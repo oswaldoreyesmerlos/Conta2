@@ -3,10 +3,9 @@
 // ============================================================================
 // REQUEST de modulos del runtime que el linker debe incluir si o si.
 // ----------------------------------------------------------------------------
-// IMPORTANTE: rddSetDefault() / hb_cdpSelect() / hb_langSelect() solo
-// *seleccionan* un modulo, pero NO obligan al linker a enlazarlo en el
-// ejecutable. Si el modulo no esta enlazado, las llamadas fallan
-// silenciosamente o dan "Argument error".
+// IMPORTANTE: rddSetDefault() solo selecciona un modulo, pero NO obliga al
+// linker a enlazarlo en el ejecutable. Si el modulo no esta enlazado, la
+// llamada puede fallar silenciosamente o dar "Argument error".
 //
 // REQUEST fuerza al linker a incluir el codigo, independientemente de la
 // optimizacion. Es la forma canonica desde Clipper 5.x de garantizar que
@@ -15,16 +14,6 @@
 
 // RDD para tablas DBF + indices CDX (formato Clipper)
 REQUEST DBFCDX
-
-// Codepage espanol Windows (Windows-1252).
-// Hace que Upper("MARTINEZ") con tilde, comparaciones, ordenacion de indices,
-// etc. traten correctamente las enes y acentos.
-// Nota: ESWIN es para Windows GUI; ES850 seria para consolas DOS reales.
-REQUEST HB_CODEPAGE_ESWIN
-
-// Idioma espanol para los mensajes del runtime (errores, nombres de meses,
-// dias de la semana en CMonth/CDoW, etc.)
-REQUEST HB_LANG_ES
 
 // ----------------------------------------------------------------------------
 // FUNCION: InitApp
@@ -48,26 +37,20 @@ FUNCTION InitApp( nRows, nCols, cFont, nFontH, nFontW )
     // 1. RDD por defecto: DBFCDX
     rddSetDefault( "DBFCDX" )
 
-    // 2. Codepage espanol Windows (Windows-1252).
-    hb_cdpSelect( "ESWIN" )
-
-    // 3. Idioma espanol del runtime
-    hb_langSelect( "ES" )
-
-    // 4. Fuente fija de ancho constante
+    // 2. Fuente fija de ancho constante
     GfxSetFont( cFont, nFontH, nFontW )
 
-    // 5. Modo de pantalla (filas x columnas)
+    // 3. Modo de pantalla (filas x columnas)
     SetMode( nRows, nCols )
 
-    // 6. Bloqueo de redimensionamiento (evita fantasmas en Save/Restore)
+    // 4. Bloqueo de redimensionamiento (evita fantasmas en Save/Restore)
     GfxFixSize( .T. )
 
-    // 7. Color por defecto y limpieza de pantalla
+    // 5. Color por defecto y limpieza de pantalla
     SetColor( CLR_WINDOW )
     CLS
 
-    // 8. Cursor oculto por defecto
+    // 6. Cursor oculto por defecto
     GfxCursor( SC_NONE )
 
 RETURN NIL

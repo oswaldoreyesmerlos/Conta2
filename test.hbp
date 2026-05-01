@@ -15,12 +15,8 @@
 # LIBRERIAS ESTRICTAMENTE NECESARIAS
 # gtwvg.hbc   : capa pseudo-grafica WVG (Wvt_*)
 # hbct.hbc    : funciones tipo Clipper Tools (hb_FNameExtSet)
-# hbcpage.hbc : codepages (REQUEST HB_CODEPAGE_ESWIN)
-# hblang.hbc  : idiomas (REQUEST HB_LANG_ES)
 gtwvg.hbc
 hbct.hbc
-hbcpage.hbc
-hblang.hbc
 
 # Rutas de cabeceras
 -i.
