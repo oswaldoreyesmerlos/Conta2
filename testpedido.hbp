@@ -1,0 +1,28 @@
+gtwvg.hbc
+hbct.hbc
+hbcpage.hbc
+hblang.hbc
+
+-i.
+
+Gfx.prg
+TControl.prg
+TLabel.prg
+TGet.prg
+TButton.prg
+TCheck.prg
+TCombo.prg
+TGrid.prg
+TWindow.prg
+TTable.prg
+Util.prg
+
+# Recursos (icono incrustado en el exe)
+appicon.rc
+
+# Programa de prueba
+TestPedido.prg
+
+-oTestPedido
+-w0
+-gui

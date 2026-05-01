@@ -1,0 +1,50 @@
+# Aplicacion principal de gestion (entorno pseudo-grafico WVG)
+#
+# Compilar:  hbmk2 test.hbp
+# Ejecutar:  AppGestion.exe
+
+# Nombre del ejecutable
+-oAppGestion
+
+# Nivel de warnings bajo
+-w0
+
+# Forzar el modo GUI
+-gui
+
+# LIBRERIAS ESTRICTAMENTE NECESARIAS
+# gtwvg.hbc   : capa pseudo-grafica WVG (Wvt_*)
+# hbct.hbc    : funciones tipo Clipper Tools (hb_FNameExtSet)
+# hbcpage.hbc : codepages (REQUEST HB_CODEPAGE_ESWIN)
+# hblang.hbc  : idiomas (REQUEST HB_LANG_ES)
+gtwvg.hbc
+hbct.hbc
+hbcpage.hbc
+hblang.hbc
+
+# Rutas de cabeceras
+-i.
+
+# ARCHIVOS FUENTE
+
+# Capa grafica (UNICA que toca Wvt_* / DispOutAt directamente)
+Gfx.prg
+
+# Clases de controles
+TControl.prg
+TLabel.prg
+TGet.prg
+TButton.prg
+TCheck.prg
+TCombo.prg
+TGrid.prg
+TWindow.prg
+
+# Capa de datos
+TTable.prg
+
+# Utilidades (InitApp, MsgBox, ErrSys)
+Util.prg
+
+# Programa de prueba
+TestWin.prg

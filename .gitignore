@@ -1,0 +1,21 @@
+*.exe
+*.log
+*.dbf
+*.cdx
+*.ntx
+*.bak
+*.tmp
+*.obj
+*.o
+*.c
+*.map
+
+# Carpetas temporales o de compilacion
+hbmk_*/
+build/
+dist/
+
+# Sistema / editor
+Thumbs.db
+desktop.ini
+.vscode/
