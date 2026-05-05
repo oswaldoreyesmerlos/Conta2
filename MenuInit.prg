@@ -22,10 +22,23 @@ EXTERNAL M_CCostes
 EXTERNAL Empresa
 EXTERNAL ClientesView
 EXTERNAL ClientesForm
+EXTERNAL ProveedView
+EXTERNAL ProveedForm
+EXTERNAL VendedoresView
+EXTERNAL VendedoresForm
 EXTERNAL FacturasView
 EXTERNAL AltaFact
 EXTERNAL ImprimirFactura
+EXTERNAL PresupuestosView
+EXTERNAL AltaPresupuesto
+EXTERNAL PlanCuentasView
+EXTERNAL PlanCuentasForm
+EXTERNAL LibroDiarioView
+EXTERNAL CobrosView
+EXTERNAL BancosView
 EXTERNAL RolesEdit
+EXTERNAL UsuariosView
+EXTERNAL UsuariosForm
 EXTERNAL App_Exit
 
 
@@ -61,13 +74,13 @@ FUNCTION Menu_Init()
     AAdd( aSubCli, { "Listado", {|| ClientesView()         }, NIL, "Ver clientes" } )
     AAdd( aSubCli, { "Alta",    {|| ClientesForm( .T., "" )}, NIL, "Nuevo cliente" } )
 
-    // Proveedores - pendiente
-    AAdd( aSubPro, { "Listado", NIL, NIL, "Ver proveedores" } )
-    AAdd( aSubPro, { "Alta",    NIL, NIL, "Nuevo proveedor" } )
+    // Proveedores - ACTIVO
+    AAdd( aSubPro, { "Listado", {|| ProveedView()         }, NIL, "Ver proveedores" } )
+    AAdd( aSubPro, { "Alta",    {|| ProveedForm( .T., "" )}, NIL, "Nuevo proveedor" } )
 
-    // Articulos - pendiente
-    AAdd( aSubArt, { "Inventario", NIL, NIL, "Catalogo" } )
-    AAdd( aSubArt, { "Alta",       NIL, NIL, "Nuevo articulo" } )
+    // Articulos - ACTIVO
+    AAdd( aSubArt, { "Inventario", {|| ArticulosView()         }, NIL, "Catalogo" } )
+    AAdd( aSubArt, { "Alta",       {|| ArticulosForm( .T., "" )}, NIL, "Nuevo articulo" } )
 
     // Facturas - ACTIVO
     AAdd( aSubFac, { "Historial",  {|| FacturasView() }, NIL, "Facturas emitidas" } )
@@ -79,7 +92,7 @@ FUNCTION Menu_Init()
     AAdd( aMaest, { "Clientes",    NIL, aSubCli, "Fichero de clientes" } )
     AAdd( aMaest, { "Proveedores", NIL, aSubPro, "Fichero de proveedores" } )
     AAdd( aMaest, { "Articulos",   NIL, aSubArt, "Catalogo de articulos" } )
-    AAdd( aMaest, { "Vendedores",  NIL, NIL,     "Ficha comercial" } )
+    AAdd( aMaest, { "Vendedores",  {|| VendedoresView() }, NIL, "Ficha comercial" } )
     AAdd( aMaest, { "Familias",    {|| M_Familias()  }, NIL, "Familias de articulos" } )
     AAdd( aMaest, { "Formas Pago", {|| M_FormaPago() }, NIL, "Formas de pago" } )
     AAdd( aMaest, { "Tipos IVA",   {|| M_TiposIva()  }, NIL, "Tipos de IVA" } )
@@ -92,7 +105,7 @@ FUNCTION Menu_Init()
     // -------------------------------------------------------------------------
     // VENTAS
     // -------------------------------------------------------------------------
-    AAdd( aVentas, { "Presupuestos", NIL,    NIL,     "Gestion de presupuestos" } )
+    AAdd( aVentas, { "Presupuestos", {|| PresupuestosView() }, NIL, "Gestion de presupuestos" } )
     AAdd( aVentas, { "Facturas",     NIL,    aSubFac, "Gestion de facturas" } )
 
     // -------------------------------------------------------------------------
@@ -104,16 +117,16 @@ FUNCTION Menu_Init()
     // TESORERIA
     // -------------------------------------------------------------------------
     IF lEsCaja
-        AAdd( aTeso, { "Cobros/Caja", NIL, NIL, "Gestion de cobros" } )
-        AAdd( aTeso, { "Bancos",      NIL, NIL, "Cuentas bancarias" } )
+        AAdd( aTeso, { "Cobros/Caja", {|| CobrosView() }, NIL, "Gestion de cobros" } )
+        AAdd( aTeso, { "Bancos",      {|| BancosView() }, NIL, "Cuentas bancarias" } )
     ENDIF
 
     // -------------------------------------------------------------------------
     // CONTABILIDAD
     // -------------------------------------------------------------------------
     IF lEsCont
-        AAdd( aContab, { "Plan Cuentas",  NIL, NIL, "Plan contable" } )
-        AAdd( aContab, { "Libro Diario",  NIL, NIL, "Consulta asientos" } )
+        AAdd( aContab, { "Plan Cuentas",  {|| PlanCuentasView() }, NIL, "Plan contable" } )
+        AAdd( aContab, { "Libro Diario",  {|| LibroDiarioView() }, NIL, "Consulta asientos" } )
         AAdd( aContab, { "Nuevo Asiento", NIL, NIL, "Alta manual" } )
         AAdd( aContab, { "Centros Coste", {|| M_CCostes() }, NIL, "Analitica" } )
     ENDIF
@@ -121,8 +134,10 @@ FUNCTION Menu_Init()
     // -------------------------------------------------------------------------
     // INFORMES
     // -------------------------------------------------------------------------
-    AAdd( aInform, { "Clientes",  NIL, NIL, "Listado de clientes" } )
-    AAdd( aInform, { "Articulos", NIL, NIL, "Listado de precios" } )
+    AAdd( aInform, { "Clientes",      {|| InformeClientes() },      NIL, "Listado de clientes" } )
+    AAdd( aInform, { "Articulos",    {|| InformeArticulos() },    NIL, "Listado de precios" } )
+    AAdd( aInform, { "Facturas",     {|| InformeFacturas() },     NIL, "Facturas emitidas" } )
+    AAdd( aInform, { "Presupuestos",{|| InformePresupuestos() }, NIL, "Presupuestos" } )
     IF lEsCont
         AAdd( aInform, { "Libro Diario", NIL, NIL, "Asientos contables" } )
     ENDIF
@@ -131,7 +146,7 @@ FUNCTION Menu_Init()
     // SISTEMA
     // -------------------------------------------------------------------------
     IF lEsAdm
-        AAdd( aSistema, { "Usuarios", NIL,              NIL, "Mantenimiento usuarios" } )
+        AAdd( aSistema, { "Usuarios", {|| UsuariosView() }, NIL, "Mantenimiento usuarios" } )
         AAdd( aSistema, { "Roles",    {|| RolesEdit() }, NIL, "Mantenimiento roles" } )
     ENDIF
     AAdd( aSistema, { "Salir", {|| App_Exit() }, NIL, "Salir del sistema" } )

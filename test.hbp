@@ -60,32 +60,29 @@ M_Auxiliar.prg
 # -- FASE 2: Maestros principales --
 M_Empresa.prg
 M_Clientes.prg
-# M_Proveed.prg
-# M_Articulos.prg
-# M_Vendedor.prg
-# M_Bancos.prg
-# M_Usuarios.prg
+M_Proveedo.prg
+M_Articulos.prg
+M_Vendedor.prg
+M_Bancos.prg
+M_Usuarios.prg
 # M_GeoLoc.prg
 
 # -- FASE 3: Ventas --
 V_Facturas.prg
 V_Imprimir.prg
-# V_Presupuestos.prg
+V_Presupuesto.prg
 
 # -- FASE 4: Almacen --
 # A_Movim.prg
 
 # -- FASE 5: Tesoreria --
-# T_Cobros.prg
+Tesoreria.prg
 
 # -- FASE 6: Contabilidad --
-# C_Cuentas.prg
-# C_Diario.prg
+M_Conta.prg
 
 # -- FASE 7: Informes --
-# R_Clientes.prg
-# R_Articulos.prg
-# R_Diario.prg
+Informes.prg
 
 # =============================================================================
 # PRUEBAS (comentar en produccion)
