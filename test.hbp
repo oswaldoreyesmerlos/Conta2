@@ -1,0 +1,93 @@
+# =============================================================================
+# ARCHIVO : test.hbp
+# PROYECTO: Sistema de Gestion de Pyme/Autonomo
+# COMPILAR: hbmk2 test.hbp
+# EJECUTAR: AppGestion.exe
+# =============================================================================
+
+-oAppGestion
+-w0
+-gui
+
+# =============================================================================
+# LIBRERIAS
+# =============================================================================
+gtwvg.hbc
+hbct.hbc
+
+# =============================================================================
+# CABECERAS
+# =============================================================================
+-i.\API
+-i.
+
+# =============================================================================
+# NUCLEO DEL FRAMEWORK  .\API\
+# =============================================================================
+API\Gfx.prg
+API\TControl.prg
+API\TLabel.prg
+API\TGet.prg
+API\TButton.prg
+API\TCheck.prg
+API\TCombo.prg
+API\TGrid.prg
+API\TWindow.prg
+API\TMenu.prg
+API\MsgBox.prg
+API\MsgYesNo.prg
+
+# =============================================================================
+# UTILIDADES Y ARRANQUE
+# =============================================================================
+Util.prg
+InicioDBF.prg
+
+# =============================================================================
+# SEGURIDAD Y MENU
+# =============================================================================
+Seguridad.prg
+MenuInit.prg
+Main.prg
+
+# =============================================================================
+# MODULOS DE NEGOCIO
+# =============================================================================
+
+# -- FASE 1: Tablas auxiliares --
+M_Auxiliar.prg
+
+# -- FASE 2: Maestros principales --
+M_Empresa.prg
+M_Clientes.prg
+# M_Proveed.prg
+# M_Articulos.prg
+# M_Vendedor.prg
+# M_Bancos.prg
+# M_Usuarios.prg
+# M_GeoLoc.prg
+
+# -- FASE 3: Ventas --
+V_Facturas.prg
+V_Imprimir.prg
+# V_Presupuestos.prg
+
+# -- FASE 4: Almacen --
+# A_Movim.prg
+
+# -- FASE 5: Tesoreria --
+# T_Cobros.prg
+
+# -- FASE 6: Contabilidad --
+# C_Cuentas.prg
+# C_Diario.prg
+
+# -- FASE 7: Informes --
+# R_Clientes.prg
+# R_Articulos.prg
+# R_Diario.prg
+
+# =============================================================================
+# PRUEBAS (comentar en produccion)
+# =============================================================================
+# TestWin.prg

@@ -1,0 +1,12 @@
+# Mini-test para verificar wvg_BoxSolid y WVG_ColorHB2RGB
+-otestsolid
+
+-w0
+-gui
+
+# Solo gtwvg, nada mas
+gtwvg.hbc
+
+-i.
+
+TestSolid.prg
