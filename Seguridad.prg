@@ -72,7 +72,15 @@ FUNCTION Login()
         oWin:AddCtrl( oBtAcep  )
         oWin:AddCtrl( oBtCanc  )
 
+        // Ejecutar ventana - ESC o X cerraran la ventana
         oWin:Run()
+
+        // Si la ventana se cerro y no hay login correcto, preguntar salir
+        IF !lOK .AND. !lSalir
+            IF MsgYesNo( "Desea salir del sistema?", "Salir" )
+                lSalir := .T.
+            ENDIF
+        ENDIF
 
         IF lOK
             DbSelectArea( "USR" )
@@ -121,6 +129,26 @@ RETURN NIL
 
 
 STATIC FUNCTION _LoginCanc( lSalir, oWin )
+
+    IF MsgYesNo( "Desea salir del sistema?", "Salir" )
+        lSalir := .T.
+        oWin:Close()
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _LoginClose( lSalir, oWin )
+
+    IF MsgYesNo( "Desea salir del sistema?", "Salir" )
+        lSalir := .T.
+        RETURN .T.  // Permite cerrar
+    ENDIF
+
+RETURN .F.  // Evita cerrar
+
+
+STATIC FUNCTION _LoginEsc( lSalir, oWin )
 
     IF MsgYesNo( "Desea salir del sistema?", "Salir" )
         lSalir := .T.

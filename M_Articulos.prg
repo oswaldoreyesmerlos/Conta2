@@ -103,7 +103,7 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
 
     LOCAL oWin
     LOCAL nArea
-    LOCAL cCodigo
+    //LOCAL cCodigo
     LOCAL cDescrip
     LOCAL cFamilia
     LOCAL cProveed

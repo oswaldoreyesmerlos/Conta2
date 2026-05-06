@@ -34,8 +34,7 @@ EXTERNAL AltaPresupuesto
 EXTERNAL PlanCuentasView
 EXTERNAL PlanCuentasForm
 EXTERNAL LibroDiarioView
-EXTERNAL CobrosView
-EXTERNAL BancosView
+EXTERNAL TesoreriaView
 EXTERNAL RolesEdit
 EXTERNAL UsuariosView
 EXTERNAL UsuariosForm
@@ -117,8 +116,7 @@ FUNCTION Menu_Init()
     // TESORERIA
     // -------------------------------------------------------------------------
     IF lEsCaja
-        AAdd( aTeso, { "Cobros/Caja", {|| CobrosView() }, NIL, "Gestion de cobros" } )
-        AAdd( aTeso, { "Bancos",      {|| BancosView() }, NIL, "Cuentas bancarias" } )
+        AAdd( aTeso, { "Tesoreria", {|| TesoreriaView() }, NIL, "Bancos y tesoreria" } )
     ENDIF
 
     // -------------------------------------------------------------------------

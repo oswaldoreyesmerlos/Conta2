@@ -495,5 +495,22 @@ RETURN cRes + cDec
 
 
 // ============================================================================
+// OS_Open( cFile )
+// Abre un archivo con la aplicacion predeterminada de Windows
+// ============================================================================
+FUNCTION OS_Open( cFile )
+
+    IF !File( cFile )
+        MsgStop( "Archivo no encontrado: " + cFile, "Error" )
+        RETURN .F.
+    ENDIF
+
+    // Usa la funcion de Harbour para ejecutar comandos
+    HB_Run( 'cmd /c start "" "' + cFile + '"' )
+
+RETURN .T.
+
+
+// ============================================================================
 // FIN DE V_Imprimir.prg
 // ============================================================================

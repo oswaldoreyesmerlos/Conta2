@@ -438,5 +438,43 @@ RETURN nSkipped
 
 
 // ============================================================================
+// _ValidNif( cNif )
+// Valida NIF/NIE/CIF español (validacion basica)
+// ============================================================================
+FUNCTION _ValidNif( cNif )
+
+    LOCAL cNum
+    LOCAL nLen
+    LOCAL lValid := .T.
+
+    IF Empty( cNif )
+        RETURN .T.
+    ENDIF
+
+    cNif := Upper( AllTrim( cNif ) )
+    nLen := Len( cNif )
+
+    // NIF personal (8 numeros + 1 letra)
+    IF nLen == 9 .AND. SubStr( cNif, 1, 1 ) $ "0123456789"
+        cNum := SubStr( cNif, 1, 8 )
+        IF !Empty( cNum ) .AND. Val( cNum ) > 0
+            RETURN .T.
+        ENDIF
+    ENDIF
+
+    // NIE (X/Y/Z + 7 numeros + 1 letra)
+    IF nLen == 9 .AND. SubStr( cNif, 1, 1 ) $ "XYZ"
+        RETURN .T.
+    ENDIF
+
+    // CIF (letra + 7 numeros + control)
+    IF nLen >= 8 .AND. nLen <= 9 .AND. SubStr( cNif, 1, 1 ) $ "ABCDEFGHJKLMNPQRSUVW"
+        RETURN .T.
+    ENDIF
+
+RETURN .F.
+
+
+// ============================================================================
 // FIN DE Util.prg
 // ============================================================================

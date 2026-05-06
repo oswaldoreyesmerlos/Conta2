@@ -1022,5 +1022,76 @@ RETURN NIL
 
 
 // ============================================================================
+// InicioDBF_Empresa()
+// Crea SOLO la tabla EMPRESA si no existe.
+// Devuelve .T. si todo fue bien.
+// ============================================================================
+FUNCTION InicioDBF_Empresa()
+
+    LOCAL aCampos  := {}
+    LOCAL aIndices := {}
+    LOCAL cDbf      := "EMPRESA.DBF"
+    LOCAL aStru
+    LOCAL oIdx
+    LOCAL lOK       := .T.
+
+    // -- 01. EMPRESA --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "NIF",      "C", 13, 0 } )
+    AAdd( aCampos, { "NOMBRE",   "C", 60, 0 } )
+    AAdd( aCampos, { "DIRECCIO", "C", 60, 0 } )
+    AAdd( aCampos, { "CIUDAD",   "C", 40, 0 } )
+    AAdd( aCampos, { "PROVINCI", "C", 30, 0 } )
+    AAdd( aCampos, { "CP",       "C",  5, 0 } )
+    AAdd( aCampos, { "PAIS",     "C", 30, 0 } )
+    AAdd( aCampos, { "TELEFONO", "C", 15, 0 } )
+    AAdd( aCampos, { "MOVIL",    "C", 15, 0 } )
+    AAdd( aCampos, { "EMAIL",    "C", 50, 0 } )
+    AAdd( aCampos, { "WEB",      "C", 50, 0 } )
+    AAdd( aCampos, { "REG_TOMO", "C", 10, 0 } )
+    AAdd( aCampos, { "REG_FOL",  "C", 10, 0 } )
+    AAdd( aCampos, { "REG_HOJA", "C", 15, 0 } )
+    AAdd( aCampos, { "REG_SECC", "C", 10, 0 } )
+    AAdd( aCampos, { "IBANPPAL", "C", 34, 0 } )
+    AAdd( aCampos, { "FEC_CIER", "D",  8, 0 } )
+    AAdd( aCampos, { "PREFIJO",  "C",  3, 0 } )
+    AAdd( aCampos, { "LOGO",     "C",120, 0 } )
+    AAdd( aCampos, { "PIE_DOC",  "M", 10, 0 } )
+    AAdd( aIndices, { "EMP_NIF", "NIF" } )
+
+    IF !File( cDbf )
+        aStru := aCampos
+        DbCreate( cDbf, aStru, "DBFCDX", .T., "EMP_TMP" )
+        IF !NetFLock( "EMP_TMP", 0.5 )
+            MsgStop( "No se pudo bloquear EMPRESA temporal", "Error" )
+            Return .F.
+        ENDIF
+        DbAppend()
+        REPLACE EMP_TMP->NIF WITH "0000000000000"
+        REPLACE EMP_TMP->NOMBRE WITH "EMPRESA SIN CONFIGURAR"
+        DbUnlock()
+        DbCloseArea()
+        IF !File( cDbf )
+            MsgStop( "Fallo al crear EMPRESA.DBF", "Error critico" )
+            RETURN .F.
+        ENDIF
+    ENDIF
+
+    // Siempre regenerar indices
+    IF !ABRIR_TABLA( "EMPRESA", "EMP_INI", "" )
+        RETURN .F.
+    ENDIF
+
+    EMP_INI->( DbClearIndex() )
+    FOR EACH oIdx IN aIndices
+        EMP_INI->( ordCreate( , oIdx[1], oIdx[2], NIL, NIL, NIL, 1 ) )
+    NEXT
+    EMP_INI->( DbCloseArea() )
+
+RETURN .T.
+
+
+// ============================================================================
 // FIN DE InicioDBF.prg
 // ============================================================================

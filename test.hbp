@@ -63,7 +63,7 @@ M_Clientes.prg
 M_Proveedo.prg
 M_Articulos.prg
 M_Vendedor.prg
-M_Bancos.prg
+Tesoreria.prg
 M_Usuarios.prg
 # M_GeoLoc.prg
 
@@ -76,7 +76,7 @@ V_Presupuesto.prg
 # A_Movim.prg
 
 # -- FASE 5: Tesoreria --
-Tesoreria.prg
+# Tesoreria.prg (ya incluido arriba)
 
 # -- FASE 6: Contabilidad --
 M_Conta.prg

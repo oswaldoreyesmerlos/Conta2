@@ -70,7 +70,7 @@ FUNCTION ProveedView()
 RETURN NIL
 
 
-STATICO FUNCTION _PrvCargar()
+STATIC FUNCTION _PrvCargar()
 
     LOCAL aData
 
@@ -252,7 +252,7 @@ FUNCTION ProveedForm( lNuevo, cId )
     oGCtaCon := TGet():New(  6, 90, cCtaCon, "@!",             oWin )
     oGCtaAnt := TGet():New(  8, 90, cCtaAnt, "@!",             oWin )
 
-    oChkBaja := TCheck():New( 26, 72, "Baja", lBaja, oWin )
+    oChkBaja := TCheck():New( 28, 72, "Baja", lBaja, oWin )
 
     oBtGua := TButton():New( 33, 40, 34, 59, oWin, "GUARDAR", ;
         {|| _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
@@ -295,7 +295,7 @@ FUNCTION ProveedForm( lNuevo, cId )
 RETURN NIL
 
 
-STATICO FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
+STATIC FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
                                oGCiu, oGPro, oGPais, oGCP, oGTel, ;
                                oGMov, oGMail, oGWeb, oGIban, oGFP, ;
                                oGDias, oGCtaCon, oGCtaAnt, ;
@@ -378,7 +378,7 @@ STATICO FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
 RETURN NIL
 
 
-STATICO FUNCTION _PrvSubcuenta( cId )
+STATIC FUNCTION _PrvSubcuenta( cId )
 
     LOCAL cNum
     LOCAL i

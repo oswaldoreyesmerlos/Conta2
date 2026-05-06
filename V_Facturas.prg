@@ -340,7 +340,7 @@ STATIC FUNCTION _FacCargarEmpPie( cPie )
     IF ABRIR_TABLA( "EMPRESA", "EMP_F", "" )
         EMP_F->( DbGoTop() )
         IF !EMP_F->( Eof() )
-            cPie := EMP_F->PIE_DOC
+            cPie := EMP_F->( FieldGet( FieldPos( "PIE_DOC" ) ) )
         ENDIF
         EMP_F->( DbCloseArea() )
     ENDIF

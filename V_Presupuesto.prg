@@ -806,5 +806,27 @@ RETURN NIL
 
 
 // ============================================================================
+// ImprimirPresupuesto( cNumero )
+// Llama a la funcion de impresion de presupuestos
+// ============================================================================
+FUNCTION ImprimirPresupuesto( cNumero )
+
+    IF !File( ".\\DATA\\PRESUP_G.DBF" )
+        MsgStop( "No existe la tabla de presupuestos", "Error" )
+        RETURN .F.
+    ENDIF
+
+    IF ValType( cNumero ) != "C" .OR. Empty( cNumero )
+        MsgStop( "Numero de presupuesto invalido", "Error" )
+        RETURN .F.
+    ENDIF
+
+    // Llama a la funcion en V_Imprimir.prg
+    ImprimirPresup( cNumero )
+
+RETURN .T.
+
+
+// ============================================================================
 // FIN DE V_Presupuesto.prg
 // ============================================================================
