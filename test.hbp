@@ -54,37 +54,31 @@ Main.prg
 # MODULOS DE NEGOCIO
 # =============================================================================
 
-# -- FASE 1: Tablas auxiliares --
+# -- Tablas auxiliares --
 M_Auxiliar.prg
 
-# -- FASE 2: Maestros principales --
+# -- Maestros principales --
 M_Empresa.prg
 M_Clientes.prg
 M_Proveedo.prg
 M_Articulos.prg
 M_Vendedor.prg
-Tesoreria.prg
 M_Usuarios.prg
-# M_GeoLoc.prg
 
-# -- FASE 3: Ventas --
-V_Facturas.prg
-V_Imprimir.prg
-V_Presupuesto.prg
-
-# -- FASE 4: Almacen --
-# A_Movim.prg
-
-# -- FASE 5: Tesoreria --
-# Tesoreria.prg (ya incluido arriba)
-
-# -- FASE 6: Contabilidad --
+# -- Contabilidad --
 M_Conta.prg
 
-# -- FASE 7: Informes --
+# -- Ventas --
+V_Presupuesto.prg
+V_Facturas.prg
+V_Imprimir.prg
+
+# -- Tesoreria --
+Tesoreria.prg
+
+# -- Informes --
 Informes.prg
 
-# =============================================================================
-# PRUEBAS (comentar en produccion)
-# =============================================================================
-# TestWin.prg
+# -- Pendientes --
+# A_Movim.prg
+# T_Cobros.prg

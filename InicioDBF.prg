@@ -343,6 +343,7 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "OBSERVA",  "C", 80, 0 } )
     AAdd( aCampos, { "PIE_DOC",  "M", 10, 0 } )
     AAdd( aCampos, { "NUM_PRE",  "C", 10, 0 } )
+    AAdd( aCampos, { "NUM_ABONO","C", 10, 0 } )
     AAdd( aIndices, { "FAC_NUM", "SERIE+NUMERO" } )
     AAdd( aIndices, { "FAC_CLI", "CLIENTE_" } )
     AAdd( aIndices, { "FAC_FEC", "DtoS(FECHA)" } )
@@ -483,32 +484,34 @@ FUNCTION InicioDBF()
     AAdd( aIndices, { "CPD_LIN", "NUMERO+Str(LINEA,3)" } )
     AAdd( aTablas, { "COMP_DET", aCampos, aIndices } )
 
-    // -- 21. RECIBOS (gestion de cobros) --
+    // -- 21. RECIBOS (recibos de caja - ingreso cobrado) --
+    // Un recibo existe solo cuando se ha cobrado. No hay estado pendiente.
+    // FORMA_PA: EFE=Efectivo TRF=Transferencia TAR=Tarjeta CHQ=Cheque OTR=Otro
     aCampos  := {}
     aIndices := {}
     AAdd( aCampos, { "NUMERO",   "C", 10, 0 } )
     AAdd( aCampos, { "FECHA",    "D",  8, 0 } )
     AAdd( aCampos, { "CLIENTE_", "C", 10, 0 } )
     AAdd( aCampos, { "CONCEPTO", "C",100, 0 } )
+    AAdd( aCampos, { "FORMA_PA", "C",  3, 0 } )
     AAdd( aCampos, { "TOTAL",    "N", 12, 2 } )
     AAdd( aCampos, { "ASIENTO",  "C", 10, 0 } )
-    AAdd( aCampos, { "ESTADO",   "C",  1, 0 } )
+    AAdd( aCampos, { "USUARIO_", "C", 10, 0 } )
     AAdd( aIndices, { "REC_NUM", "NUMERO" } )
     AAdd( aIndices, { "REC_CLI", "CLIENTE_" } )
-    AAdd( aIndices, { "REC_EST", "ESTADO+CLIENTE_" } )
+    AAdd( aIndices, { "REC_FEC", "DtoS(FECHA)" } )
     AAdd( aTablas, { "RECIBOS", aCampos, aIndices } )
 
-    // -- 22. RC_DETAL (detalle de recibos) --
+    // -- 22. RC_DETAL (facturas cobradas por el recibo) --
+    // Cada linea referencia una factura cobrada con este recibo.
     aCampos  := {}
     aIndices := {}
     AAdd( aCampos, { "NUMERO",   "C", 10, 0 } )
     AAdd( aCampos, { "LINEA",    "N",  3, 0 } )
-    AAdd( aCampos, { "TIP_PAGO", "C",  3, 0 } )
-    AAdd( aCampos, { "BANCO",    "C", 10, 0 } )
-    AAdd( aCampos, { "MONTO",    "N", 12, 2 } )
-    AAdd( aCampos, { "REF_DOC",  "C", 10, 0 } )
+    AAdd( aCampos, { "NUM_FAC",  "C", 10, 0 } )
+    AAdd( aCampos, { "IMPORTE",  "N", 12, 2 } )
     AAdd( aIndices, { "RCD_NUM", "NUMERO+Str(LINEA,3)" } )
-    AAdd( aIndices, { "RCD_REF", "REF_DOC" } )
+    AAdd( aIndices, { "RCD_FAC", "NUM_FAC" } )
     AAdd( aTablas, { "RC_DETAL", aCampos, aIndices } )
 
     // -- 23. PRESUPUEST --
@@ -701,25 +704,21 @@ FUNCTION InicioDBF()
             aStru := aTablas[i, 2]
             aIdx  := aTablas[i, 3]
 
-            // Crear DBF solo si no existe
+            // Si el DBF ya existe no hacer nada — datos y CDX intactos.
+            // El reindexado es una operacion de mantenimiento separada
+            // que solo ejecuta el ADM previa copia de seguridad.
             IF !File( cDbf + ".DBF" )
                 DbCreate( cDbf, aStru )
-            ENDIF
-
-            // Regenerar CDX siempre (indices limpios)
-            IF File( cDbf + ".CDX" )
-                FErase( cDbf + ".CDX" )
-            ENDIF
-
-            IF Len( aIdx ) > 0
-                USE (cDbf) NEW EXCLUSIVE
-                IF !NetErr()
-                    FOR EACH oIdx IN aIdx
-                        OrdCreate( cDbf + ".CDX", oIdx[1], oIdx[2] )
-                    NEXT
-                    USE
-                ELSE
-                    lOK := .F.
+                IF Len( aIdx ) > 0
+                    USE (cDbf) NEW EXCLUSIVE
+                    IF !NetErr()
+                        FOR EACH oIdx IN aIdx
+                            OrdCreate( cDbf + ".CDX", oIdx[1], oIdx[2] )
+                        NEXT
+                        USE
+                    ELSE
+                        lOK := .F.
+                    ENDIF
                 ENDIF
             ENDIF
 
@@ -1090,6 +1089,195 @@ FUNCTION InicioDBF_Empresa()
     EMP_INI->( DbCloseArea() )
 
 RETURN .T.
+
+
+
+// ============================================================================
+// ReindexarTodo()
+// ----------------------------------------------------------------------------
+// Operacion de mantenimiento — solo disponible para ADM.
+// Recrea todos los indices CDX de todas las tablas del sistema.
+//
+// IMPORTANTE: ejecutar SIEMPRE con copia de seguridad previa y con
+// todos los usuarios desconectados (modo exclusivo).
+//
+// Flujo recomendado:
+//   1. Cerrar sesion de todos los usuarios
+//   2. Hacer copia de seguridad de .\DATA//   3. Entrar como ADM
+//   4. Sistema → Reindexar
+// ============================================================================
+FUNCTION ReindexarTodo()
+
+    LOCAL aTablas
+    LOCAL aIndices
+    LOCAL i
+    LOCAL cDbf
+    LOCAL oIdx
+    LOCAL nTotal
+    LOCAL nOK
+    LOCAL cMsg
+
+    MEMVAR cUserRol
+
+    // Solo ADM puede reindexar
+    IF AllTrim( cUserRol ) != "ADM"
+        MsgStop( "Solo el Administrador puede reindexar.", "Acceso denegado" )
+        RETURN .F.
+    ENDIF
+
+    IF !MsgYesNo( "Esta operacion requiere copia de seguridad previa." + Chr(13) + ;
+                  "Todos los usuarios deben estar desconectados." + Chr(13) + ;
+                  "Desea continuar?", "Reindexar tablas" )
+        RETURN .F.
+    ENDIF
+
+    // Construir lista de tablas e indices (igual que InicioDBF pero solo indices)
+    aTablas := _GetTablasList()
+
+    nTotal := Len( aTablas )
+    nOK    := 0
+
+    SET EXCLUSIVE ON
+
+    BEGIN SEQUENCE
+
+        FOR i := 1 TO nTotal
+
+            cDbf    := aTablas[i, 1]
+            aIndices := aTablas[i, 2]
+
+            IF !File( cDbf + ".DBF" ) .OR. Len( aIndices ) == 0
+                nOK++
+                LOOP
+            ENDIF
+
+            // Borrar CDX existente
+            IF File( cDbf + ".CDX" )
+                FErase( cDbf + ".CDX" )
+            ENDIF
+
+            // Recrear indices
+            USE (cDbf) NEW EXCLUSIVE
+            IF !NetErr()
+                FOR EACH oIdx IN aIndices
+                    OrdCreate( cDbf + ".CDX", oIdx[1], oIdx[2] )
+                NEXT
+                USE
+                nOK++
+            ENDIF
+
+        NEXT
+
+    RECOVER
+
+        SET EXCLUSIVE OFF
+        MsgStop( "Error durante el reindexado. Restaure la copia de seguridad.", ;
+                 "Error critico" )
+        RETURN .F.
+
+    END SEQUENCE
+
+    SET EXCLUSIVE OFF
+
+    cMsg := "Reindexado completado." + Chr(13) + ;
+            AllTrim( Str( nOK ) ) + " de " + AllTrim( Str( nTotal ) ) + ;
+            " tablas procesadas correctamente."
+
+    MsgInfo( cMsg, "Reindexar" )
+
+RETURN .T.
+
+
+// ----------------------------------------------------------------------------
+// _GetTablasList() — devuelve array { cNombreDBF, aIndices } de todas las tablas
+// Se mantiene sincronizado con InicioDBF() manualmente.
+// ----------------------------------------------------------------------------
+STATIC FUNCTION _GetTablasList()
+
+    LOCAL aTablas
+
+    aTablas := {}
+
+    AAdd( aTablas, { "EMPRESA",    { { "EMP_NIF",  "NIF"                        } } } )
+    AAdd( aTablas, { "CLIENTES",   { { "CLI_ID",   "ID"                         }, ;
+                                     { "CLI_NOM",  "Upper(NOMBRE+APELLIDO)"     }, ;
+                                     { "CLI_NIF",  "Upper(NIF)"                 }, ;
+                                     { "CLI_CIU",  "Upper(CIUDAD)"              } } } )
+    AAdd( aTablas, { "PROVEED",    { { "PRV_ID",   "ID"                         }, ;
+                                     { "PRV_NOM",  "Upper(NOMBRE+APELLIDO)"     }, ;
+                                     { "PRV_NIF",  "Upper(NIF)"                 }, ;
+                                     { "PRV_CIU",  "Upper(CIUDAD)"              } } } )
+    AAdd( aTablas, { "ARTICULOS",  { { "ART_COD",  "CODIGO"                     }, ;
+                                     { "ART_DES",  "Upper(DESCRIP)"             }, ;
+                                     { "ART_FAM",  "FAMILIA"                    }, ;
+                                     { "ART_BAR",  "COD_BARR"                   } } } )
+    AAdd( aTablas, { "MOVIMIEN",   { { "MOV_ART",  "COD_ART"                    }, ;
+                                     { "MOV_FEC",  "DtoS(FECHA)"                }, ;
+                                     { "MOV_DOC",  "DOC_ORIG"                   } } } )
+    AAdd( aTablas, { "CATALOGO",   { { "CAT_CTA",  "CUENTA"                     }, ;
+                                     { "CAT_NOM",  "Upper(NOMBRE)"              }, ;
+                                     { "CAT_MAY",  "SUMA_EN"                    } } } )
+    AAdd( aTablas, { "LDIARIO",    { { "DIA_ASI",  "D_ASIENT+Str(D_LINEA,4)"   }, ;
+                                     { "DIA_FEC",  "DtoS(D_FECHA)+D_ASIENT"    }, ;
+                                     { "DIA_MAY",  "D_CUENTA+DtoS(D_FECHA)"    }, ;
+                                     { "DIA_ANA",  "D_CCOSTE+D_CUENTA"         } } } )
+    AAdd( aTablas, { "BANCOS",     { { "BAN_COD",  "BAN_COD"                    }, ;
+                                     { "BAN_NOM",  "Upper(BAN_NOM)"             } } } )
+    AAdd( aTablas, { "VENDEDOR",   { { "VEN_ID",   "ID"                         }, ;
+                                     { "VEN_NOM",  "Upper(NOMBRE)"              } } } )
+    AAdd( aTablas, { "USUARIOS",   { { "USR_COD",  "CODIGO"                     }, ;
+                                     { "USR_NOM",  "Upper(NOMBRE)"              } } } )
+    AAdd( aTablas, { "ROLES",      { { "ROLID",    "ID"                         } } } )
+    AAdd( aTablas, { "GEOLOC",     { { "GEO_CP",   "CP"                         }, ;
+                                     { "GEO_CIU",  "Upper(CIUDAD)"              }, ;
+                                     { "GEO_PRV",  "Upper(PROVINCI)"            } } } )
+    AAdd( aTablas, { "FACTURA",    { { "FAC_NUM",  "SERIE+NUMERO"               }, ;
+                                     { "FAC_CLI",  "CLIENTE_"                   }, ;
+                                     { "FAC_FEC",  "DtoS(FECHA)"                }, ;
+                                     { "FAC_VTO",  "DtoS(FECHA_VT)"             }, ;
+                                     { "FAC_PTE",  "CLIENTE_+DtoS(FECHA)"       } } } )
+    AAdd( aTablas, { "FACTUR_DE",  { { "FAC_LIN",  "SERIE+NUMERO+Str(LINEA,3)" } } } )
+    AAdd( aTablas, { "PEDIDOS",    { { "PED_NUM",  "NUMERO"                     }, ;
+                                     { "PED_CLI",  "CLIENTE_"                   }, ;
+                                     { "PED_FEC",  "DtoS(FECHA)"                }, ;
+                                     { "PED_EST",  "ESTADO"                     } } } )
+    AAdd( aTablas, { "PED_DET",    { { "PED_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
+    AAdd( aTablas, { "NOTASDC",    { { "NDC_NUM",  "SERIE+NUMERO"               }, ;
+                                     { "NDC_CLI",  "CLIENTE_"                   }, ;
+                                     { "NDC_FEC",  "DtoS(FECHA)"                }, ;
+                                     { "NDC_TIP",  "TIPO+CLIENTE_"              } } } )
+    AAdd( aTablas, { "NOTASD_DE",  { { "NDC_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
+    AAdd( aTablas, { "COMPRAS",    { { "COM_INT",  "NUM_INTE"                   }, ;
+                                     { "COM_PRO",  "PROV_ID"                    }, ;
+                                     { "COM_FEC",  "DtoS(FECHA)"                }, ;
+                                     { "COM_VTO",  "DtoS(FECHA_VT)"             } } } )
+    AAdd( aTablas, { "COMP_DET",   { { "CPD_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
+    AAdd( aTablas, { "RECIBOS",    { { "REC_NUM",  "NUMERO"                     }, ;
+                                     { "REC_CLI",  "CLIENTE_"                   }, ;
+                                     { "REC_FEC",  "DtoS(FECHA)"                } } } )
+    AAdd( aTablas, { "RC_DETAL",   { { "RCD_NUM",  "NUMERO+Str(LINEA,3)"       }, ;
+                                     { "RCD_FAC",  "NUM_FAC"                    } } } )
+    AAdd( aTablas, { "PRESUPUEST", { { "PRE_NUM",  "NUMERO"                     }, ;
+                                     { "PRE_CLI",  "CLIENTE_"                   }, ;
+                                     { "PRE_FEC",  "DtoS(FECHA)"                } } } )
+    AAdd( aTablas, { "PRESUP_DE",  { { "PRD_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
+    AAdd( aTablas, { "CHEQUES",    { { "CHQ_NUM",  "NUMERO"                     }, ;
+                                     { "CHQ_FEC",  "DtoS(FECHA_EM)"             }, ;
+                                     { "CHQ_VTO",  "DtoS(FECHA_VT)"             } } } )
+    AAdd( aTablas, { "CHEQUE_DE",  { { "CHD_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
+    AAdd( aTablas, { "AJUSTEIN",   { { "AJU_NUM",  "NUMERO"                     }, ;
+                                     { "AJU_ART",  "ARTICULO"                   } } } )
+    AAdd( aTablas, { "CONTADOR",   { { "COD_DOC",  "COD_DOC"                    } } } )
+    AAdd( aTablas, { "BAL_DEF",    { { "BAL_ORD",  "TIPO_BAL+CODIGO"            } } } )
+    AAdd( aTablas, { "TIENDAS",    { { "TDA_ID",   "ID"                         } } } )
+    AAdd( aTablas, { "CCOSTOS",    { { "CCO_COD",  "CCO_COD"                    } } } )
+    AAdd( aTablas, { "FORMAPAGO",  { { "FP_COD",   "CODIGO"                     } } } )
+    AAdd( aTablas, { "TIPOSIVA",   { { "IVA_COD",  "CODIGO"                     } } } )
+    AAdd( aTablas, { "FAMILIAS",   { { "FAM_COD",  "CODIGO"                     }, ;
+                                     { "FAM_NOM",  "Upper(DESCRIP)"             } } } )
+    AAdd( aTablas, { "TIPOSIRPF",  { { "IRF_COD",  "CODIGO"                     } } } )
+
+RETURN aTablas
 
 
 // ============================================================================

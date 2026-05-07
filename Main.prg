@@ -1,6 +1,19 @@
 /*
  * ARCHIVO  : Main.prg
  * PROPOSITO: Punto de entrada, inicializacion, login y menu principal.
+ *
+ * FLUJO DE ARRANQUE
+ * -----------------
+ * 1. InitApp()             configura entorno WVG, fuente, modo pantalla
+ * 2. _CrearTablasBoot()    crea SOLO USUARIOS + EMPRESA si no existen
+ *                          siembra usuario ADMIN/1234 si USUARIOS esta vacia
+ * 3. Login()               autenticacion obligatoria — sin ella nada mas
+ * 4. CheckEmpresa()        verifica NIF + Nombre configurados
+ *    → si falta → Empresa() formulario obligatorio
+ *    → si cancela sin guardar → App_Exit()
+ * 5. InicioDBF()           crea las tablas restantes + semillas (IVA, PGC...)
+ * 6. DesktopPaint()        barra de titulo con nombre de empresa
+ * 7. TMenu():Run()         bucle principal de la aplicacion
  */
 
 #include "OOp.ch"
@@ -12,6 +25,7 @@ MEMVAR cUserID, cUserNom, cUserRol, cEmpNom
 EXTERNAL Menu_Init
 EXTERNAL Login
 EXTERNAL InicioDBF
+EXTERNAL Empresa
 
 INIT PROCEDURE IniGlobales()
     PUBLIC cUserID  := Space( 10 )
@@ -40,37 +54,71 @@ FUNCTION Main()
     SET DELETED ON
     SET EXACT ON
 
-    // 1. Crear SOLO tabla EMPRESA si no existe
-    IF !_CrearEmpresaDBF()
-        MsgStop( "Error critico creando tabla EMPRESA.", "Inicio" )
+    // Directorio de datos: debe establecerse ANTES de cualquier
+    // operacion con tablas — incluidas las de arranque (USUARIOS, EMPRESA).
+    IF !DirExiste( ".\DATA" )
+        IF DirMake( ".\DATA" ) != 0
+            MsgStop( "No se pudo crear la carpeta DATA.", "Error critico" )
+            App_Exit()
+            RETURN NIL
+        ENDIF
+    ENDIF
+
+    rddSetDefault( "DBFCDX" )
+    SET DEFAULT TO ".\DATA"
+
+    // ------------------------------------------------------------------
+    // PASO 1: Crear USUARIOS y EMPRESA si no existen (tablas de arranque)
+    //         Estas dos tablas son necesarias ANTES del Login.
+    //         El resto se crea en InicioDBF() tras verificar la empresa.
+    // ------------------------------------------------------------------
+    IF !_CrearTablasBoot()
+        MsgStop( "Error critico creando tablas de arranque.", "Inicio" )
         App_Exit()
         RETURN NIL
     ENDIF
 
     DesktopPaint( "SISTEMA DE GESTION" )
 
-    // 2. Verificar datos de empresa ANTES de crear el resto
-    //    No dejar continuar hasta que se configure
-    DO WHILE !CheckEmpresa()
-        MsgInfo( "Debe configurar los datos de la empresa antes de continuar.", "Requerido" )
-        IF !FirstEmpresa()
+    // ------------------------------------------------------------------
+    // PASO 2: LOGIN — autenticacion obligatoria
+    //         Sin credenciales validas no se puede continuar.
+    //         Usuario por defecto: ADMIN / 1234
+    // ------------------------------------------------------------------
+    IF !Login()
+        App_Exit()
+        RETURN NIL
+    ENDIF
+
+    // ------------------------------------------------------------------
+    // PASO 3: VERIFICAR EMPRESA
+    //         Si NIF o Nombre estan vacios, mostrar formulario de alta.
+    //         Si el usuario cancela sin guardar datos validos → salir.
+    // ------------------------------------------------------------------
+    IF !CheckEmpresa()
+        Empresa()
+        IF !CheckEmpresa()
+            MsgStop( "La empresa debe estar configurada para iniciar el sistema.", ;
+                     "Configuracion requerida" )
             App_Exit()
             RETURN NIL
         ENDIF
-    ENDDO
+    ENDIF
 
-    // 3. Crear el resto de tablas
+    // ------------------------------------------------------------------
+    // PASO 4: CREAR RESTO DE TABLAS
+    //         InicioDBF() crea las 33 tablas restantes y siembra datos
+    //         iniciales (tipos IVA, plan contable PGC...).
+    // ------------------------------------------------------------------
     IF !InicioDBF()
         MsgStop( "Error critico en la inicializacion de tablas.", "Inicio" )
         App_Exit()
         RETURN NIL
     ENDIF
 
-    IF !Login()
-        App_Exit()
-        RETURN NIL
-    ENDIF
-
+    // ------------------------------------------------------------------
+    // PASO 5: MENU PRINCIPAL
+    // ------------------------------------------------------------------
     DesktopPaint( cEmpNom )
 
     aMenu := Menu_Init()
@@ -96,11 +144,16 @@ RETURN NIL
 
 // ============================================================================
 // CheckEmpresa()
+// Devuelve .T. si la tabla EMPRESA tiene un registro con NIF y Nombre
+// validos (no vacios y NIF distinto del placeholder de arranque).
+// Como efecto secundario actualiza la variable publica cEmpNom.
 // ============================================================================
 FUNCTION CheckEmpresa()
 
     LOCAL lOK
     LOCAL nArea
+    LOCAL cNif
+    LOCAL cNom
 
     MEMVAR cEmpNom
 
@@ -110,10 +163,11 @@ FUNCTION CheckEmpresa()
     IF ABRIR_TABLA( "EMPRESA", "EMP_CHK", "" )
         EMP_CHK->( DbGoTop() )
         IF !EMP_CHK->( Eof() ) .AND. !EMP_CHK->( Deleted() )
-            IF !Empty( AllTrim( EMP_CHK->NIF    ) ) .AND. ;
-               !Empty( AllTrim( EMP_CHK->NOMBRE ) )
+            cNif := AllTrim( EMP_CHK->NIF    )
+            cNom := AllTrim( EMP_CHK->NOMBRE )
+            IF !Empty( cNif ) .AND. !Empty( cNom )
                 lOK     := .T.
-                cEmpNom := AllTrim( EMP_CHK->NOMBRE )
+                cEmpNom := cNom
             ENDIF
         ENDIF
         EMP_CHK->( DbCloseArea() )
@@ -125,17 +179,156 @@ RETURN lOK
 
 
 // ============================================================================
-// _CrearEmpresaDBF()
-// Crea SOLO la tabla EMPRESA si no existe.
-// Devuelve .T. si todo bien.
+// DesktopPaint( cTitulo )
+// Pinta el fondo de escritorio con barra de titulo y barra de estado.
 // ============================================================================
-STATIC FUNCTION _CrearEmpresaDBF()
+FUNCTION DesktopPaint( cTitulo )
 
-    LOCAL aCampos  := {}
-    LOCAL aIndices := {}
-    LOCAL cDbf      := ".\DATA\EMPRESA.DBF"
+    LOCAL nMaxC
+    LOCAL nMaxR
+    LOCAL cInfo
 
-    IF File( cDbf )
+    MEMVAR cUserID, cUserRol
+
+    DEFAULT cTitulo TO "SISTEMA"
+
+    nMaxC := GfxMaxCol()
+    nMaxR := GfxMaxRow()
+
+    GfxLock()
+
+    GfxClear( 0, 0, nMaxR, nMaxC, CLR_WINDOW )
+
+    // Barra superior — titulo centrado
+    GfxClear( 0, 0, 0, nMaxC, "W+/B" )
+    GfxText( 0, Int( ( nMaxC - Len( cTitulo ) ) / 2 ), cTitulo, "W+/B" )
+
+    // Barra inferior — usuario, rol, fecha, hora
+    cInfo := " Usuario: " + AllTrim( cUserID ) + ;
+             "  Rol: "    + AllTrim( cUserRol ) + ;
+             "  "         + DToC( Date() ) + ;
+             "  "         + Time()
+
+    GfxClear( nMaxR, 0, nMaxR, nMaxC, "W+/B" )
+    GfxText( nMaxR, 1, PadR( cInfo, nMaxC ), "W+/B" )
+
+    GfxUnlock()
+
+RETURN NIL
+
+
+// ============================================================================
+// _CrearTablasBoot()
+// ----------------------------------------------------------------------------
+// Crea las dos tablas necesarias ANTES del Login:
+//   - USUARIOS : para poder autenticar
+//   - EMPRESA  : para poder verificar configuracion
+//
+// Si USUARIOS esta vacia siembra el usuario ADMIN/1234 con rol ADM.
+// Si EMPRESA no existe crea la tabla con un registro placeholder.
+//
+// Devuelve .T. si todo fue bien, .F. si hubo error critico.
+// ============================================================================
+STATIC FUNCTION _CrearTablasBoot()
+
+    LOCAL lOK
+
+    lOK := .T.
+
+    // El directorio DATA y rddSetDefault ya fueron establecidos en Main().
+    // Esta funcion solo crea las tablas si no existen.
+
+    IF !_BootUsuarios()
+        lOK := .F.
+    ENDIF
+
+    IF !_BootEmpresa()
+        lOK := .F.
+    ENDIF
+
+RETURN lOK
+
+
+// ----------------------------------------------------------------------------
+// _BootUsuarios()
+// Crea tabla USUARIOS si no existe y siembra ADMIN si esta vacia.
+// ----------------------------------------------------------------------------
+STATIC FUNCTION _BootUsuarios()
+
+    LOCAL aCampos
+    LOCAL aIdx
+    LOCAL cDbf
+
+    aCampos := {}
+    aIdx    := {}
+    cDbf    := "USUARIOS"
+
+    IF !File( cDbf + ".DBF" )
+
+        AAdd( aCampos, { "CODIGO",   "C", 10, 0 } )
+        AAdd( aCampos, { "NOMBRE",   "C", 40, 0 } )
+        AAdd( aCampos, { "CLAVE",    "C", 10, 0 } )
+        AAdd( aCampos, { "ROLID",    "C",  3, 0 } )
+        AAdd( aCampos, { "NIVEL",    "N",  1, 0 } )
+        AAdd( aCampos, { "FECHA_AL", "D",  8, 0 } )
+        AAdd( aCampos, { "ULT_ACCE", "D",  8, 0 } )
+        AAdd( aCampos, { "BAJA",     "L",  1, 0 } )
+
+        DbCreate( cDbf, aCampos )
+
+    ENDIF
+
+    IF !ABRIR_TABLA( cDbf, "USR_B", "USR_COD" )
+
+        // Intentar sin indice si falla (primera vez sin CDX)
+        IF !ABRIR_TABLA( cDbf, "USR_B", "" )
+            RETURN .F.
+        ENDIF
+
+    ENDIF
+
+    // Regenerar indice si no existe
+    IF File( cDbf + ".CDX" )
+        // ya existe
+    ELSE
+        USR_B->( OrdCreate( cDbf + ".CDX", "USR_COD", "CODIGO" ) )
+        USR_B->( OrdCreate( cDbf + ".CDX", "USR_NOM", "Upper(NOMBRE)" ) )
+    ENDIF
+
+    // Sembrar ADMIN si tabla vacia
+    IF USR_B->( LastRec() ) == 0
+        IF NetFLock()
+            USR_B->( DbAppend() )
+            REPLACE USR_B->CODIGO   WITH "ADMIN"
+            REPLACE USR_B->NOMBRE   WITH "Administrador"
+            REPLACE USR_B->CLAVE    WITH "1234"
+            REPLACE USR_B->ROLID    WITH "ADM"
+            REPLACE USR_B->NIVEL    WITH 9
+            REPLACE USR_B->FECHA_AL WITH Date()
+            REPLACE USR_B->ULT_ACCE WITH Date()
+            REPLACE USR_B->BAJA     WITH .F.
+            DbUnlock()
+        ENDIF
+    ENDIF
+
+    USR_B->( DbCloseArea() )
+
+RETURN .T.
+
+
+// ----------------------------------------------------------------------------
+// _BootEmpresa()
+// Crea tabla EMPRESA si no existe con un registro placeholder.
+// ----------------------------------------------------------------------------
+STATIC FUNCTION _BootEmpresa()
+
+    LOCAL aCampos
+    LOCAL cDbf
+
+    aCampos := {}
+    cDbf    := "EMPRESA"
+
+    IF File( cDbf + ".DBF" )
         RETURN .T.
     ENDIF
 
@@ -159,94 +352,21 @@ STATIC FUNCTION _CrearEmpresaDBF()
     AAdd( aCampos, { "PREFIJO",  "C",  3, 0 } )
     AAdd( aCampos, { "LOGO",     "C",120, 0 } )
     AAdd( aCampos, { "PIE_DOC",  "M", 10, 0 } )
-    AAdd( aIndices, { "EMP_NIF", "NIF" } )
 
-    DbCreate( cDbf, aCampos, "DBFCDX", .T., "EMP_TMP" )
+    DbCreate( cDbf, aCampos )
 
-    IF !NetFLock( "EMP_TMP", 0.5 )
-        MsgStop( "No se pudo bloquear EMPRESA temporal", "Error" )
+    IF !ABRIR_TABLA( cDbf, "EMP_B", "" )
         RETURN .F.
     ENDIF
 
-    DbAppend()
-    REPLACE EMP_TMP->NIF WITH "0000000000000"
-    REPLACE EMP_TMP->NOMBRE WITH "EMPRESA SIN CONFIGURAR"
-    DbUnlock()
-    DbCloseArea()
+    // Crear indice
+    EMP_B->( OrdCreate( cDbf + ".CDX", "EMP_NIF", "NIF" ) )
 
-    // Crear indices
-    IF !ABRIR_TABLA( "EMPRESA", "EMP_INI", "" )
-        RETURN .F.
-    ENDIF
+    // Tabla vacia intencionalmente — CheckEmpresa() detecta Eof()
+    // y fuerza el alta antes de continuar
 
-    EMP_INI->( DbClearIndex() )
-    AEval( aIndices, {|oIdx| EMP_INI->( ordCreate( , oIdx[1], oIdx[2], NIL, NIL, NIL, 1 ) ) } )
-    EMP_INI->( DbCloseArea() )
-
+    EMP_B->( DbCloseArea() )
 RETURN .T.
-
-
-// ============================================================================
-// DesktopPaint()
-// ============================================================================
-FUNCTION DesktopPaint( cTitulo )
-
-    LOCAL nMaxC
-    LOCAL nMaxR
-    LOCAL cInfo
-
-    MEMVAR cUserID, cUserRol
-
-    DEFAULT cTitulo TO "SISTEMA"
-
-    nMaxC := GfxMaxCol()
-    nMaxR := GfxMaxRow()
-
-    GfxLock()
-
-    GfxClear( 0, 0, nMaxR, nMaxC, CLR_WINDOW )
-
-    GfxClear( 0, 0, 0, nMaxC, "W+/B" )
-    GfxText( 0, Int( ( nMaxC - Len( cTitulo ) ) / 2 ), cTitulo, "W+/B" )
-
-    cInfo := " Usuario: " + AllTrim( cUserID ) + ;
-             "  Rol: "    + AllTrim( cUserRol ) + ;
-             "  "         + DToC( Date() ) + ;
-             "  "         + Time()
-
-    GfxClear( nMaxR, 0, nMaxR, nMaxC, "W+/B" )
-    GfxText( nMaxR, 1, PadR( cInfo, nMaxC ), "W+/B" )
-
-    GfxUnlock()
-
-RETURN NIL
-
-
-// ============================================================================
-// FirstEmpresa()
-// Forzar alta de empresa la primera vez.
-// Muestra el maestro completo (Empresa()).
-// Devuelve .T. si se guardaron datos validos.
-// ============================================================================
-FUNCTION FirstEmpresa()
-
-    LOCAL lOK := .F.
-
-    DO WHILE !lOK
-        // Mostrar maestro completo de empresa
-        Empresa()
-
-        lOK := CheckEmpresa()
-        IF !lOK
-            IF !MsgYesNo( "Debe ingresar los datos de la empresa para continuar." + Chr(13) + ;
-                          "NIF valido y Nombre no vacio son obligatorios." + Chr(13) + ;
-                          "Desea intentar de nuevo?", "Datos requeridos" )
-                EXIT
-            ENDIF
-        ENDIF
-    ENDDO
-
-RETURN lOK
 
 
 // ============================================================================

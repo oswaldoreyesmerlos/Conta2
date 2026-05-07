@@ -1,0 +1,317 @@
+================================================================================
+AUDITORIA FUNCIONAL DEL SISTEMA - MODELO DE NEGOCIO CONSTRUCCIÓN
+Fecha: 07/05/2026
+=================
+
+## OBJETIVO
+
+Adaptar el sistema actual para reflejar el flujo real de trabajo en construcción,
+garantizando coherencia operativa y cumplimiento fiscal en España.
+
+## PRINCIPIO FUNDAMENTAL
+
+* PRESUPUESTO → NO tiene efecto fiscal
+* FACTURA → SÍ tiene efecto fiscal
+
+El sistema debe garantizar esta separación en todo momento.
+
+================================================================================
+
+1. MODELO DE NEGOCIO IDENTIFICADO
+   ================================================================================
+
+FLUJO REAL DEL USUARIO:
+
+1. Crear PRESUPUESTO
+2. Cliente acepta o rechaza
+3. Si acepta → se ejecuta la OBRA
+4. Facturación:
+
+   * Anticipo (opcional)
+   * Certificaciones (parciales)
+   * Factura final
+5. Cobro asociado a factura
+6. Declaración de IVA en base a facturas emitidas
+
+OBJETIVO CLAVE:
+Evitar emitir facturas sin respaldo económico (cobro o ejecución real)
+
+================================================================================
+2. PROBLEMAS DEL SISTEMA ACTUAL
+===============================
+
+[CRITICO]
+
+* No existe entidad OBRA (todo cuelga de presupuesto)
+* Facturación demasiado directa desde presupuesto
+* No hay control de facturación parcial (certificaciones)
+* No hay control de importes ya facturados vs pendientes
+
+[IMPORTANTE]
+
+* No existe modelo de cobros real
+* Condiciones de pago son texto, no datos
+* No hay control de estado económico (pendiente/cobrado)
+
+[MEJORA]
+
+* No distingue entre precio cerrado y medición
+* No controla margen (coste vs venta)
+* No hay trazabilidad completa del flujo
+
+================================================================================
+3. MODELO PROPUESTO (ARQUITECTURA)
+==================================
+
+RELACIÓN PRINCIPAL:
+
+PRESUPUESTO → OBRA → FACTURA → COBRO
+
+---
+
+## 3.1 PRESUPUESTO (sin impacto fiscal)
+
+Estados:
+
+* BORRADOR
+* ACEPTADO
+* RECHAZADO
+
+Funciones:
+
+* Crear / editar
+* Generar PDF
+* Definir condiciones (anticipo, tipo de pago)
+
+---
+
+## 3.2 OBRA (nueva entidad clave)
+
+Representa la ejecución real del trabajo
+
+Campos:
+
+* ID
+* ID_PRESUPUESTO
+* TOTAL
+* FACTURADO
+* PENDIENTE
+* ESTADO (EN_CURSO / FINALIZADA)
+
+Funciones:
+
+* Crear automáticamente al aceptar presupuesto
+* Controlar avance económico
+* Base para facturación
+
+---
+
+## 3.3 FACTURACION
+
+Tipos:
+
+* Anticipo
+* Certificación (parcial)
+* Final
+
+Reglas:
+
+* No facturar más de lo pendiente
+* Siempre vinculada a OBRA
+* Genera IVA (477) e ingreso
+
+Estados:
+
+* EMITIDA
+* COBRADA
+* PENDIENTE
+* IMPAGADA
+
+---
+
+## 3.4 COBROS (tesorería)
+
+Campos:
+
+* ID
+* ID_FACTURA
+* FECHA
+* IMPORTE
+
+Funciones:
+
+* Registrar cobros parciales o totales
+* Cambiar estado de factura automáticamente
+
+================================================================================
+4. FUNCIONALIDAD CLAVE A IMPLEMENTAR
+====================================
+
+[ALTA PRIORIDAD]
+
+1. Crear entidad OBRA
+2. Convertir presupuesto aceptado → OBRA
+3. Función FacturarCertificacion()
+4. Control de importe pendiente
+5. Tabla COBROS + registro de pagos
+6. Estado automático de facturas
+
+[MEDIA PRIORIDAD]
+
+7. Parametrizar condiciones de pago:
+
+   * Anticipo %
+   * Tipo (cerrado / certificación)
+8. Generación automática de cobros previstos
+9. Control de IVA según factura
+
+[BAJA PRIORIDAD / EVOLUTIVO]
+
+10. Soporte medición (m2, ml, etc.)
+11. Modelo híbrido (coste interno vs precio venta)
+12. Control de márgenes
+13. Certificaciones por porcentaje
+
+================================================================================
+5. REGLAS DE NEGOCIO (OBLIGATORIAS)
+===================================
+
+* Un presupuesto NO genera asiento contable
+* Una factura SIEMPRE genera impacto fiscal
+* No se puede facturar sin obra asociada
+* No se puede facturar más de lo ejecutado
+* Todo cobro debe estar asociado a una factura
+* Anticipos deben facturarse (legalmente obligatorio)
+
+================================================================================
+6. BENEFICIOS DEL MODELO PROPUESTO
+==================================
+
+* Evita adelantar IVA innecesariamente
+* Alineado con normativa española
+* Refleja la realidad del trabajo en obra
+* Permite certificaciones (clave en construcción)
+* Mejora control financiero y de tesorería
+* Escalable a proyectos más grandes
+
+================================================================================
+7. CONCLUSION
+=============
+
+El sistema actual es funcional para gestión básica, pero necesita evolucionar
+de un modelo "facturación directa" a un modelo "gestión de obra".
+
+La incorporación de la entidad OBRA y la facturación por certificaciones
+es crítica para:
+
+* coherencia operativa
+* control económico
+* cumplimiento fiscal
+
+================================================================================
+FIN DE AUDITORIA
+================
+
+
+
+
+🧱 PROPUESTA (sin romper tu sistema)
+
+No vamos a rehacer nada.
+
+👉 Vamos a extender tu modelo
+
+🧩 1. NUEVA TABLA: OBRA (CLAVE)
+
+Añadir en InicioDBF:
+
+// -- XX. OBRA --
+aCampos  := {}
+aIndices := {}
+
+AAdd( aCampos, { "ID",        "C", 10, 0 } )
+AAdd( aCampos, { "NUM_PRE",   "C", 10, 0 } )
+AAdd( aCampos, { "CLIENTE_",  "C", 10, 0 } )
+AAdd( aCampos, { "FECHA_IN",  "D",  8, 0 } )
+AAdd( aCampos, { "FECHA_FIN", "D",  8, 0 } )
+AAdd( aCampos, { "TOTAL",     "N", 12, 2 } )
+AAdd( aCampos, { "FACTURADO", "N", 12, 2 } )
+AAdd( aCampos, { "ESTADO",    "C",  1, 0 } ) // P=pendiente E=en curso F=finalizada
+
+AAdd( aIndices, { "OBR_ID",  "ID" } )
+AAdd( aIndices, { "OBR_PRE", "NUM_PRE" } )
+AAdd( aIndices, { "OBR_CLI", "CLIENTE_" } )
+
+AAdd( aTablas, { "OBRA", aCampos, aIndices } )
+🧩 2. AJUSTE EN FACTURA (mínimo y potente)
+
+Añadir campo:
+
+AAdd( aCampos, { "ID_OBRA", "C", 10, 0 } )
+AAdd( aCampos, { "TIPO_FAC","C", 1, 0 } ) // A=anticipo C=certif F=final
+
+👉 Esto te cambia todo el sistema sin romper nada
+
+🧩 3. MEJORAR PRESUPUESTO (muy poco cambio)
+
+Añadir:
+
+AAdd( aCampos, { "TIPO", "C", 1, 0 } ) // C=cerrado M=medicion
+
+👉 opcional pero muy útil
+
+🧩 4. CONTROL DE FACTURACIÓN (la clave real)
+
+Nueva lógica (no tabla):
+
+nFacturado := SUM( FACTURA->TOTAL WHERE ID_OBRA == cId )
+nPendiente := OBRA->TOTAL - nFacturado
+🔥 LO MÁS IMPORTANTE DE TODO
+
+👉 NO necesitas tocar:
+
+RECIBOS ✔
+RC_DETAL ✔
+CONTABILIDAD ✔
+
+👉 Ya lo tienes bien
+
+🧠 CAMBIO CONCEPTUAL (muy importante)
+
+Tu sistema pasa de:
+
+PRESUPUESTO → FACTURA
+
+a:
+
+PRESUPUESTO → OBRA → FACTURA → RECIBO
+💡 VENTAJAS INMEDIATAS
+
+Con solo estos cambios:
+
+✔ puedes hacer certificaciones reales
+✔ controlas pendiente
+✔ no facturas de más
+✔ no adelantas IVA
+✔ todo encaja con Hacienda
+
+⚠️ COSA QUE HARÍA SÍ O SÍ
+
+Eliminar dependencia fuerte de:
+
+FACTURA.NUM_PRE
+
+👉 mantenerlo solo como referencia
+👉 la relación real debe ser:
+
+FACTURA.ID_OBRA
+🎯 CONCLUSIÓN
+
+Tu sistema:
+
+👉 NO necesita rehacerse
+👉 necesita una capa de negocio encima
+
+Y esa capa es:
+
+👉 OBRA + control de certificaciones

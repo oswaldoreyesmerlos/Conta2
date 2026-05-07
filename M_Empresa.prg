@@ -112,10 +112,10 @@ FUNCTION Empresa()
     oWin:AddCtrl( TLabel():New( 24,  2, "IBAN Principal   :", oWin ) )
     oWin:AddCtrl( TLabel():New( 26,  2, "Prefijo docs     :", oWin ) )
 
-    oWin:AddCtrl( TLabel():New(  2, 65, "Tomo   :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  4, 65, "Folio  :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  6, 65, "Hoja   :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  8, 65, "Seccion:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  2, 84, "Tomo   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4, 84, "Folio  :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6, 84, "Hoja   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  8, 84, "Seccion:", oWin ) )
 
     oGNif  := TGet():New(  2, 21, cNif,    "@!",    oWin )
     oGNif:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
@@ -135,10 +135,10 @@ FUNCTION Empresa()
     oGIban := TGet():New( 24, 21, cIban,    "@!",    oWin )
     oGPref := TGet():New( 26, 21, cPrefijo, "@!",    oWin )
 
-    oGTomo := TGet():New(  2, 74, cTomo,    "@!", oWin )
-    oGFol  := TGet():New(  4, 74, cFolio,   "@!", oWin )
-    oGHoja := TGet():New(  6, 74, cHoja,    "@!", oWin )
-    oGSec  := TGet():New(  8, 74, cSeccion, "@!", oWin )
+    oGTomo := TGet():New(  2, 93, cTomo,    "@!", oWin )
+    oGFol  := TGet():New(  4, 93, cFolio,   "@!", oWin )
+    oGHoja := TGet():New(  6, 93, cHoja,    "@!", oWin )
+    oGSec  := TGet():New(  8, 93, cSeccion, "@!", oWin )
 
     oBtGua := TButton():New( 30, 35, 31, 54, oWin, "GUARDAR", ;
         {|| _EmpGuardar( oGNif, oGNom, oGDir, oGCiu, oGPro, ;

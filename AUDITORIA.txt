@@ -1,0 +1,169 @@
+================================================================================
+AUDITORIA DEL SISTEMA - FUNCIONES DE GESTION POR APARTADO DE MENU
+Fecha: 06/05/2026
+================================================================================
+
+LEYENDA
+  [OK]      Implementado y conectado al menu
+  [FALTA]   Requerido por el menu pero no implementado
+  [PARCIAL] Implementado pero incompleto (ver nota)
+  [EXTRA]   Implementado pero no accesible desde el menu todavia
+
+================================================================================
+MENU: MAESTROS
+================================================================================
+
+  CLIENTES
+  --------
+  [OK]      ClientesView()                     Listado / busqueda
+  [OK]      ClientesForm( lNuevo, cId )        Alta y edicion
+
+  PROVEEDORES
+  -----------
+  [OK]      ProveedView()                      Listado / busqueda
+  [OK]      ProveedForm( lNuevo, cId )         Alta y edicion
+
+  ARTICULOS
+  ---------
+  [OK]      ArticulosView()                    Listado / inventario
+  [OK]      ArticulosForm( lNuevo, cCodigo )   Alta y edicion
+
+  VENDEDORES
+  ----------
+  [OK]      VendedoresView()                   Listado
+  [OK]      VendedoresForm( lNuevo, cId )      Alta y edicion
+
+  FAMILIAS
+  --------
+  [OK]      M_Familias()                       ABM familias de articulos
+
+  FORMAS DE PAGO
+  --------------
+  [OK]      M_FormaPago()                      ABM formas de pago
+
+  TIPOS IVA
+  ---------
+  [OK]      M_TiposIva()                       ABM tipos de IVA
+
+  EMPRESA  (solo ADM)
+  -------------------
+  [OK]      Empresa()                          Alta y edicion datos empresa
+
+================================================================================
+MENU: VENTAS
+================================================================================
+
+  PRESUPUESTOS
+  ------------
+  [OK]      PresupuestosView()                 Listado de presupuestos
+  [OK]      AltaPresupuesto()                  Nuevo presupuesto
+  [OK]      ImprimirPresupuesto( cNumero )     Genera HTML + abre navegador
+  [FALTA]   PresupuestosForm( cNumero )        Edicion de presupuesto existente
+  [FALTA]   ConvertirAFactura( cNumPre )       Convertir presupuesto en factura
+
+  FACTURAS
+  --------
+  [OK]      FacturasView()                     Listado de facturas
+  [OK]      AltaFact()                         Nueva factura directa
+  [OK]      AltaFactDesdePre( cNumPre )        Factura desde presupuesto
+  [OK]      ImprimirFactura( cNumero )         Genera HTML + abre navegador
+  [FALTA]   AnularFactura( cNumero )           Anulacion con trazabilidad
+
+================================================================================
+MENU: TESORERIA  (solo ADM/CAJA)
+================================================================================
+
+  BANCOS / CAJA
+  -------------
+  [OK]      TesoreriaView()                    Listado cuentas bancarias
+  [FALTA]   MovimientosTesoreria( cBanco )     Movimientos por cuenta
+  [FALTA]   CobrosView()                       Gestion de cobros / vencimientos
+  [FALTA]   PagosView()                        Gestion de pagos a proveedores
+
+================================================================================
+MENU: CONTABILIDAD  (solo ADM/CONT)
+================================================================================
+
+  PLAN DE CUENTAS
+  ---------------
+  [OK]      PlanCuentasView()                  Listado del plan contable
+  [OK]      PlanCuentasForm( cCuenta )         Alta y edicion de cuenta
+  [FALTA]   CierreEjercicio()                  Cierre contable anual
+
+  LIBRO DIARIO
+  ------------
+  [OK]      LibroDiarioView()                  Consulta y alta de asientos
+  [FALTA]   AsientoAutomatico( cTipo, cDoc )   Generacion automatica desde docs
+
+  CENTROS DE COSTE
+  ----------------
+  [OK]      M_CCostes()                        ABM centros de coste
+
+================================================================================
+MENU: INFORMES
+================================================================================
+
+  [OK]      InformeClientes()                  Listado HTML de clientes
+  [OK]      InformeFacturas()                  Listado HTML de facturas
+  [OK]      InformeArticulos()                 Listado HTML de articulos
+  [OK]      InformePresupuestos()              Listado HTML de presupuestos
+  [FALTA]   InformeVencimientos()              Vencimientos pendientes de cobro
+  [FALTA]   InformeProveedores()               Listado de proveedores
+  [FALTA]   InformeStockMinimo()               Articulos por debajo de stock min
+  [FALTA]   InformeDiario()                    Libro diario contable imprimible
+
+================================================================================
+MENU: SISTEMA
+================================================================================
+
+  USUARIOS  (solo ADM)
+  --------------------
+  [OK]      UsuariosView()                     Listado de usuarios
+  [PARCIAL] UsuariosForm( cCodigo )            Alta/edicion — falta baja logica
+                                               y cambio de clave por el propio usuario
+
+  ROLES  (solo ADM)
+  -----------------
+  [OK]      RolesEdit()                        ABM de roles
+
+  SALIR
+  -----
+  [OK]      App_Exit()                         Cierre limpio
+
+================================================================================
+MODULOS IMPLEMENTADOS SIN ENTRADA EN MENU ACTUAL
+================================================================================
+
+  [EXTRA]   ImprimirPresup( cNumero )          En V_Imprimir — llamado interno
+  [EXTRA]   OS_Open( cFile )                   Utilidad apertura SO — interna
+  [EXTRA]   InicioDBF_Empresa()               En InicioDBF — no se usa en el flujo actual
+
+================================================================================
+RESUMEN
+================================================================================
+
+  Total opciones de menu activas          : 28
+  Funciones OK (implementadas)            : 24
+  Funciones FALTA (pendientes)            : 11
+  Funciones PARCIAL                       :  1
+  Funciones EXTRA (implementadas, sin menu):  3
+
+================================================================================
+PENDIENTES PRIORITARIOS (por impacto en el flujo de negocio)
+================================================================================
+
+  1. ConvertirAFactura( cNumPre )        VENTAS — flujo principal del negocio
+  2. CobrosView()                        TESORERIA — gestion de vencimientos
+  3. AnularFactura( cNumero )            VENTAS — obligatorio para correccion
+  4. MovimientosTesoreria()              TESORERIA — sin esto el modulo esta vacio
+  5. InformeVencimientos()               INFORMES — critico para seguimiento cobros
+  6. AsientoAutomatico()                 CONTABILIDAD — automatizar desde facturas
+  7. PagosView()                         TESORERIA — pagos a proveedores
+  8. InformeProveedores()                INFORMES — complemento basico
+  9. InformeStockMinimo()                INFORMES — util para reposicion
+ 10. CierreEjercicio()                   CONTABILIDAD — necesario fin de año
+ 11. InformeDiario()                     INFORMES — impresion libro diario
+
+================================================================================
+FIN DE AUDITORIA
+================================================================================

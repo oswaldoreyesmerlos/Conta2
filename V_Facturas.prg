@@ -76,11 +76,18 @@ FUNCTION FacturasView()
     oLbl := TLabel():New( 32, 2, ;
         "ENTER: ver/editar   F5: nueva factura   Letras: buscar cliente", oWin )
 
-    oBtNvo := TButton():New( 33, 2, 34, 18, oWin, "NUEVA (F5)", ;
+    oBtNvo := TButton():New( 33,  2, 34, 18, oWin, "NUEVA (F5)", ;
         {|| AltaFact(), ;
             aData := _FacCargar(), ;
             oGrid:aData := aData, ;
             oGrid:nCurRow := Len( aData ), ;
+            oGrid:Paint() } )
+
+    oBtAbo := TButton():New( 33, 20, 34, 38, oWin, "NOTA ABONO", ;
+        {|| If( oGrid:CurrentRow() != NIL, ;
+               NotaAbonoForm( oGrid:CurrentRow()[1] ), NIL ), ;
+            aData := _FacCargar(), ;
+            oGrid:aData := aData, ;
             oGrid:Paint() } )
 
     oBtSal := TButton():New( 33, 108, 34, 124, oWin, "CERRAR", ;
@@ -89,6 +96,7 @@ FUNCTION FacturasView()
     oWin:AddCtrl( oGrid  )
     oWin:AddCtrl( oLbl   )
     oWin:AddCtrl( oBtNvo )
+    oWin:AddCtrl( oBtAbo )
     oWin:AddCtrl( oBtSal )
 
     oWin:Run()
@@ -959,6 +967,372 @@ STATIC FUNCTION _FacMarcarPresup( cNumPre, cNumFac )
     ENDIF
 
     PRE_M->( DbCloseArea() )
+
+RETURN NIL
+
+
+
+// ============================================================================
+// NotaAbonoForm( cNumFac )
+// ----------------------------------------------------------------------------
+// Genera una nota de abono (nota de credito) que revierte una factura.
+//
+// Reglas:
+//   - Solo se puede abonar una factura que NO tenga ya nota de abono
+//   - El documento generado es NOTASDC con TIPO="C" (credito)
+//   - REF_DOC apunta a la factura original
+//   - Las lineas se copian de FACTUR_DE con importes en negativo
+//   - Se genera asiento contable inverso al de la factura
+//   - La factura queda marcada: ANULADA=.T., NUM_ABONO=numero NA
+//   - Si la factura estaba cobrada, se revierte tambien el cobro
+// ============================================================================
+FUNCTION NotaAbonoForm( cNumFac )
+
+    LOCAL cNumFac_
+    LOCAL cCliID
+    LOCAL cCliNom
+    LOCAL dFecha
+    LOCAL cMotivo
+    LOCAL nSubtotal
+    LOCAL nIva
+    LOCAL nRet
+    LOCAL nTotal
+    LOCAL cCtaCli
+    LOCAL aLineas
+    LOCAL oWin
+    LOCAL oGrid
+    LOCAL oLFac
+    LOCAL oLCli
+    LOCAL oGFec
+    LOCAL oGMot
+    LOCAL oLBase
+    LOCAL oLIva
+    LOCAL oLTotal
+    LOCAL oBtGua
+    LOCAL oBtCan
+
+    cNumFac_  := AllTrim( cNumFac )
+    cCliID    := ""
+    cCliNom   := ""
+    dFecha    := Date()
+    cMotivo   := Space( 80 )
+    nSubtotal := 0
+    nIva      := 0
+    nRet      := 0
+    nTotal    := 0
+    cCtaCli   := ""
+    aLineas   := {}
+
+    IF Empty( cNumFac_ )
+        MsgStop( "Seleccione una factura.", "Nota de Abono" )
+        RETURN NIL
+    ENDIF
+
+    // Verificar que la factura existe y no tiene ya abono
+    IF !ABRIR_TABLA( "FACTURA", "FAC_NA", "FAC_NUM" )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "FAC_NA" )
+    OrdSetFocus( "FAC_NUM" )
+
+    IF !DbSeek( PadR( "A", 4 ) + PadR( cNumFac_, 10 ) )
+        FAC_NA->( DbCloseArea() )
+        MsgStop( "Factura " + cNumFac_ + " no encontrada.", "Nota de Abono" )
+        RETURN NIL
+    ENDIF
+
+    IF !Empty( AllTrim( FAC_NA->NUM_ABONO ) )
+        FAC_NA->( DbCloseArea() )
+        MsgStop( "Esta factura ya tiene nota de abono: " + ;
+                 AllTrim( FAC_NA->NUM_ABONO ), "Nota de Abono" )
+        RETURN NIL
+    ENDIF
+
+    cCliID    := AllTrim( FAC_NA->CLIENTE_ )
+    nSubtotal := FAC_NA->SUBTOTAL
+    nIva      := FAC_NA->IVA
+    nRet      := FAC_NA->RETENCIO
+    nTotal    := FAC_NA->TOTAL
+
+    FAC_NA->( DbCloseArea() )
+
+    // Cargar nombre y cuenta contable del cliente
+    IF ABRIR_TABLA( "CLIENTES", "CLI_NA", "CLI_ID" )
+        IF CLI_NA->( DbSeek( cCliID ) )
+            cCliNom := AllTrim( CLI_NA->NOMBRE + " " + CLI_NA->APELLIDO )
+            cCtaCli := AllTrim( CLI_NA->CTA_CONT )
+        ENDIF
+        CLI_NA->( DbCloseArea() )
+    ENDIF
+
+    // Cargar lineas de la factura
+    _NaCargarLineas( cNumFac_, @aLineas )
+
+    // Formulario
+    oWin := TWindow():New( 3, 10, 30, 120, "NOTA DE ABONO — Factura: " + cNumFac_ )
+
+    oWin:AddCtrl( TLabel():New( 2,  2, "Factura orig. :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 4,  2, "Cliente       :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 6,  2, "Fecha abono   :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 8,  2, "Motivo        :", oWin ) )
+
+    oLFac := TLabel():New( 2, 18, PadR( cNumFac_, 12 ), oWin )
+    oLFac:cColor := "W+/B"
+    oWin:AddCtrl( oLFac )
+
+    oLCli := TLabel():New( 4, 18, PadR( cCliNom, 50 ), oWin )
+    oWin:AddCtrl( oLCli )
+
+    oGFec := TGet():New( 6, 18, dFecha,   "99/99/9999", oWin )
+    oGMot := TGet():New( 8, 18, cMotivo,  "@!",         oWin )
+    oGMot:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) .OR. ;
+        ( MsgStop( "El motivo del abono es obligatorio.", "Validacion" ), .F. ) }
+
+    oWin:AddCtrl( TLabel():New( 12, 2, "Lineas de la factura (se abonan en su totalidad):", oWin ) )
+
+    // Grid de lineas (solo lectura)
+    oGrid := TGrid():New( 13, 2, 20, 106, oWin )
+    oGrid:aData := aLineas
+    oGrid:AddColumn( "#",          3, "999",      { |a| a[1] } )
+    oGrid:AddColumn( "Descripcion",53, "@!",       { |a| a[2] } )
+    oGrid:AddColumn( "Cantidad",   8, "9,999.99", { |a| a[3] } )
+    oGrid:AddColumn( "Precio",    10, "9,999.99", { |a| a[4] } )
+    oGrid:AddColumn( "IVA %",      6, "99.99",    { |a| a[6] } )
+    oGrid:AddColumn( "Importe",   12, "99,999.99",{ |a| a[7] } )
+
+    oWin:AddCtrl( TLabel():New( 22, 2,  "BASE:", oWin ) )
+    oWin:AddCtrl( TLabel():New( 23, 2,  "IVA :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 24, 2,  "TOTAL:", oWin ) )
+
+    oLBase  := TLabel():New( 22, 10, Transform( nSubtotal, "999,999.99" ) + " EUR", oWin )
+    oLIva   := TLabel():New( 23, 10, Transform( nIva,      "999,999.99" ) + " EUR", oWin )
+    oLTotal := TLabel():New( 24, 10, Transform( nTotal,    "999,999.99" ) + " EUR", oWin )
+    oLTotal:cColor := "W+/B"
+
+    oWin:AddCtrl( oLBase  )
+    oWin:AddCtrl( oLIva   )
+    oWin:AddCtrl( oLTotal )
+
+    oBtGua := TButton():New( 25, 10, 26, 30, oWin, "EMITIR NOTA ABONO", ;
+        {|| _NaGuardar( cNumFac_, cCliID, cCtaCli, oGFec, oGMot, ;
+                        aLineas, nSubtotal, nIva, nRet, nTotal, oWin ) } )
+
+    oBtCan := TButton():New( 25, 75, 26, 90, oWin, "CANCELAR", ;
+        {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGFec   )
+    oWin:AddCtrl( oGMot   )
+    oWin:AddCtrl( oGrid   )
+    oWin:AddCtrl( oBtGua  )
+    oWin:AddCtrl( oBtCan  )
+
+    oWin:Run()
+
+RETURN NIL
+
+
+STATIC FUNCTION _NaCargarLineas( cNumFac, aLins )
+
+    LOCAL nL
+
+    nL   := 0
+    aLins := {}
+
+    IF !ABRIR_TABLA( "FACTUR_DE", "FAC_NL", "FAC_LIN" )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "FAC_NL" )
+    OrdSetFocus( "FAC_LIN" )
+    DbSeek( PadR( "A", 4 ) + PadR( cNumFac, 10 ) )
+
+    DO WHILE !Eof() .AND. AllTrim( FAC_NL->NUMERO ) == cNumFac
+        IF !Deleted()
+            nL++
+            AAdd( aLins, { nL, AllTrim( FAC_NL->DESCRIPC ), ;
+                FAC_NL->CANTIDAD, FAC_NL->PRECIO, ;
+                FAC_NL->DESCUENT, FAC_NL->PORC_IVA, ;
+                FAC_NL->IMPORTE } )
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    FAC_NL->( DbCloseArea() )
+
+RETURN NIL
+
+
+STATIC FUNCTION _NaGuardar( cNumFac, cCliID, cCtaCli, oGFec, oGMot, ;
+                              aLins, nBase, nIva, nRet, nTotal, oWin )
+
+    LOCAL cNumNA
+    LOCAL dFec
+    LOCAL cMotivo
+    LOCAL cCtaDebe
+    LOCAL i
+
+    dFec    := oGFec:uVar
+    cMotivo := AllTrim( oGMot:uVar )
+
+    IF Empty( cMotivo )
+        MsgStop( "El motivo del abono es obligatorio.", "Validacion" )
+        RETURN NIL
+    ENDIF
+
+    IF !MsgYesNo( "Emitir nota de abono por " + ;
+                  Transform( nTotal, "999,999.99" ) + " EUR?" + Chr(13) + ;
+                  "Esta accion no se puede deshacer.", "Confirmar" )
+        RETURN NIL
+    ENDIF
+
+    // Numero de nota de abono
+    cNumNA := GetNextNum( "NA" + AllTrim( Str( Year( Date() ) ) ), "Notas Abono" )
+    IF Empty( cNumNA )
+        RETURN NIL
+    ENDIF
+
+    // Cuenta de debe: 570 Caja o la que sea (en abono la devolucion va al cliente)
+    // D  430xxxxxxx   nTotal   (eliminamos la deuda del cliente)
+    // H  700/ingresos nBase    (menor ingreso)
+    // H  477 IVA      nIva     (IVA repercutido negativo)
+    cCtaDebe := If( Empty( cCtaCli ), "430", cCtaCli )
+
+    // Grabar cabecera NOTASDC
+    IF !ABRIR_TABLA( "NOTASDC", "NDC_G", "NDC_NUM" )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "NDC_G" )
+
+    IF !NetFLock()
+        NDC_G->( DbCloseArea() )
+        RETURN NIL
+    ENDIF
+
+    DbAppend()
+    REPLACE NDC_G->NUMERO   WITH cNumNA
+    REPLACE NDC_G->SERIE    WITH "NA"
+    REPLACE NDC_G->TIPO     WITH "C"
+    REPLACE NDC_G->CLIENTE_ WITH cCliID
+    REPLACE NDC_G->FECHA    WITH dFec
+    REPLACE NDC_G->FECHA_OP WITH Date()
+    REPLACE NDC_G->REF_DOC  WITH cNumFac
+    REPLACE NDC_G->MOTIVO   WITH cMotivo
+    REPLACE NDC_G->SUBTOTAL WITH nBase
+    REPLACE NDC_G->IVA      WITH nIva
+    REPLACE NDC_G->RETENCIO WITH nRet
+    REPLACE NDC_G->TOTAL    WITH nTotal
+    REPLACE NDC_G->ESTADO   WITH "E"
+    REPLACE NDC_G->OBSERVA  WITH "Abono factura " + cNumFac
+    DbUnlock()
+
+    NDC_G->( DbCloseArea() )
+
+    // Grabar lineas en NOTASD_DE con importes negativos
+    IF ABRIR_TABLA( "NOTASD_DE", "NDD_G", "NDC_LIN" )
+        DbSelectArea( "NDD_G" )
+        IF NetFLock()
+            FOR i := 1 TO Len( aLins )
+                DbAppend()
+                REPLACE NDD_G->NUMERO   WITH cNumNA
+                REPLACE NDD_G->LINEA    WITH i
+                REPLACE NDD_G->DESCRIPC WITH aLins[i,2]
+                REPLACE NDD_G->CANTIDAD WITH aLins[i,3]
+                REPLACE NDD_G->PRECIO   WITH aLins[i,4]
+                REPLACE NDD_G->DESCUENT WITH aLins[i,5]
+                REPLACE NDD_G->IMPORTE  WITH -aLins[i,7]
+                REPLACE NDD_G->PORC_IVA WITH aLins[i,6]
+            NEXT
+            DbUnlock()
+        ENDIF
+        NDD_G->( DbCloseArea() )
+    ENDIF
+
+    // Marcar factura como anulada con referencia al abono
+    IF ABRIR_TABLA( "FACTURA", "FAC_NA2", "FAC_NUM" )
+        DbSelectArea( "FAC_NA2" )
+        OrdSetFocus( "FAC_NUM" )
+        IF DbSeek( PadR( "A", 4 ) + PadR( cNumFac, 10 ) ) .AND. NetRLock()
+            REPLACE FAC_NA2->ANULADA   WITH .T.
+            REPLACE FAC_NA2->NUM_ABONO WITH cNumNA
+            DbUnlock()
+        ENDIF
+        FAC_NA2->( DbCloseArea() )
+    ENDIF
+
+    // Asiento contable inverso
+    _NaAsiento( cNumNA, dFec, cCliID, cCtaDebe, nBase, nIva, nTotal, ;
+                "Nota abono " + cNumNA + " / Fac " + cNumFac )
+
+    MsgInfo( "Nota de abono " + cNumNA + " emitida correctamente." + Chr(13) + ;
+             "Factura " + cNumFac + " marcada como abonada.", "Nota de Abono" )
+
+    oWin:Close()
+
+RETURN NIL
+
+
+STATIC FUNCTION _NaAsiento( cNumNA, dFec, cCliID, cCtaCli, ;
+                              nBase, nIva, nTotal, cConcepto )
+
+    LOCAL cAsi
+    LOCAL cCta700
+
+    cAsi   := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    cCta700 := "700"
+
+    IF Empty( cAsi ) .OR. !ABRIR_TABLA( "LDIARIO", "DIA_NA", "DIA_ASI" )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "DIA_NA" )
+
+    IF NetFLock()
+
+        // D 430xxxxxxx — eliminamos deuda del cliente (abono)
+        DbAppend()
+        REPLACE DIA_NA->D_ASIENT WITH cAsi
+        REPLACE DIA_NA->D_LINEA  WITH 1
+        REPLACE DIA_NA->D_FECHA  WITH dFec
+        REPLACE DIA_NA->D_CUENTA WITH cCtaCli
+        REPLACE DIA_NA->D_DEBE   WITH nTotal
+        REPLACE DIA_NA->D_HABER  WITH 0
+        REPLACE DIA_NA->D_DESCRI WITH cConcepto
+        REPLACE DIA_NA->TIP_ORIG WITH "NA"
+        REPLACE DIA_NA->DOC_ORIG WITH cNumNA
+
+        // H 700 — menor ingreso por ventas
+        DbAppend()
+        REPLACE DIA_NA->D_ASIENT WITH cAsi
+        REPLACE DIA_NA->D_LINEA  WITH 2
+        REPLACE DIA_NA->D_FECHA  WITH dFec
+        REPLACE DIA_NA->D_CUENTA WITH cCta700
+        REPLACE DIA_NA->D_DEBE   WITH 0
+        REPLACE DIA_NA->D_HABER  WITH nBase
+        REPLACE DIA_NA->D_DESCRI WITH cConcepto
+        REPLACE DIA_NA->TIP_ORIG WITH "NA"
+        REPLACE DIA_NA->DOC_ORIG WITH cNumNA
+
+        // H 477 — IVA repercutido negativo
+        IF nIva > 0
+            DbAppend()
+            REPLACE DIA_NA->D_ASIENT WITH cAsi
+            REPLACE DIA_NA->D_LINEA  WITH 3
+            REPLACE DIA_NA->D_FECHA  WITH dFec
+            REPLACE DIA_NA->D_CUENTA WITH "477"
+            REPLACE DIA_NA->D_DEBE   WITH 0
+            REPLACE DIA_NA->D_HABER  WITH nIva
+            REPLACE DIA_NA->D_DESCRI WITH cConcepto
+            REPLACE DIA_NA->TIP_ORIG WITH "NA"
+            REPLACE DIA_NA->DOC_ORIG WITH cNumNA
+        ENDIF
+
+        DbUnlock()
+
+    ENDIF
+
+    DIA_NA->( DbCloseArea() )
 
 RETURN NIL
 

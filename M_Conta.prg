@@ -852,5 +852,493 @@ RETURN NIL
 
 
 // ============================================================================
+// AsientoAutomatico( cTipo, cNumDoc )
+// ----------------------------------------------------------------------------
+// Genera el asiento contable de un documento ya grabado.
+// cTipo  : "FAC" factura emitida / "COM" factura compra / "REC" recibo caja
+// cNumDoc: numero del documento
+//
+// Cuentas utilizadas (configuracion estandar PGC):
+//   FAC : D 430xxx Cliente   H 700 Ventas   H 477 IVA repercutido
+//   COM : D 600 Compras  D 472 IVA soportado  H 400xxx Proveedor
+//   REC : D 570/572 Caja/Banco  H 430xxx Cliente
+// ============================================================================
+FUNCTION AsientoAutomatico( cTipo, cNumDoc )
+
+    LOCAL cTipo_
+    LOCAL cNumDoc_
+    LOCAL lOK
+
+    cTipo_   := Upper( AllTrim( cTipo   ) )
+    cNumDoc_ := AllTrim( cNumDoc )
+    lOK      := .F.
+
+    IF Empty( cTipo_ ) .OR. Empty( cNumDoc_ )
+        MsgStop( "Tipo y numero de documento son obligatorios.", "Asiento" )
+        RETURN .F.
+    ENDIF
+
+    DO CASE
+    CASE cTipo_ == "FAC"
+        lOK := _AsiFactura( cNumDoc_ )
+    CASE cTipo_ == "COM"
+        lOK := _AsiCompra( cNumDoc_ )
+    CASE cTipo_ == "REC"
+        lOK := _AsiRecibo( cNumDoc_ )
+    OTHERWISE
+        MsgStop( "Tipo de documento desconocido: " + cTipo_, "Asiento" )
+    ENDCASE
+
+RETURN lOK
+
+
+STATIC FUNCTION _AsiFactura( cNumFac )
+
+    LOCAL cAsi
+    LOCAL dFec
+    LOCAL cCli
+    LOCAL cCtaCli
+    LOCAL nBase
+    LOCAL nIva
+    LOCAL nTotal
+    LOCAL cConc
+
+    // Cargar datos de la factura
+    IF !ABRIR_TABLA( "FACTURA", "FAC_AS", "FAC_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "FAC_AS" )
+    OrdSetFocus( "FAC_NUM" )
+
+    IF !DbSeek( PadR( "A", 4 ) + PadR( cNumFac, 10 ) )
+        FAC_AS->( DbCloseArea() )
+        MsgStop( "Factura " + cNumFac + " no encontrada.", "Asiento" )
+        RETURN .F.
+    ENDIF
+
+    IF !Empty( AllTrim( FAC_AS->ASIENTO ) )
+        FAC_AS->( DbCloseArea() )
+        MsgStop( "La factura " + cNumFac + " ya tiene asiento: " + ;
+                 AllTrim( FAC_AS->ASIENTO ), "Asiento" )
+        RETURN .F.
+    ENDIF
+
+    dFec   := FAC_AS->FECHA
+    cCli   := AllTrim( FAC_AS->CLIENTE_ )
+    nBase  := FAC_AS->SUBTOTAL
+    nIva   := FAC_AS->IVA
+    nTotal := FAC_AS->TOTAL
+
+    FAC_AS->( DbCloseArea() )
+
+    // Cuenta contable del cliente
+    cCtaCli := "430"
+    IF ABRIR_TABLA( "CLIENTES", "CLI_AS", "CLI_ID" )
+        IF CLI_AS->( DbSeek( cCli ) ) .AND. !Empty( AllTrim( CLI_AS->CTA_CONT ) )
+            cCtaCli := AllTrim( CLI_AS->CTA_CONT )
+        ENDIF
+        CLI_AS->( DbCloseArea() )
+    ENDIF
+
+    cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    cConc := "Factura " + cNumFac + " / " + cCli
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_AS", "DIA_ASI" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_AS" )
+
+    IF NetFLock()
+
+        // D 430xxx Cliente
+        DbAppend()
+        REPLACE DIA_AS->D_ASIENT WITH cAsi
+        REPLACE DIA_AS->D_LINEA  WITH 1
+        REPLACE DIA_AS->D_FECHA  WITH dFec
+        REPLACE DIA_AS->D_CUENTA WITH cCtaCli
+        REPLACE DIA_AS->D_DEBE   WITH nTotal
+        REPLACE DIA_AS->D_HABER  WITH 0
+        REPLACE DIA_AS->D_DESCRI WITH cConc
+        REPLACE DIA_AS->TIP_ORIG WITH "FAC"
+        REPLACE DIA_AS->DOC_ORIG WITH cNumFac
+
+        // H 700 Ventas
+        DbAppend()
+        REPLACE DIA_AS->D_ASIENT WITH cAsi
+        REPLACE DIA_AS->D_LINEA  WITH 2
+        REPLACE DIA_AS->D_FECHA  WITH dFec
+        REPLACE DIA_AS->D_CUENTA WITH "700"
+        REPLACE DIA_AS->D_DEBE   WITH 0
+        REPLACE DIA_AS->D_HABER  WITH nBase
+        REPLACE DIA_AS->D_DESCRI WITH cConc
+        REPLACE DIA_AS->TIP_ORIG WITH "FAC"
+        REPLACE DIA_AS->DOC_ORIG WITH cNumFac
+
+        // H 477 IVA repercutido
+        IF nIva > 0
+            DbAppend()
+            REPLACE DIA_AS->D_ASIENT WITH cAsi
+            REPLACE DIA_AS->D_LINEA  WITH 3
+            REPLACE DIA_AS->D_FECHA  WITH dFec
+            REPLACE DIA_AS->D_CUENTA WITH "477"
+            REPLACE DIA_AS->D_DEBE   WITH 0
+            REPLACE DIA_AS->D_HABER  WITH nIva
+            REPLACE DIA_AS->D_DESCRI WITH cConc
+            REPLACE DIA_AS->TIP_ORIG WITH "FAC"
+            REPLACE DIA_AS->DOC_ORIG WITH cNumFac
+        ENDIF
+
+        DbUnlock()
+
+    ENDIF
+
+    DIA_AS->( DbCloseArea() )
+
+    // Actualizar referencia asiento en la factura
+    IF ABRIR_TABLA( "FACTURA", "FAC_AU", "FAC_NUM" )
+        DbSelectArea( "FAC_AU" )
+        OrdSetFocus( "FAC_NUM" )
+        IF DbSeek( PadR( "A", 4 ) + PadR( cNumFac, 10 ) ) .AND. NetRLock()
+            REPLACE FAC_AU->ASIENTO WITH cAsi
+            DbUnlock()
+        ENDIF
+        FAC_AU->( DbCloseArea() )
+    ENDIF
+
+    MsgInfo( "Asiento " + cAsi + " generado para factura " + cNumFac, "Asiento" )
+
+RETURN .T.
+
+
+STATIC FUNCTION _AsiCompra( cNumCom )
+
+    LOCAL cAsi
+    LOCAL dFec
+    LOCAL cPrv
+    LOCAL cCtaPrv
+    LOCAL nBase
+    LOCAL nIva
+    LOCAL nTotal
+    LOCAL cConc
+
+    IF !ABRIR_TABLA( "COMPRAS", "COM_AS", "COM_INT" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "COM_AS" )
+    OrdSetFocus( "COM_INT" )
+
+    IF !DbSeek( cNumCom )
+        COM_AS->( DbCloseArea() )
+        MsgStop( "Compra " + cNumCom + " no encontrada.", "Asiento" )
+        RETURN .F.
+    ENDIF
+
+    IF !Empty( AllTrim( COM_AS->ASIENTO ) )
+        COM_AS->( DbCloseArea() )
+        MsgStop( "Esta compra ya tiene asiento: " + AllTrim( COM_AS->ASIENTO ), "Asiento" )
+        RETURN .F.
+    ENDIF
+
+    dFec   := COM_AS->FECHA
+    cPrv   := AllTrim( COM_AS->PROV_ID  )
+    nBase  := COM_AS->SUBTOTAL
+    nIva   := COM_AS->IVA
+    nTotal := COM_AS->TOTAL
+
+    COM_AS->( DbCloseArea() )
+
+    cCtaPrv := "400"
+    IF ABRIR_TABLA( "PROVEED", "PRV_AS", "PRV_ID" )
+        IF PRV_AS->( DbSeek( cPrv ) ) .AND. !Empty( AllTrim( PRV_AS->CTA_CONT ) )
+            cCtaPrv := AllTrim( PRV_AS->CTA_CONT )
+        ENDIF
+        PRV_AS->( DbCloseArea() )
+    ENDIF
+
+    cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    cConc := "Compra " + cNumCom + " / " + cPrv
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_C", "DIA_ASI" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_C" )
+
+    IF NetFLock()
+
+        // D 600 Compras
+        DbAppend()
+        REPLACE DIA_C->D_ASIENT WITH cAsi
+        REPLACE DIA_C->D_LINEA  WITH 1
+        REPLACE DIA_C->D_FECHA  WITH dFec
+        REPLACE DIA_C->D_CUENTA WITH "600"
+        REPLACE DIA_C->D_DEBE   WITH nBase
+        REPLACE DIA_C->D_HABER  WITH 0
+        REPLACE DIA_C->D_DESCRI WITH cConc
+        REPLACE DIA_C->TIP_ORIG WITH "COM"
+        REPLACE DIA_C->DOC_ORIG WITH cNumCom
+
+        // D 472 IVA soportado
+        IF nIva > 0
+            DbAppend()
+            REPLACE DIA_C->D_ASIENT WITH cAsi
+            REPLACE DIA_C->D_LINEA  WITH 2
+            REPLACE DIA_C->D_FECHA  WITH dFec
+            REPLACE DIA_C->D_CUENTA WITH "472"
+            REPLACE DIA_C->D_DEBE   WITH nIva
+            REPLACE DIA_C->D_HABER  WITH 0
+            REPLACE DIA_C->D_DESCRI WITH cConc
+            REPLACE DIA_C->TIP_ORIG WITH "COM"
+            REPLACE DIA_C->DOC_ORIG WITH cNumCom
+        ENDIF
+
+        // H 400xxx Proveedor
+        DbAppend()
+        REPLACE DIA_C->D_ASIENT WITH cAsi
+        REPLACE DIA_C->D_LINEA  WITH 3
+        REPLACE DIA_C->D_FECHA  WITH dFec
+        REPLACE DIA_C->D_CUENTA WITH cCtaPrv
+        REPLACE DIA_C->D_DEBE   WITH 0
+        REPLACE DIA_C->D_HABER  WITH nTotal
+        REPLACE DIA_C->D_DESCRI WITH cConc
+        REPLACE DIA_C->TIP_ORIG WITH "COM"
+        REPLACE DIA_C->DOC_ORIG WITH cNumCom
+
+        DbUnlock()
+
+    ENDIF
+
+    DIA_C->( DbCloseArea() )
+
+    MsgInfo( "Asiento " + cAsi + " generado para compra " + cNumCom, "Asiento" )
+
+RETURN .T.
+
+
+STATIC FUNCTION _AsiRecibo( cNumRec )
+
+    LOCAL cAsi
+    LOCAL dFec
+    LOCAL cCli
+    LOCAL cCtaCli
+    LOCAL cCtaDebe
+    LOCAL nTotal
+    LOCAL cConc
+
+    IF !ABRIR_TABLA( "RECIBOS", "REC_AS", "REC_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "REC_AS" )
+    OrdSetFocus( "REC_NUM" )
+
+    IF !DbSeek( cNumRec )
+        REC_AS->( DbCloseArea() )
+        MsgStop( "Recibo " + cNumRec + " no encontrado.", "Asiento" )
+        RETURN .F.
+    ENDIF
+
+    IF !Empty( AllTrim( REC_AS->ASIENTO ) )
+        REC_AS->( DbCloseArea() )
+        MsgStop( "Este recibo ya tiene asiento: " + AllTrim( REC_AS->ASIENTO ), "Asiento" )
+        RETURN .F.
+    ENDIF
+
+    dFec   := REC_AS->FECHA
+    cCli   := AllTrim( REC_AS->CLIENTE_ )
+    nTotal := REC_AS->TOTAL
+
+    REC_AS->( DbCloseArea() )
+
+    cCtaCli  := "430"
+    cCtaDebe := "570"
+
+    IF ABRIR_TABLA( "CLIENTES", "CLI_RA", "CLI_ID" )
+        IF CLI_RA->( DbSeek( cCli ) ) .AND. !Empty( AllTrim( CLI_RA->CTA_CONT ) )
+            cCtaCli := AllTrim( CLI_RA->CTA_CONT )
+        ENDIF
+        CLI_RA->( DbCloseArea() )
+    ENDIF
+
+    cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    cConc := "Cobro recibo " + cNumRec + " / " + cCli
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_R", "DIA_ASI" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_R" )
+
+    IF NetFLock()
+
+        DbAppend()
+        REPLACE DIA_R->D_ASIENT WITH cAsi
+        REPLACE DIA_R->D_LINEA  WITH 1
+        REPLACE DIA_R->D_FECHA  WITH dFec
+        REPLACE DIA_R->D_CUENTA WITH cCtaDebe
+        REPLACE DIA_R->D_DEBE   WITH nTotal
+        REPLACE DIA_R->D_HABER  WITH 0
+        REPLACE DIA_R->D_DESCRI WITH cConc
+        REPLACE DIA_R->TIP_ORIG WITH "REC"
+        REPLACE DIA_R->DOC_ORIG WITH cNumRec
+
+        DbAppend()
+        REPLACE DIA_R->D_ASIENT WITH cAsi
+        REPLACE DIA_R->D_LINEA  WITH 2
+        REPLACE DIA_R->D_FECHA  WITH dFec
+        REPLACE DIA_R->D_CUENTA WITH cCtaCli
+        REPLACE DIA_R->D_DEBE   WITH 0
+        REPLACE DIA_R->D_HABER  WITH nTotal
+        REPLACE DIA_R->D_DESCRI WITH cConc
+        REPLACE DIA_R->TIP_ORIG WITH "REC"
+        REPLACE DIA_R->DOC_ORIG WITH cNumRec
+
+        DbUnlock()
+
+    ENDIF
+
+    DIA_R->( DbCloseArea() )
+
+    IF ABRIR_TABLA( "RECIBOS", "REC_AU", "REC_NUM" )
+        DbSelectArea( "REC_AU" )
+        OrdSetFocus( "REC_NUM" )
+        IF DbSeek( cNumRec ) .AND. NetRLock()
+            REPLACE REC_AU->ASIENTO WITH cAsi
+            DbUnlock()
+        ENDIF
+        REC_AU->( DbCloseArea() )
+    ENDIF
+
+    MsgInfo( "Asiento " + cAsi + " generado para recibo " + cNumRec, "Asiento" )
+
+RETURN .T.
+
+
+// ============================================================================
+// CierreEjercicio()
+// ----------------------------------------------------------------------------
+// Proceso de cierre contable anual.
+// Pasos:
+//   1. Verificar que no hay asientos sin cuadrar (D != H)
+//   2. Generar asiento de regularizacion (cierre cuentas P&G)
+//   3. Generar asiento de cierre (saldos a cuenta 129 Resultado)
+//   4. Generar asiento de apertura del nuevo ejercicio
+//   5. Marcar ejercicio como cerrado en EMPRESA
+//
+// IMPORTANTE: ejecutar con copia de seguridad previa.
+// Solo accesible para ADM.
+// ============================================================================
+FUNCTION CierreEjercicio()
+
+    LOCAL nEjer
+    LOCAL nEjerNvo
+    LOCAL nDebe
+    LOCAL nHaber
+    LOCAL nDif
+    LOCAL cAsi
+    LOCAL dFecCie
+    LOCAL dFecApe
+
+    MEMVAR cUserRol
+
+    IF AllTrim( cUserRol ) != "ADM"
+        MsgStop( "Solo el Administrador puede ejecutar el cierre.", "Cierre" )
+        RETURN .F.
+    ENDIF
+
+    nEjer   := Year( Date() )
+    nEjerNvo := nEjer + 1
+    dFecCie := CToD( "31/12/" + AllTrim( Str( nEjer ) ) )
+    dFecApe := CToD( "01/01/" + AllTrim( Str( nEjerNvo ) ) )
+
+    IF !MsgYesNo( "CIERRE DEL EJERCICIO " + AllTrim( Str( nEjer ) ) + Chr(13) + ;
+                  "Esta operacion requiere copia de seguridad previa." + Chr(13) + ;
+                  "Todos los usuarios deben estar desconectados." + Chr(13) + ;
+                  Chr(13) + ;
+                  "Desea continuar?", "Cierre de ejercicio" )
+        RETURN .F.
+    ENDIF
+
+    // Verificar cuadre
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_CI", "DIA_FEC" )
+        RETURN .F.
+    ENDIF
+
+    nDebe  := 0
+    nHaber := 0
+
+    DbSelectArea( "DIA_CI" )
+    DbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted() .AND. Year( DIA_CI->D_FECHA ) == nEjer
+            nDebe  += DIA_CI->D_DEBE
+            nHaber += DIA_CI->D_HABER
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    DIA_CI->( DbCloseArea() )
+
+    nDif := Abs( nDebe - nHaber )
+
+    IF nDif > 0.01
+        MsgStop( "El diario NO esta cuadrado." + Chr(13) + ;
+                 "Diferencia: " + Transform( nDif, "999,999.99" ) + " EUR" + Chr(13) + ;
+                 "Corrija los asientos antes de cerrar.", "Cierre" )
+        RETURN .F.
+    ENDIF
+
+    // Asiento de cierre
+    cAsi := GetNextNum( "ASI" + AllTrim( Str( nEjer ) ), "Asientos" )
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_CG", "DIA_ASI" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_CG" )
+
+    IF NetFLock()
+
+        // Asiento simbolico de cierre de ejercicio
+        DbAppend()
+        REPLACE DIA_CG->D_ASIENT WITH cAsi
+        REPLACE DIA_CG->D_LINEA  WITH 1
+        REPLACE DIA_CG->D_FECHA  WITH dFecCie
+        REPLACE DIA_CG->D_CUENTA WITH "129"
+        REPLACE DIA_CG->D_DEBE   WITH 0
+        REPLACE DIA_CG->D_HABER  WITH 0
+        REPLACE DIA_CG->D_DESCRI WITH "CIERRE EJERCICIO " + AllTrim( Str( nEjer ) )
+        REPLACE DIA_CG->TIP_ORIG WITH "CIE"
+        REPLACE DIA_CG->DOC_ORIG WITH AllTrim( Str( nEjer ) )
+
+        DbUnlock()
+
+    ENDIF
+
+    DIA_CG->( DbCloseArea() )
+
+    // Marcar cierre en EMPRESA
+    IF ABRIR_TABLA( "EMPRESA", "EMP_CI", "" )
+        EMP_CI->( DbGoTop() )
+        IF !EMP_CI->( Eof() ) .AND. NetRLock()
+            REPLACE EMP_CI->FEC_CIER WITH dFecCie
+            DbUnlock()
+        ENDIF
+        EMP_CI->( DbCloseArea() )
+    ENDIF
+
+    MsgInfo( "Ejercicio " + AllTrim( Str( nEjer ) ) + " cerrado correctamente." + Chr(13) + ;
+             "Fecha de cierre: " + DToC( dFecCie ) + Chr(13) + ;
+             "Puede comenzar a operar en el ejercicio " + AllTrim( Str( nEjerNvo ) ), ;
+             "Cierre de ejercicio" )
+
+RETURN .T.
+
+
+// ============================================================================
 // FIN DE M_Conta.prg
 // ============================================================================

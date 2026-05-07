@@ -74,11 +74,25 @@ FUNCTION PresupuestosView()
     oLbl := TLabel():New( 32, 2, ;
         "ENTER: ver/editar   F5: nuevo presupuesto   Letras: buscar cliente", oWin )
 
-    oBtNvo := TButton():New( 33, 2, 34, 18, oWin, "NUEVO (F5)", ;
+    oBtNvo := TButton():New( 33,  2, 34, 18, oWin, "NUEVO (F5)", ;
         {|| AltaPresupuesto(), ;
             aData := _PreCargar(), ;
             oGrid:aData := aData, ;
             oGrid:nCurRow := Len( aData ), ;
+            oGrid:Paint() } )
+
+    oBtFac := TButton():New( 33, 20, 34, 38, oWin, "FACTURAR", ;
+        {|| If( oGrid:CurrentRow() != NIL, ;
+               ConvertirAFactura( oGrid:CurrentRow()[1] ), NIL ), ;
+            aData := _PreCargar(), ;
+            oGrid:aData := aData, ;
+            oGrid:Paint() } )
+
+    oBtRec := TButton():New( 33, 40, 34, 58, oWin, "RECHAZAR", ;
+        {|| If( oGrid:CurrentRow() != NIL, ;
+               RechazarPresupuesto( oGrid:CurrentRow()[1] ), NIL ), ;
+            aData := _PreCargar(), ;
+            oGrid:aData := aData, ;
             oGrid:Paint() } )
 
     oBtSal := TButton():New( 33, 108, 34, 124, oWin, "CERRAR", ;
@@ -87,6 +101,8 @@ FUNCTION PresupuestosView()
     oWin:AddCtrl( oGrid  )
     oWin:AddCtrl( oLbl   )
     oWin:AddCtrl( oBtNvo )
+    oWin:AddCtrl( oBtFac )
+    oWin:AddCtrl( oBtRec )
     oWin:AddCtrl( oBtSal )
 
     oWin:Run()
@@ -823,6 +839,176 @@ FUNCTION ImprimirPresupuesto( cNumero )
 
     // Llama a la funcion en V_Imprimir.prg
     ImprimirPresup( cNumero )
+
+RETURN .T.
+
+
+
+// ============================================================================
+// ConvertirAFactura( cNumPre )
+// ----------------------------------------------------------------------------
+// Convierte un presupuesto en factura.
+// Verifica estado — solo presupuestos pendientes o aceptados se pueden facturar.
+// ============================================================================
+FUNCTION ConvertirAFactura( cNumPre )
+
+    LOCAL cEstado
+    LOCAL cNumFac
+
+    cEstado := ""
+    cNumFac := ""
+
+    IF Empty( AllTrim( cNumPre ) )
+        MsgStop( "Seleccione un presupuesto.", "Facturar" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_CV", "PRE_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "PRE_CV" )
+    OrdSetFocus( "PRE_NUM" )
+
+    IF !DbSeek( AllTrim( cNumPre ) )
+        PRE_CV->( DbCloseArea() )
+        MsgStop( "Presupuesto " + cNumPre + " no encontrado.", "Facturar" )
+        RETURN .F.
+    ENDIF
+
+    cEstado := AllTrim( PRE_CV->ESTADO  )
+    cNumFac := AllTrim( PRE_CV->NUM_FAC )
+
+    PRE_CV->( DbCloseArea() )
+
+    DO CASE
+    CASE cEstado == "F"
+        MsgStop( "Este presupuesto ya fue facturado." + Chr(13) + ;
+                 "Factura: " + cNumFac, "Facturar" )
+        RETURN .F.
+    CASE cEstado == "R"
+        MsgStop( "No se puede facturar un presupuesto rechazado.", "Facturar" )
+        RETURN .F.
+    ENDCASE
+
+    IF !MsgYesNo( "Convertir presupuesto " + AllTrim( cNumPre ) + ;
+                  " en factura?", "Facturar" )
+        RETURN .F.
+    ENDIF
+
+    AltaFactDesdePre( AllTrim( cNumPre ) )
+
+RETURN .T.
+
+
+// ============================================================================
+// RechazarPresupuesto( cNumPre )
+// ----------------------------------------------------------------------------
+// Marca un presupuesto como rechazado por el cliente.
+// No genera ningun documento — solo cambia el estado.
+// ============================================================================
+FUNCTION RechazarPresupuesto( cNumPre )
+
+    LOCAL cEstado
+    LOCAL cMotivo
+    LOCAL oWin
+    LOCAL oGMot
+    LOCAL oBtOk
+    LOCAL oBtCan
+    LOCAL lOK
+
+    cEstado := ""
+    cMotivo := Space( 60 )
+    lOK     := .F.
+
+    IF Empty( AllTrim( cNumPre ) )
+        MsgStop( "Seleccione un presupuesto.", "Rechazar" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_RV", "PRE_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "PRE_RV" )
+    OrdSetFocus( "PRE_NUM" )
+
+    IF !DbSeek( AllTrim( cNumPre ) )
+        PRE_RV->( DbCloseArea() )
+        MsgStop( "Presupuesto no encontrado.", "Rechazar" )
+        RETURN .F.
+    ENDIF
+
+    cEstado := AllTrim( PRE_RV->ESTADO )
+
+    PRE_RV->( DbCloseArea() )
+
+    DO CASE
+    CASE cEstado == "F"
+        MsgStop( "No se puede rechazar un presupuesto ya facturado.", "Rechazar" )
+        RETURN .F.
+    CASE cEstado == "R"
+        MsgStop( "Este presupuesto ya esta rechazado.", "Rechazar" )
+        RETURN .F.
+    ENDCASE
+
+    // Pedir motivo del rechazo
+    IF !MsgYesNo( "Marcar presupuesto " + AllTrim( cNumPre ) + ;
+                  " como RECHAZADO?" + Chr(13) + ;
+                  "Esta accion no genera documentos adicionales.", "Rechazar" )
+        RETURN .F.
+    ENDIF
+
+    oWin := TWindow():New( 12, 30, 22, 100, "MOTIVO DEL RECHAZO" )
+
+    oWin:AddCtrl( TLabel():New( 2, 3, "Presupuesto :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 2, 17, PadR( AllTrim( cNumPre ), 10 ), oWin ) )
+    oWin:AddCtrl( TLabel():New( 4, 3, "Motivo      :", oWin ) )
+
+    oGMot := TGet():New( 4, 17, cMotivo, "@!", oWin )
+    oGMot:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) .OR. ;
+        ( MsgStop( "Indique el motivo del rechazo.", "Validacion" ), .F. ) }
+
+    oBtOk  := TButton():New( 7, 12, 8, 28, oWin, "CONFIRMAR", ;
+        {|| lOK := .T., oWin:Close() } )
+
+    oBtCan := TButton():New( 7, 32, 8, 48, oWin, "CANCELAR", ;
+        {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGMot  )
+    oWin:AddCtrl( oBtOk  )
+    oWin:AddCtrl( oBtCan )
+
+    oWin:Run()
+
+    IF !lOK
+        RETURN .F.
+    ENDIF
+
+    cMotivo := AllTrim( oGMot:uVar )
+
+    IF Empty( cMotivo )
+        RETURN .F.
+    ENDIF
+
+    // Actualizar estado
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_RM", "PRE_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "PRE_RM" )
+    OrdSetFocus( "PRE_NUM" )
+
+    IF DbSeek( AllTrim( cNumPre ) ) .AND. NetRLock()
+        REPLACE PRE_RM->ESTADO  WITH "R"
+        REPLACE PRE_RM->OBSERVA WITH "RECHAZADO: " + cMotivo
+        DbUnlock()
+    ENDIF
+
+    PRE_RM->( DbCloseArea() )
+
+    MsgInfo( "Presupuesto " + AllTrim( cNumPre ) + " marcado como rechazado.", ;
+             "Rechazar" )
 
 RETURN .T.
 
