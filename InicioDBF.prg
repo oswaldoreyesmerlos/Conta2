@@ -107,6 +107,7 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "FECHA_AL", "D",  8, 0 } )
     AAdd( aCampos, { "CTA_BANC", "C", 34, 0 } )
     AAdd( aCampos, { "DIAS_PAG", "N",  3, 0 } )
+    AAdd( aCampos, { "FORPAGO",  "C",  3, 0 } )
     AAdd( aCampos, { "LIMITE_C", "N", 12, 2 } )
     AAdd( aCampos, { "TARIFA",   "N",  1, 0 } )
     AAdd( aCampos, { "DESC_COM", "N",  5, 2 } )
@@ -343,12 +344,15 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "OBSERVA",  "C", 80, 0 } )
     AAdd( aCampos, { "PIE_DOC",  "M", 10, 0 } )
     AAdd( aCampos, { "NUM_PRE",  "C", 10, 0 } )
+    AAdd( aCampos, { "ID_OBRA",  "C", 12, 0 } )
+    AAdd( aCampos, { "TIPO_FAC", "C",  1, 0 } ) // A=Anticipo C=Certif. F=Final R=Rectif.
     AAdd( aCampos, { "NUM_ABONO","C", 10, 0 } )
     AAdd( aIndices, { "FAC_NUM", "SERIE+NUMERO" } )
     AAdd( aIndices, { "FAC_CLI", "CLIENTE_" } )
     AAdd( aIndices, { "FAC_FEC", "DtoS(FECHA)" } )
     AAdd( aIndices, { "FAC_VTO", "DtoS(FECHA_VT)" } )
     AAdd( aIndices, { "FAC_PTE", "CLIENTE_+DtoS(FECHA)" } )
+    AAdd( aIndices, { "FAC_OBR", "ID_OBRA+DtoS(FECHA)" } )
     AAdd( aTablas, { "FACTURA", aCampos, aIndices } )
 
     // -- 14. FACTUR_DET (lineas de facturas emitidas) --
@@ -514,7 +518,48 @@ FUNCTION InicioDBF()
     AAdd( aIndices, { "RCD_FAC", "NUM_FAC" } )
     AAdd( aTablas, { "RC_DETAL", aCampos, aIndices } )
 
-    // -- 23. PRESUPUEST --
+    // -- 23. VENCIMIEN (vencimientos de cobro/pago) --
+    // TIPO: C=Cobro cliente P=Pago proveedor
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "EJERCICIO", "N",  4, 0 } )
+    AAdd( aCampos, { "TIPO",      "C",  1, 0 } )
+    AAdd( aCampos, { "NUMERO",    "C", 10, 0 } )
+    AAdd( aCampos, { "SERIE",     "C",  4, 0 } )
+    AAdd( aCampos, { "VENCTO",    "D",  8, 0 } )
+    AAdd( aCampos, { "IMPORTE",   "N", 12, 2 } )
+    AAdd( aCampos, { "COBRADO",   "L",  1, 0 } )
+    AAdd( aCampos, { "CODTERCE",  "C", 10, 0 } )
+    AAdd( aCampos, { "NOMBRE",    "C", 60, 0 } )
+    AAdd( aCampos, { "ID_OBRA",   "C", 12, 0 } )
+    AAdd( aIndices, { "VEN_NUM", "TIPO+NUMERO" } )
+    AAdd( aIndices, { "VEN_FEC", "DtoS(VENCTO)" } )
+    AAdd( aIndices, { "VEN_TER", "TIPO+CODTERCE+DtoS(VENCTO)" } )
+    AAdd( aIndices, { "VEN_OBR", "ID_OBRA+DtoS(VENCTO)" } )
+    AAdd( aTablas, { "VENCIMIEN", aCampos, aIndices } )
+
+    // -- 24. OBRAS (gestion economica de obras aceptadas) --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "ID",        "C", 12, 0 } ) // OBR20260001
+    AAdd( aCampos, { "NUM_PRE",   "C", 10, 0 } )
+    AAdd( aCampos, { "CLIENTE_",  "C", 10, 0 } )
+    AAdd( aCampos, { "DESCRIP",   "C", 80, 0 } )
+    AAdd( aCampos, { "DIRECC_OB", "C", 80, 0 } )
+    AAdd( aCampos, { "FECHA_IN",  "D",  8, 0 } )
+    AAdd( aCampos, { "FECHA_FIN", "D",  8, 0 } )
+    AAdd( aCampos, { "TOTAL",     "N", 12, 2 } )
+    AAdd( aCampos, { "ESTADO",    "C",  1, 0 } ) // A=Abierta E=En curso F=Finalizada C=Cancelada
+    AAdd( aCampos, { "USUARIO_",  "C", 10, 0 } )
+    AAdd( aCampos, { "FECHA_AL",  "D",  8, 0 } )
+    AAdd( aCampos, { "OBSERVA",   "M", 10, 0 } )
+    AAdd( aIndices, { "OBR_ID",  "ID" } )
+    AAdd( aIndices, { "OBR_PRE", "NUM_PRE" } )
+    AAdd( aIndices, { "OBR_CLI", "CLIENTE_" } )
+    AAdd( aIndices, { "OBR_EST", "ESTADO" } )
+    AAdd( aTablas, { "OBRAS", aCampos, aIndices } )
+
+    // -- 25. PRESUPUEST --
     aCampos  := {}
     aIndices := {}
     AAdd( aCampos, { "NUMERO",   "C", 10, 0 } )
@@ -529,11 +574,14 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "OBSERVA",  "C", 60, 0 } )
     AAdd( aCampos, { "PIE_DOC",  "M", 10, 0 } )
     AAdd( aCampos, { "NUM_FAC",  "C", 10, 0 } )
+    AAdd( aCampos, { "ID_OBRA",  "C", 12, 0 } )
+    AAdd( aCampos, { "TIPO",     "C",  1, 0 } ) // C=Cerrado M=Medicion
     AAdd( aCampos, { "RETENCIO", "N", 12, 2 } )
     AAdd( aCampos, { "PORC_RET", "N",  5, 2 } )
     AAdd( aIndices, { "PRE_NUM", "NUMERO" } )
     AAdd( aIndices, { "PRE_CLI", "CLIENTE_" } )
     AAdd( aIndices, { "PRE_FEC", "DtoS(FECHA)" } )
+    AAdd( aIndices, { "PRE_OBR", "ID_OBRA" } )
     AAdd( aTablas, { "PRESUPUEST", aCampos, aIndices } )
 
     // -- 24. PRESUP_DE --
@@ -1235,7 +1283,8 @@ STATIC FUNCTION _GetTablasList()
                                      { "FAC_CLI",  "CLIENTE_"                   }, ;
                                      { "FAC_FEC",  "DtoS(FECHA)"                }, ;
                                      { "FAC_VTO",  "DtoS(FECHA_VT)"             }, ;
-                                     { "FAC_PTE",  "CLIENTE_+DtoS(FECHA)"       } } } )
+                                     { "FAC_PTE",  "CLIENTE_+DtoS(FECHA)"       }, ;
+                                     { "FAC_OBR",  "ID_OBRA+DtoS(FECHA)"        } } } )
     AAdd( aTablas, { "FACTUR_DE",  { { "FAC_LIN",  "SERIE+NUMERO+Str(LINEA,3)" } } } )
     AAdd( aTablas, { "PEDIDOS",    { { "PED_NUM",  "NUMERO"                     }, ;
                                      { "PED_CLI",  "CLIENTE_"                   }, ;
@@ -1257,9 +1306,18 @@ STATIC FUNCTION _GetTablasList()
                                      { "REC_FEC",  "DtoS(FECHA)"                } } } )
     AAdd( aTablas, { "RC_DETAL",   { { "RCD_NUM",  "NUMERO+Str(LINEA,3)"       }, ;
                                      { "RCD_FAC",  "NUM_FAC"                    } } } )
+    AAdd( aTablas, { "VENCIMIEN",  { { "VEN_NUM",  "TIPO+NUMERO"                }, ;
+                                     { "VEN_FEC",  "DtoS(VENCTO)"               }, ;
+                                     { "VEN_TER",  "TIPO+CODTERCE+DtoS(VENCTO)" }, ;
+                                     { "VEN_OBR",  "ID_OBRA+DtoS(VENCTO)"       } } } )
+    AAdd( aTablas, { "OBRAS",      { { "OBR_ID",   "ID"                         }, ;
+                                     { "OBR_PRE",  "NUM_PRE"                    }, ;
+                                     { "OBR_CLI",  "CLIENTE_"                   }, ;
+                                     { "OBR_EST",  "ESTADO"                     } } } )
     AAdd( aTablas, { "PRESUPUEST", { { "PRE_NUM",  "NUMERO"                     }, ;
                                      { "PRE_CLI",  "CLIENTE_"                   }, ;
-                                     { "PRE_FEC",  "DtoS(FECHA)"                } } } )
+                                     { "PRE_FEC",  "DtoS(FECHA)"                }, ;
+                                     { "PRE_OBR",  "ID_OBRA"                    } } } )
     AAdd( aTablas, { "PRESUP_DE",  { { "PRD_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
     AAdd( aTablas, { "CHEQUES",    { { "CHQ_NUM",  "NUMERO"                     }, ;
                                      { "CHQ_FEC",  "DtoS(FECHA_EM)"             }, ;

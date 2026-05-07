@@ -3,136 +3,84 @@
 // ============================================================================
 // FUNCION: MsgYesNo
 // ----------------------------------------------------------------------------
-// Caja de confirmacion modal.
+// Caja de confirmacion modal construida con:
+//
+//    TWindow + TLabel + TButton
+//
 // Devuelve:
 //    .T. = Si
 //    .F. = No / ESC
-//
-// Uso:
-//    IF MsgYesNo( "Desea guardar cambios?", "Confirmacion" )
-//       ...
-//    ENDIF
 // ============================================================================
 FUNCTION MsgYesNo( cMsg, cTit )
 
-    LOCAL xSave
-    LOCAL nT, nL, nB, nR
-    LOCAL nAncho
-    LOCAL nAlto
-    LOCAL nKey
-    LOCAL lYes
+    LOCAL oWin
+    LOCAL oLbl
+    LOCAL oBtnSi
+    LOCAL oBtnNo
+
+    LOCAL nMsgLen
+    LOCAL nWidth
+    LOCAL nHeight
+    LOCAL nTop
+    LOCAL nLeft
+
+    LOCAL lResp := .F.
 
     hb_Default( @cTit, "Confirmacion" )
     hb_Default( @cMsg, "" )
 
-    lYes := .T.
+    nMsgLen := Len( AllTrim( cMsg ) )
 
-    // ------------------------------------------------------------------------
-    // Calculo de dimensiones
-    // ------------------------------------------------------------------------
-    nAncho := Min( ;
-					Max( Max( Len( cMsg ) + 10, ;
-					Len( cTit ) + 12 ), ;
-					28 ), ;
-					GfxMaxCol() - 4 )
+    nWidth  := Max( 36, Max( nMsgLen + 8, Len( cTit ) + 12 ) )
+    nWidth  := Min( nWidth, GfxMaxCol() - 4 )
 
-    nAlto := 7
+    nHeight := 8
 
-    nT := Int( ( GfxMaxRow() - nAlto ) / 2 )
-    nL := Int( ( GfxMaxCol() - nAncho ) / 2 )
+    nTop  := Int( ( GfxMaxRow() - nHeight ) / 2 )
+    nLeft := Int( ( GfxMaxCol() - nWidth  ) / 2 )
 
-    nB := nT + nAlto
-    nR := nL + nAncho
+    oWin := TWindow():New( ;
+        nTop, ;
+        nLeft, ;
+        nTop + nHeight, ;
+        nLeft + nWidth, ;
+        cTit )
 
-    // Guardamos fondo (+margen por sombra)
-    xSave := GfxSave( nT, nL, nB + 1, nR + 2 )
+    oLbl := TLabel():New( ;
+        2, ;
+        3, ;
+        PadR( cMsg, nWidth - 6 ), ;
+        oWin )
 
-    GfxCursor( SC_NONE )
+    oBtnSi := TButton():New( ;
+        5, ;
+        Int( ( nWidth - 26 ) / 2 ), ;
+        5, ;
+        Int( ( nWidth - 26 ) / 2 ) + 11, ;
+        oWin, ;
+        "SI", ;
+        { || lResp := .T., oWin:Close() } )
 
-    // ------------------------------------------------------------------------
-    // Bucle modal
-    // ------------------------------------------------------------------------
-    DO WHILE .T.
+    oBtnNo := TButton():New( ;
+        5, ;
+        Int( ( nWidth - 26 ) / 2 ) + 15, ;
+        5, ;
+        Int( ( nWidth - 26 ) / 2 ) + 26, ;
+        oWin, ;
+        "NO", ;
+        { || lResp := .F., oWin:Close() } )
 
-        GfxLock()
+    oWin:AddCtrl( oLbl )
+    oWin:AddCtrl( oBtnSi )
+    oWin:AddCtrl( oBtnNo )
 
-        // Fondo
-        GfxShadow( nT, nL, nB, nR )
-        GfxClear( nT, nL, nB, nR, CLR_WINDOW )
-        GfxRaised( nT, nL, nB, nR )
+    oWin:Run()
 
-        // Barra titulo
-        GfxClear( nT, nL + 1, nT, nR - 1, "W+/B" )
-        GfxText( nT, nL + 2, cTit, "W+/B" )
-
-        // Mensaje
-        GfxText( nT + 2, nL + 3, ;
-                 PadR( cMsg, nAncho - 5 ), ;
-                 CLR_WINDOW )
-
-        // Boton SI
-        IF lYes
-            GfxRecessed( nB - 2, nL + 6, nB - 2, nL + 13 )
-            GfxText( nB - 2, nL + 8, "SI", "W+/B" )
-        ELSE
-            GfxRaised( nB - 2, nL + 6, nB - 2, nL + 13 )
-            GfxText( nB - 2, nL + 8, "SI", CLR_WINDOW )
-        ENDIF
-
-        // Boton NO
-        IF ! lYes
-            GfxRecessed( nB - 2, nR - 13, nB - 2, nR - 6 )
-            GfxText( nB - 2, nR - 11, "NO", "W+/B" )
-        ELSE
-            GfxRaised( nB - 2, nR - 13, nB - 2, nR - 6 )
-            GfxText( nB - 2, nR - 11, "NO", CLR_WINDOW )
-        ENDIF
-
-        GfxUnlock()
-
-        // --------------------------------------------------------------------
-        // Espera tecla
-        // --------------------------------------------------------------------
-        nKey := Inkey( 0 )
-
-        DO CASE
-
-        CASE nKey == K_LEFT .OR. nKey == K_RIGHT .OR. ;
-             nKey == K_TAB  .OR. nKey == K_SH_TAB
-
-            lYes := ! lYes
-
-        CASE nKey == K_ENTER
-            EXIT
-
-        CASE nKey == K_ESC
-            lYes := .F.
-            EXIT
-
-        CASE nKey == Asc("S") .OR. nKey == Asc("s")
-            lYes := .T.
-            EXIT
-
-        CASE nKey == Asc("N") .OR. nKey == Asc("n")
-            lYes := .F.
-            EXIT
-
-        ENDCASE
-
-    ENDDO
-
-    // Restaurar pantalla
-    GfxRestore( nT, nL, nB + 1, nR + 2, xSave )
-
-    GfxCursor( SC_NONE )
-
-RETURN lYes
+RETURN lResp
 
 
 // ============================================================================
 // WRAPPER OPCIONAL
-// ----------------------------------------------------------------------------
-// MsgConfirm() alias amigable
 // ============================================================================
 FUNCTION MsgConfirm( cMsg, cTit )
 RETURN MsgYesNo( cMsg, cTit )

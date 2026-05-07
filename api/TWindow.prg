@@ -333,22 +333,17 @@ RETURN Self
 // ----------------------------------------------------------------------------
 METHOD Paint() CLASS TWindow
 
-    LOCAL nTitCol
-    LOCAL Self_ := Self          // referencia explicita para los codeblocks
+    LOCAL Self_ := Self
 
     ::Lock()
 
-    // -- Bloques persistentes (capa grafica WVG): se registran en el stack
-    //    SOLO la primera vez del ciclo Run() para evitar duplicados.
-
+    // -- Bloques persistentes WVG: sombra + marco
     IF ! ::lRegistered
 
-        // [1] Sombra a la derecha y debajo
         GfxPaintAdd( "tw_shadow", ;
             {|| GfxShadow( Self_:nTop, Self_:nLeft, ;
                            Self_:nBottom, Self_:nRight ) } )
 
-        // [2] Marco raised
         GfxPaintAdd( "tw_frame", ;
             {|| GfxRaised( Self_:nTop, Self_:nLeft, ;
                            Self_:nBottom, Self_:nRight ) } )
@@ -357,46 +352,34 @@ METHOD Paint() CLASS TWindow
 
     ENDIF
 
-    // -- Pintado directo (capa de caracteres): se ejecuta SIEMPRE.
-    //
-    //    NOTA: probamos GfxFillSolid (wvg_ShadedRect) como "escudo
-    //    opaco" antes del pintado, pero la capa grafica WVG SIEMPRE
-    //    queda por encima de los caracteres en GTWVG, asi que tapaba
-    //    nuestros propios textos y controles.  La transparencia de
-    //    relieves WVG de la ventana padre queda como limitacion
-    //    visual conocida.
+    // -- Limpiar toda la zona de caracteres de la ventana
+    GfxClear( ::nTop, ::nLeft, ::nBottom, ::nRight, CLR_WIN_BODY )
 
-    // [3] LIMPIEZA AGRESIVA del area completa de la ventana (incluyendo
-    //     el marco) para borrar cualquier caracter previo de ventanas
-    //     inferiores que pudiera quedar.  Los relieves WVG no se afectan
-    //     (estan en otra capa), pero los caracteres si.
-    GfxClear( ::nTop, ::nLeft, ::nBottom, ::nRight, CLR_WINDOW )
+    // -- Barra de titulo estilo Windows clasico:
+    //    primera fila interior completa, solida y distinta al cuerpo
+    GfxClear( ::nTop, ::nLeft + 1, ::nTop, ::nRight - 1, CLR_WIN_TITLE_ACT )
 
-    // [4] Barra de titulo (fondo azul) - solo la franja del titulo
-    GfxClear( ::nTop, ::nLeft + 1, ::nTop, ::nRight - 1, "W+/B" )
-
-    // [5] Texto del titulo centrado
+    // -- Titulo alineado a la izquierda, con aire lateral
     IF ! Empty( ::cTitle )
-        nTitCol := ::nLeft + ;
-                   Int( ( ::nRight - ::nLeft - Len( ::cTitle ) ) / 2 )
-
-        GfxText( ::nTop, nTitCol, ::cTitle, "W+/B" )
+        GfxText( ::nTop, ;
+         ::nLeft, ;
+         PadR( " " + AllTrim( ::cTitle ) + " ", ;
+               ::nRight - ::nLeft + 1  ), ;
+         CLR_WIN_TITLE_ACT )
     ENDIF
 
-    // [6] Interior (color de fondo) - innecesario ya por el [3] pero
-    //     lo dejamos por claridad de codigo
+    // -- Cuerpo de ventana separado visualmente del titulo
     GfxClear( ::nTop + 1, ::nLeft + 1, ;
               ::nBottom - 1, ::nRight - 1, ;
-              CLR_WINDOW )
+              CLR_WIN_BODY )
 
-    // [7] Hijos (cada uno se pinta con su estado actual)
+    // -- Pintar controles hijos
     AEval( ::aCtrls, ;
            { |o| If( o:lVisible, o:Paint(), NIL ) } )
 
     ::Unlock()
 
 RETURN NIL
-
 
 // ----------------------------------------------------------------------------
 // Refresh

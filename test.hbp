@@ -42,6 +42,7 @@ API\MsgYesNo.prg
 # =============================================================================
 Util.prg
 InicioDBF.prg
+ReglasNegocio.prg
 
 # =============================================================================
 # SEGURIDAD Y MENU
@@ -69,6 +70,7 @@ M_Usuarios.prg
 M_Conta.prg
 
 # -- Ventas --
+M_Obras.prg
 V_Presupuesto.prg
 V_Facturas.prg
 V_Imprimir.prg

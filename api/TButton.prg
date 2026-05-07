@@ -19,74 +19,71 @@ ENDCLASS
 
 METHOD New( nTop, nLeft, nBottom, nRight, oPar, cCap, bAct ) CLASS TButton
 
+    LOCAL nMinWidth := 10
+    LOCAL nWidth
+
+    // Boton SIEMPRE de una sola fila
+    nBottom := nTop
+
+    // Mejor aspecto para captions cortos: SI, NO, OK, etc.
+    nWidth := nRight - nLeft + 1
+
+    IF nWidth < nMinWidth
+        nRight := nLeft + nMinWidth - 1
+    ENDIF
+
     ::TControl:New( nTop, nLeft, nBottom, nRight, oPar )
 
     ::cCaption := cCap
     ::bAction  := bAct
-
     ::lPressed := .F.
 
-    ::cColor := CLR_BUTTON
-
+    ::cColor   := CLR_BUTTON
     ::lTabStop := .T.
 
 RETURN Self
 
 
 METHOD Paint() CLASS TButton
+
     LOCAL cCol
-    LOCAL nRow
     LOCAL nWidth
-    LOCAL nFila
-    LOCAL cFondo
+    LOCAL cText
 
     IF !::lVisible
         RETURN NIL
     ENDIF
 
-    // Anchura TOTAL del boton (de borde a borde, ambos inclusive).
-    // El relieve WVG vive en lineas FINAS entre celdas, no ocupa columnas
-    // de caracteres, asi que podemos rellenar de nLeft a nRight sin
-    // tapar el efecto raised/recessed.
+    // Garantia: el boton se pinta siempre en una sola fila
+    ::nBottom := ::nTop
+
     nWidth := ::nRight - ::nLeft + 1
 
-    // Fila central (para botones de 1 fila queda en nTop)
-    nRow := Int( ( ::nBottom - ::nTop ) / 2 )
-
-    // Color del texto:
-    //  - Pulsado (flash de click)  -> CLR_BUT_FOC con tinta/fondo INVERTIDOS
-    //  - Con foco (sin pulsar)     -> CLR_BUT_FOC normal
-    //  - Sin foco                  -> CLR_BUTTON
     DO CASE
     CASE ::lPressed
         cCol := __SwapColor( CLR_BUT_FOC )
+
     CASE ::lFocused
         cCol := CLR_BUT_FOC
+
     OTHERWISE
         cCol := ::cColor
     ENDCASE
 
     ::Lock()
 
-    // ----- Relieve segun estado -----
     IF ::lPressed .OR. ::lFocused
         ::DrawRecessed()
     ELSE
         ::DrawRaised()
     ENDIF
 
-    // ----- Fondo COMPLETO con el color del estado -----
-    // Rellena el ancho total. Si el boton tiene mas de una fila, las
-    // filas intermedias tambien se rellenan.
-    cFondo := Space( nWidth )
-    FOR nFila := ::nTop TO ::nBottom
-        GfxText( nFila, ::nLeft, cFondo, cCol )
-    NEXT
+    // Caption centrado horizontalmente.
+    // Verticalmente queda centrado porque el boton mide una sola fila.
+    cText := PadC( AllTrim( ::cCaption ), nWidth )
 
-    // ----- Caption centrado en el ancho TOTAL -----
-    ::DrawText( nRow, 0, PadC( ::cCaption, nWidth ), cCol )
+    GfxText( ::nTop, ::nLeft, cText, cCol )
 
-    // ----- Cursor invisible mientras el boton esta enfocado -----
     IF ::lFocused
         GfxCursor( SC_NONE )
     ENDIF

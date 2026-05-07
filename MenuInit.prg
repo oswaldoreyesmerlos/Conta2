@@ -43,6 +43,7 @@ EXTERNAL CierreEjercicio
 EXTERNAL LibroDiarioView
 EXTERNAL FacturasView
 EXTERNAL AltaFact
+EXTERNAL ObrasView
 EXTERNAL NotaAbonoForm
 EXTERNAL PresupuestosView
 EXTERNAL AltaPresupuesto
@@ -79,6 +80,7 @@ FUNCTION Menu_Init()
     LOCAL aSubArt
     LOCAL aSubVen
     LOCAL aSubFac
+    LOCAL aSubObr
     LOCAL aSubPre
     LOCAL lEsAdm
     LOCAL lEsCont
@@ -98,6 +100,7 @@ FUNCTION Menu_Init()
     aSubArt  := {}
     aSubVen  := {}
     aSubFac  := {}
+    aSubObr  := {}
     aSubPre  := {}
 
     lEsAdm  := ( AllTrim( cUserRol ) == "ADM" )
@@ -128,6 +131,9 @@ FUNCTION Menu_Init()
     AAdd( aSubPre, { "Historial", {|| PresupuestosView()  }, NIL, "Presupuestos emitidos" } )
     AAdd( aSubPre, { "Nuevo",     {|| AltaPresupuesto()   }, NIL, "Nuevo presupuesto" } )
 
+    // Obras
+    AAdd( aSubObr, { "Historial", {|| ObrasView() }, NIL, "Gestion y certificacion de obras" } )
+
     // Facturas
     AAdd( aSubFac, { "Historial", {|| FacturasView() }, NIL, "Facturas emitidas" } )
     AAdd( aSubFac, { "Nueva",     {|| AltaFact()     }, NIL, "Nueva factura" } )
@@ -151,6 +157,7 @@ FUNCTION Menu_Init()
     // VENTAS
     // -------------------------------------------------------------------------
     AAdd( aVentas, { "Presupuestos", NIL, aSubPre, "Gestion de presupuestos" } )
+    AAdd( aVentas, { "Obras",        NIL, aSubObr, "Gestion de obras y certificaciones" } )
     AAdd( aVentas, { "Facturas",     NIL, aSubFac, "Gestion de facturas" } )
 
     // -------------------------------------------------------------------------

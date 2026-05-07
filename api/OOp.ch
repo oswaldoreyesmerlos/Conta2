@@ -44,6 +44,15 @@
 #define COL_PICTURE  3   // Picture de visualizacion (formato)
 #define COL_GETVAL   4   // Codeblock { |aRow| ... } que devuelve el valor
 
+// ============================================================================
+// COLORES DE VENTANAS
+// ============================================================================
+#define CLR_WIN_TITLE_ACT   "W+/B"      // Titulo ventana activa
+#define CLR_WIN_TITLE_INA   "W+/N"      // Futuro: titulo ventana inactiva
+#define CLR_WIN_BODY        CLR_WINDOW  // Cuerpo ventana
+
+
+
 // Color de la cabecera del grid
 #define CLR_GRID_HDR    "W+/B"       // Blanco brillante sobre Azul
 

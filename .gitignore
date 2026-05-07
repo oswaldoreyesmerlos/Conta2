@@ -2,6 +2,7 @@
 *.log
 *.dbf
 *.cdx
+*.fpt
 *.ntx
 *.bak
 *.tmp
@@ -9,6 +10,7 @@
 *.o
 *.c
 *.map
+*.zip
 
 # Carpetas temporales o de compilacion
 hbmk_*/
