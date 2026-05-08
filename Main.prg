@@ -48,6 +48,12 @@ FUNCTION Main()
     InitApp()
     ErrorBlock( { |e| ErrSys( e ) } )
 
+    IF !AppLockAcquire()
+        MsgStop( "AppGestion ya esta abierto en este terminal.", "Inicio" )
+        App_Exit()
+        RETURN NIL
+    ENDIF
+
     SET DATE BRIT
     SET DATE FORMAT TO "DD/MM/YYYY"
     SET EPOCH TO 1950
@@ -142,6 +148,7 @@ RETURN NIL
 FUNCTION App_Exit()
 
     dbCloseAll()
+    AppLockRelease()
     GfxCursor( SC_NORMAL )
     CLS
     QUIT
@@ -285,6 +292,8 @@ STATIC FUNCTION _BootUsuarios()
         AAdd( aCampos, { "CAMB_CL",  "L",  1, 0 } )
         AAdd( aCampos, { "FEC_CL",   "D",  8, 0 } )
         AAdd( aCampos, { "INT_FAL",  "N",  3, 0 } )
+        AAdd( aCampos, { "BLOQ_FEC", "D",  8, 0 } )
+        AAdd( aCampos, { "BLOQ_HOR", "C",  8, 0 } )
 
         DbCreate( cDbf, aCampos )
 

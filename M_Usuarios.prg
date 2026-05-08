@@ -46,7 +46,7 @@ FUNCTION UsuariosView()
     oGrid:AddColumn( "Baja",        4, "@!",         { |a| If( a[6], "SI", "NO" ) } )
 
     oGrid:bEnter := {| g | ;
-        UsuariosForm( g:CurrentRow()[1] ), ;
+        If( g:CurrentRow() != NIL, UsuariosForm( g:CurrentRow()[1] ), NIL ), ;
         aData := _UsrCargar(), ;
         g:aData := aData, ;
         g:Paint() }
@@ -138,21 +138,21 @@ FUNCTION UsuariosForm( cCodigo )
     dUltAcc  := CToD( "" )
     lBaja    := .F.
 
-    IF !ABRIR_TABLA( "USUARIOS", "USR", "USR_COD" )
+    IF !ABRIR_TABLA( "USUARIOS", "USRF", "USR_COD" )
         RETURN NIL
     ENDIF
 
     IF !lNuevo .AND. !Empty( AllTrim( cCodigo ) )
-        DbSelectArea( "USR" )
+        DbSelectArea( "USRF" )
         OrdSetFocus( "USR_COD" )
         IF DbSeek( AllTrim( cCodigo ) )
-            cCod_    := PadR( AllTrim( USR->CODIGO   ), 10 )
-            cNombre  := PadR( AllTrim( USR->NOMBRE   ), 40 )
+            cCod_    := PadR( AllTrim( USRF->CODIGO  ), 10 )
+            cNombre  := PadR( AllTrim( USRF->NOMBRE  ), 40 )
             cClave   := Space( 20 )
-            cRolID   := PadR( AllTrim( USR->ROLID    ),  3 )
-            nNivel   := USR->NIVEL
-            dUltAcc  := USR->ULT_ACCE
-            lBaja    := USR->BAJA
+            cRolID   := PadR( AllTrim( USRF->ROLID   ),  3 )
+            nNivel   := USRF->NIVEL
+            dUltAcc  := USRF->ULT_ACCE
+            lBaja    := USRF->BAJA
         ENDIF
     ENDIF
 
@@ -201,7 +201,7 @@ FUNCTION UsuariosForm( cCodigo )
 
     oWin:Run()
 
-    USR->( DbCloseArea() )
+    USRF->( DbCloseArea() )
     Select( nArea )
 
 RETURN NIL
@@ -215,7 +215,7 @@ STATIC FUNCTION _UsrGuardar( oGC, oGN, oGP, oGR, oGNv, oChk, lNuevo, oWin )
     cCodigo := AllTrim( oGC:uVar )
     cClave  := AllTrim( oGP:uVar )
 
-    DbSelectArea( "USR" )
+    DbSelectArea( "USRF" )
     OrdSetFocus( "USR_COD" )
 
     IF lNuevo
@@ -236,10 +236,10 @@ STATIC FUNCTION _UsrGuardar( oGC, oGN, oGP, oGR, oGNv, oChk, lNuevo, oWin )
         ENDIF
     ENDIF
 
-    REPLACE USR->CODIGO   WITH cCodigo
-    REPLACE USR->NOMBRE   WITH AllTrim( oGN:uVar )
-    REPLACE USR->ROLID    WITH AllTrim( oGR:uVar )
-    REPLACE USR->NIVEL    WITH oGNv:uVar
+    REPLACE USRF->CODIGO  WITH cCodigo
+    REPLACE USRF->NOMBRE  WITH AllTrim( oGN:uVar )
+    REPLACE USRF->ROLID   WITH AllTrim( oGR:uVar )
+    REPLACE USRF->NIVEL   WITH oGNv:uVar
 
     IF lNuevo .OR. !Empty( cClave )
         IF !UserSetPassword( cCodigo, cClave )
@@ -250,13 +250,19 @@ STATIC FUNCTION _UsrGuardar( oGC, oGN, oGP, oGR, oGNv, oChk, lNuevo, oWin )
     ENDIF
 
     IF lNuevo
-        REPLACE USR->FECHA_AL WITH Date()
-        REPLACE USR->ULT_ACCE WITH Date()
+        REPLACE USRF->FECHA_AL WITH Date()
+        REPLACE USRF->ULT_ACCE WITH Date()
     ENDIF
 
-    REPLACE USR->BAJA     WITH oChk:lValue
+    REPLACE USRF->BAJA    WITH oChk:lValue
     IF FieldPos( "INT_FAL" ) > 0 .AND. !oChk:lValue
-        REPLACE USR->INT_FAL WITH 0
+        REPLACE USRF->INT_FAL WITH 0
+    ENDIF
+    IF FieldPos( "BLOQ_FEC" ) > 0 .AND. !oChk:lValue
+        REPLACE USRF->BLOQ_FEC WITH CToD( "" )
+    ENDIF
+    IF FieldPos( "BLOQ_HOR" ) > 0 .AND. !oChk:lValue
+        REPLACE USRF->BLOQ_HOR WITH Space( 8 )
     ENDIF
 
     DbCommit()

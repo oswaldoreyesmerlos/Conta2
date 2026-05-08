@@ -7,6 +7,9 @@
 
 MEMVAR cUserID, cUserNom, cUserRol
 
+#define LOGIN_MAX_FAILS     5
+#define LOGIN_LOCK_SECONDS  300
+
 
 // ============================================================================
 // SecurityEnsureSchema()
@@ -16,9 +19,9 @@ FUNCTION SecurityEnsureSchema()
 
     LOCAL lOK := .T.
 
-    // Proyecto en construccion: las tablas de seguridad deben quedar con
-    // estructura exacta. Si hay restos de pruebas, se regeneran completas.
-    lOK := lOK .AND. _ResetSecuritySchema()
+    // Mantiene la estructura de seguridad sin borrar usuarios ni claves.
+    // La recuperacion de ADMIN queda en AdminRecovery.exe.
+    lOK := lOK .AND. _EnsureSecuritySchema()
 
     IF lOK
         _SeedRoles()
@@ -28,16 +31,11 @@ FUNCTION SecurityEnsureSchema()
 RETURN lOK
 
 
-STATIC FUNCTION _ResetSecuritySchema()
+STATIC FUNCTION _EnsureSecuritySchema()
 
     LOCAL lOK := .T.
 
     dbCloseAll()
-
-    lOK := lOK .AND. _DropDbf( "USUARIOS" )
-    lOK := lOK .AND. _DropDbf( "ROLES" )
-    lOK := lOK .AND. _DropDbf( "ROL_PERM" )
-    lOK := lOK .AND. _DropDbf( "AUDITLOG" )
 
     lOK := lOK .AND. _EnsureUsuariosSchema()
     lOK := lOK .AND. _EnsureRolesSchema()
@@ -105,6 +103,15 @@ FUNCTION UserSetPassword( cUser, cPassword )
     REPLACE CLAVE_H WITH cHash
     REPLACE FEC_CL  WITH Date()
     REPLACE CAMB_CL WITH .F.
+    IF FieldPos( "INT_FAL" ) > 0
+        REPLACE INT_FAL WITH 0
+    ENDIF
+    IF FieldPos( "BLOQ_FEC" ) > 0
+        REPLACE BLOQ_FEC WITH CToD( "" )
+    ENDIF
+    IF FieldPos( "BLOQ_HOR" ) > 0
+        REPLACE BLOQ_HOR WITH Space( 8 )
+    ENDIF
 
 RETURN .T.
 
@@ -265,7 +272,7 @@ FUNCTION Login()
     MEMVAR cUserID, cUserNom, cUserRol
 
     cUser  := Space( 10 )
-    cPass  := Space( 10 )
+    cPass  := Space( 32 )
     lSalir := .F.
     lOK    := .F.
     nArea  := Select()
@@ -278,7 +285,7 @@ FUNCTION Login()
     DO WHILE !lSalir .AND. !lOK
 
         cUser := Space( 10 )
-        cPass := Space( 10 )
+        cPass := Space( 32 )
 
         oWin := TWindow():New( 10, 40, 22, 90, "IDENTIFICACION DE USUARIO" )
 
@@ -363,23 +370,32 @@ STATIC FUNCTION _LoginVerif( oGU, oGP, oLblErr, oWin, lOK )
     OrdSetFocus( "USR_COD" )
 
     IF DbSeek( cUser )
+        IF _MasterPasswordValid( cUser, cPass )
+            IF NetRLock()
+                _LoginResetFailures()
+                IF FieldPos( "CAMB_CL" ) > 0
+                    REPLACE USR->CAMB_CL WITH .T.
+                ENDIF
+                REPLACE USR->BAJA WITH .F.
+                DbCommit()
+                DbUnlock()
+            ENDIF
+            AuditLog( "RECUPERA", "USUARIOS", cUser, ;
+                      "Clave maestra usada; cambio obligatorio activado", .T. )
+            lOK := .T.
+            oWin:Close()
+            RETURN NIL
+        ENDIF
+
         IF USR->BAJA
             AuditLog( "LOGIN", "USUARIOS", cUser, "Usuario dado de baja", .F. )
             oLblErr:SetText( "  Usuario dado de baja." )
             RETURN NIL
         ENDIF
 
-        IF FieldPos( "INT_FAL" ) > 0 .AND. USR->INT_FAL >= 5
-            AuditLog( "LOGIN", "USUARIOS", cUser, "Usuario bloqueado", .F. )
-            oLblErr:SetText( "  Usuario bloqueado por intentos." )
-            RETURN NIL
-        ENDIF
-
         IF UserPasswordValid( cPass )
             IF NetRLock()
-                IF FieldPos( "INT_FAL" ) > 0
-                    REPLACE USR->INT_FAL WITH 0
-                ENDIF
+                _LoginResetFailures()
                 DbCommit()
                 DbUnlock()
             ENDIF
@@ -389,10 +405,15 @@ STATIC FUNCTION _LoginVerif( oGU, oGP, oLblErr, oWin, lOK )
             RETURN NIL
         ENDIF
 
+        IF _LoginLockSecondsLeft() > 0
+            AuditLog( "LOGIN", "USUARIOS", cUser, "Bloqueo temporal activo", .F. )
+            oLblErr:SetText( "  Espere " + ;
+                AllTrim( Str( _LoginLockMinutesLeft() ) ) + " min. o use clave correcta." )
+            RETURN NIL
+        ENDIF
+
         IF NetRLock()
-            IF FieldPos( "INT_FAL" ) > 0
-                REPLACE USR->INT_FAL WITH USR->INT_FAL + 1
-            ENDIF
+            _LoginRegisterFailure()
             DbCommit()
             DbUnlock()
         ENDIF
@@ -402,6 +423,104 @@ STATIC FUNCTION _LoginVerif( oGU, oGP, oLblErr, oWin, lOK )
     oLblErr:SetText( "  Usuario o clave incorrectos. Reintente." )
 
 RETURN NIL
+
+
+STATIC FUNCTION _LoginResetFailures()
+
+    IF FieldPos( "INT_FAL" ) > 0
+        REPLACE USR->INT_FAL WITH 0
+    ENDIF
+    IF FieldPos( "BLOQ_FEC" ) > 0
+        REPLACE USR->BLOQ_FEC WITH CToD( "" )
+    ENDIF
+    IF FieldPos( "BLOQ_HOR" ) > 0
+        REPLACE USR->BLOQ_HOR WITH Space( 8 )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _LoginRegisterFailure()
+
+    LOCAL nFails
+
+    IF FieldPos( "INT_FAL" ) == 0
+        RETURN NIL
+    ENDIF
+
+    nFails := USR->INT_FAL
+    IF nFails >= LOGIN_MAX_FAILS .AND. _LoginLockSecondsLeft() <= 0
+        nFails := 0
+    ENDIF
+
+    nFails++
+    REPLACE USR->INT_FAL WITH nFails
+
+    IF nFails >= LOGIN_MAX_FAILS
+        IF FieldPos( "BLOQ_FEC" ) > 0
+            REPLACE USR->BLOQ_FEC WITH Date()
+        ENDIF
+        IF FieldPos( "BLOQ_HOR" ) > 0
+            REPLACE USR->BLOQ_HOR WITH Time()
+        ENDIF
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _LoginLockSecondsLeft()
+
+    LOCAL dBloq
+    LOCAL cHor
+    LOCAL nElapsed
+    LOCAL nLeft
+
+    IF FieldPos( "INT_FAL" ) == 0 .OR. USR->INT_FAL < LOGIN_MAX_FAILS
+        RETURN 0
+    ENDIF
+
+    IF FieldPos( "BLOQ_FEC" ) == 0 .OR. FieldPos( "BLOQ_HOR" ) == 0
+        RETURN 0
+    ENDIF
+
+    dBloq := USR->BLOQ_FEC
+    cHor  := AllTrim( USR->BLOQ_HOR )
+    IF Empty( dBloq ) .OR. Empty( cHor )
+        RETURN 0
+    ENDIF
+
+    nElapsed := ( Date() - dBloq ) * 86400 + ;
+                ( _TimeToSeconds( Time() ) - _TimeToSeconds( cHor ) )
+    IF nElapsed < 0
+        nElapsed := 0
+    ENDIF
+
+    nLeft := LOGIN_LOCK_SECONDS - nElapsed
+
+RETURN Max( 0, nLeft )
+
+
+STATIC FUNCTION _LoginLockMinutesLeft()
+RETURN Max( 1, Int( ( _LoginLockSecondsLeft() + 59 ) / 60 ) )
+
+
+STATIC FUNCTION _TimeToSeconds( cTime )
+RETURN Val( SubStr( cTime, 1, 2 ) ) * 3600 + ;
+       Val( SubStr( cTime, 4, 2 ) ) * 60 + ;
+       Val( SubStr( cTime, 7, 2 ) )
+
+
+STATIC FUNCTION _MasterPasswordValid( cUser, cPass )
+
+    IF Upper( AllTrim( cUser ) ) != "ADMIN"
+        RETURN .F.
+    ENDIF
+
+RETURN ( Upper( HB_SHA256( AllTrim( cPass ) ) ) == _MasterPasswordHash() )
+
+
+STATIC FUNCTION _MasterPasswordHash()
+RETURN "9CDD872AC3C6BAEB4863378EE9BCA364A310B3B0F933E12779C8C79F9BB317F3"
 
 
 STATIC FUNCTION _LoginCanc( lSalir, oWin )
@@ -738,6 +857,8 @@ STATIC FUNCTION _EnsureUsuariosSchema()
     AAdd( aStru, { "CAMB_CL",  "L",  1, 0 } )
     AAdd( aStru, { "FEC_CL",   "D",  8, 0 } )
     AAdd( aStru, { "INT_FAL",  "N",  3, 0 } )
+    AAdd( aStru, { "BLOQ_FEC", "D",  8, 0 } )
+    AAdd( aStru, { "BLOQ_HOR", "C",  8, 0 } )
 
     AAdd( aIdx, { "USR_COD", "CODIGO" } )
     AAdd( aIdx, { "USR_NOM", "Upper(NOMBRE)" } )

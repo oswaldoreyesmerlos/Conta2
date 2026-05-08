@@ -160,7 +160,7 @@ FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice )
 
     DEFAULT cAlias TO cArchivo
 
-    IF Select( cAlias ) > 0
+    IF DBUSED( cAlias )
         DbSelectArea( cAlias )
         IF !Empty( cIndice )
             OrdSetFocus( cIndice )
@@ -371,7 +371,52 @@ RETURN If( xVar == NIL, xDefecto, xVar )
 
 
 FUNCTION IsDbUsed( cAlias )
-RETURN ( Select( cAlias ) > 0 )
+RETURN DBUSED( cAlias )
+
+
+FUNCTION DBUSED( cAlias )
+
+    IF ValType( cAlias ) != "C" .OR. Empty( AllTrim( cAlias ) )
+        RETURN .F.
+    ENDIF
+
+RETURN ( Select( AllTrim( cAlias ) ) > 0 )
+
+
+FUNCTION DbFieldValue( cField, xDefault )
+
+    LOCAL nPos
+
+    DEFAULT xDefault TO NIL
+
+    IF ValType( cField ) != "C" .OR. Empty( AllTrim( cField ) )
+        RETURN xDefault
+    ENDIF
+
+    nPos := FieldPos( AllTrim( cField ) )
+    IF nPos == 0
+        RETURN xDefault
+    ENDIF
+
+RETURN FieldGet( nPos )
+
+
+FUNCTION DbFieldPutIf( cField, xValue )
+
+    LOCAL nPos
+
+    IF ValType( cField ) != "C" .OR. Empty( AllTrim( cField ) )
+        RETURN .F.
+    ENDIF
+
+    nPos := FieldPos( AllTrim( cField ) )
+    IF nPos == 0
+        RETURN .F.
+    ENDIF
+
+    FieldPut( nPos, xValue )
+
+RETURN .T.
 
 
 FUNCTION GetDbArea( cAlias )

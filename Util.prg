@@ -18,6 +18,10 @@
 
 #include "OOp.ch"
 #include "inkey.ch"
+#include "fileio.ch"
+
+STATIC s_nAppLockHandle := -1
+STATIC s_cAppLockFile   := ""
 
 // ============================================================================
 // 1) REQUEST / InitApp
@@ -53,6 +57,145 @@ FUNCTION InitApp( nRows, nCols, cFont, nFontH, nFontW )
 RETURN NIL
 
 
+// ----------------------------------------------------------------------------
+// AppLockAcquire()
+// Evita que AppGestion se ejecute mas de una vez en el mismo terminal.
+// Usa un archivo de bloqueo por equipo/usuario y mantiene el handle abierto
+// en modo exclusivo hasta AppLockRelease().
+// ----------------------------------------------------------------------------
+FUNCTION AppLockAcquire()
+
+    LOCAL cDir
+    LOCAL cKey
+    LOCAL cFile
+    LOCAL nTmp
+
+    IF s_nAppLockHandle >= 0
+        RETURN .T.
+    ENDIF
+
+    cDir := AllTrim( GetEnv( "TEMP" ) )
+    IF Empty( cDir )
+        cDir := AllTrim( GetEnv( "TMP" ) )
+    ENDIF
+    IF Empty( cDir )
+        cDir := "."
+    ENDIF
+
+    cKey  := _AppLockToken( GetEnv( "COMPUTERNAME" ) + "_" + GetEnv( "USERNAME" ) )
+    IF Empty( cKey )
+        cKey := "TERMINAL"
+    ENDIF
+
+    cFile := _AppPathAddSep( cDir ) + "AppGestion_" + cKey + ".lck"
+
+    IF !File( cFile )
+        nTmp := FCreate( cFile, FC_NORMAL )
+        IF nTmp >= 0
+            FClose( nTmp )
+        ENDIF
+    ENDIF
+
+    s_nAppLockHandle := FOpen( cFile, FO_READWRITE + FO_EXCLUSIVE )
+    IF s_nAppLockHandle < 0
+        RETURN .F.
+    ENDIF
+
+    s_cAppLockFile := cFile
+    FSeek( s_nAppLockHandle, 0 )
+    FWrite( s_nAppLockHandle, ;
+            "AppGestion en ejecucion" + hb_Eol() + ;
+            "Equipo : " + GetEnv( "COMPUTERNAME" ) + hb_Eol() + ;
+            "Usuario: " + GetEnv( "USERNAME" ) + hb_Eol() + ;
+            "Fecha  : " + DToC( Date() ) + " " + Time() + hb_Eol() )
+
+RETURN .T.
+
+
+FUNCTION AppLockRelease()
+
+    IF s_nAppLockHandle >= 0
+        FClose( s_nAppLockHandle )
+        s_nAppLockHandle := -1
+    ENDIF
+
+    IF !Empty( s_cAppLockFile ) .AND. File( s_cAppLockFile )
+        BEGIN SEQUENCE
+            FErase( s_cAppLockFile )
+        RECOVER
+        END SEQUENCE
+    ENDIF
+    s_cAppLockFile := ""
+
+RETURN NIL
+
+
+FUNCTION ErrorLogAppend( cText )
+
+    LOCAL nH
+
+    DEFAULT cText TO ""
+
+    IF Empty( cText )
+        RETURN .F.
+    ENDIF
+
+    nH := FOpen( "error.log", FO_READWRITE + FO_DENYNONE )
+    IF nH < 0
+        nH := FCreate( "error.log", FC_NORMAL )
+    ENDIF
+
+    IF nH < 0
+        RETURN .F.
+    ENDIF
+
+    FSeek( nH, 0, FS_END )
+    FWrite( nH, cText )
+    IF Right( cText, Len( hb_Eol() ) ) != hb_Eol()
+        FWrite( nH, hb_Eol() )
+    ENDIF
+    FClose( nH )
+
+RETURN .T.
+
+
+STATIC FUNCTION _AppPathAddSep( cPath )
+
+    cPath := AllTrim( cPath )
+
+    IF Empty( cPath )
+        RETURN ".\"
+    ENDIF
+
+    IF Right( cPath, 1 ) $ "\/"
+        RETURN cPath
+    ENDIF
+
+RETURN cPath + "\"
+
+
+STATIC FUNCTION _AppLockToken( cText )
+
+    LOCAL cOut := ""
+    LOCAL i
+    LOCAL cCh
+
+    cText := Upper( AllTrim( cText ) )
+
+    FOR i := 1 TO Len( cText )
+        cCh := SubStr( cText, i, 1 )
+        IF ( cCh >= "A" .AND. cCh <= "Z" ) .OR. ;
+           ( cCh >= "0" .AND. cCh <= "9" ) .OR. ;
+           cCh == "_" .OR. cCh == "-"
+            cOut += cCh
+        ELSE
+            cOut += "_"
+        ENDIF
+    NEXT
+
+RETURN cOut
+
+
 // ============================================================================
 // 2) MANEJADOR DE ERRORES CRITICOS
 // ============================================================================
@@ -68,7 +211,6 @@ FUNCTION ErrSys( oErr )
     LOCAL cMsg     := ""
     LOCAL cLog     := ""
     LOCAL cArgs    := ""
-    LOCAL cLogPrev := ""
     LOCAL nI       := 2
     LOCAL i
 
@@ -128,16 +270,11 @@ FUNCTION ErrSys( oErr )
         ENDIF
     ENDDO
 
-    BEGIN SEQUENCE
-        IF File( "error.log" )
-            cLogPrev := hb_MemoRead( "error.log" )
-        ENDIF
-        hb_MemoWrit( "error.log", cLogPrev + cLog )
-    RECOVER
-    END SEQUENCE
+    ErrorLogAppend( cLog )
 
     BEGIN SEQUENCE
         dbCloseAll()
+        AppLockRelease()
     RECOVER
     END SEQUENCE
 
@@ -160,7 +297,7 @@ FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice )
 
     DEFAULT cAlias TO cArchivo
 
-    IF Select( cAlias ) > 0
+    IF DBUSED( cAlias )
         DbSelectArea( cAlias )
         IF !Empty( cIndice )
             OrdSetFocus( cIndice )
@@ -371,7 +508,52 @@ RETURN If( xVar == NIL, xDefecto, xVar )
 
 
 FUNCTION IsDbUsed( cAlias )
-RETURN ( Select( cAlias ) > 0 )
+RETURN DBUSED( cAlias )
+
+
+FUNCTION DBUSED( cAlias )
+
+    IF ValType( cAlias ) != "C" .OR. Empty( AllTrim( cAlias ) )
+        RETURN .F.
+    ENDIF
+
+RETURN ( Select( AllTrim( cAlias ) ) > 0 )
+
+
+FUNCTION DbFieldValue( cField, xDefault )
+
+    LOCAL nPos
+
+    DEFAULT xDefault TO NIL
+
+    IF ValType( cField ) != "C" .OR. Empty( AllTrim( cField ) )
+        RETURN xDefault
+    ENDIF
+
+    nPos := FieldPos( AllTrim( cField ) )
+    IF nPos == 0
+        RETURN xDefault
+    ENDIF
+
+RETURN FieldGet( nPos )
+
+
+FUNCTION DbFieldPutIf( cField, xValue )
+
+    LOCAL nPos
+
+    IF ValType( cField ) != "C" .OR. Empty( AllTrim( cField ) )
+        RETURN .F.
+    ENDIF
+
+    nPos := FieldPos( AllTrim( cField ) )
+    IF nPos == 0
+        RETURN .F.
+    ENDIF
+
+    FieldPut( nPos, xValue )
+
+RETURN .T.
 
 
 FUNCTION GetDbArea( cAlias )

@@ -153,6 +153,8 @@ METHOD KillFocus() CLASS TGet
         RETURN NIL
     ENDIF
 
+    GfxCursor( SC_NONE )
+
 RETURN ::TControl:KillFocus()
 
 

@@ -11,6 +11,8 @@
 *.c
 *.map
 *.zip
+*.msix
+*.msi
 
 # Carpetas temporales o de compilacion
 hbmk_*/

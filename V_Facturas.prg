@@ -116,9 +116,9 @@ STATIC FUNCTION _FacCargar()
                 FAC->SUBTOTAL, ;
                 FAC->IVA, ;
                 FAC->TOTAL, ;
-                AllTrim( FAC->FORMA_PA ), ;
-                FAC->COBRADA, ;
-                FAC->ANULADA } )
+                AllTrim( DbFieldValue( "FORMA_PA", "" ) ), ;
+                DbFieldValue( "COBRADA", .F. ), ;
+                DbFieldValue( "ANULADA", .F. ) } )
         ENDIF
         DbSkip()
     ENDDO
@@ -369,11 +369,11 @@ STATIC FUNCTION _FacCargarCab( cNum, cCli, cNom, dFec, cFP, nDias, ;
 
     cCli  := AllTrim( FAC->CLIENTE_ )
     dFec  := FAC->FECHA
-    cFP   := AllTrim( FAC->FORMA_PA )
-    nRet  := FAC->PORC_RET
-    cObs  := AllTrim( FAC->OBSERVA  )
-    lAnu  := FAC->ANULADA
-    lCob  := FAC->COBRADA
+    cFP   := AllTrim( DbFieldValue( "FORMA_PA", "" ) )
+    nRet  := DbFieldValue( "PORC_RET", 0 )
+    cObs  := AllTrim( DbFieldValue( "OBSERVA", "" ) )
+    lAnu  := DbFieldValue( "ANULADA", .F. )
+    lCob  := DbFieldValue( "COBRADA", .F. )
 
     // Cargar días de pago desde el cliente
     IF ABRIR_TABLA( "CLIENTES", "CLI_F2", "CLI_ID" )
@@ -444,7 +444,7 @@ STATIC FUNCTION _FacDesdePresup( cNumPre, cCli, cNom, dFec, cFP, nDias, cObs, aL
     IF DbSeek( cNumPre )
         cCli := AllTrim( PRE_F->CLIENTE_ )
         dFec := Date()
-        cObs := AllTrim( PRE_F->OBSERVA  )
+        cObs := AllTrim( DbFieldValue( "OBSERVA", "" ) )
 
         IF ABRIR_TABLA( "CLIENTES", "CLI_F2", "CLI_ID" )
             IF CLI_F2->( DbSeek( cCli ) )
@@ -814,20 +814,20 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
     REPLACE FAC->SERIE    WITH "A"
     REPLACE FAC->CLIENTE_ WITH cCli
     REPLACE FAC->FECHA    WITH dFec
-    REPLACE FAC->FORMA_PA WITH cFP
+    DbFieldPutIf( "FORMA_PA", cFP )
     REPLACE FAC->SUBTOTAL WITH nBase
     REPLACE FAC->IVA      WITH nIva
     REPLACE FAC->RETENCIO WITH nRet
-    REPLACE FAC->PORC_RET WITH nPRet
+    DbFieldPutIf( "PORC_RET", nPRet )
     REPLACE FAC->TOTAL    WITH nTotal
-    REPLACE FAC->FECHA_VT WITH dVto
-    REPLACE FAC->FECHA_OP WITH Date()
-    REPLACE FAC->OBSERVA  WITH cObs
-    REPLACE FAC->PIE_DOC  WITH cPieDoc
-    REPLACE FAC->ANULADA  WITH .F.
-    REPLACE FAC->COBRADA  WITH .F.
+    DbFieldPutIf( "FECHA_VT", dVto )
+    DbFieldPutIf( "FECHA_OP", Date() )
+    DbFieldPutIf( "OBSERVA",  cObs )
+    DbFieldPutIf( "PIE_DOC",  cPieDoc )
+    DbFieldPutIf( "ANULADA",  .F. )
+    DbFieldPutIf( "COBRADA",  .F. )
     REPLACE FAC->HORA     WITH Time()
-    REPLACE FAC->TIPO_DOC WITH "F"
+    DbFieldPutIf( "TIPO_DOC", "F" )
 
     IF !Empty( cNumPre )
         REPLACE FAC->NUM_PRE WITH cNumPre
@@ -1205,8 +1205,8 @@ STATIC FUNCTION _NaGuardar( cNumFac, cCliID, cCtaCli, oGFec, oGMot, ;
         DbSelectArea( "FAC_NA2" )
         OrdSetFocus( "FAC_NUM" )
         IF DbSeek( PadR( "A", 4 ) + PadR( cNumFac, 10 ) ) .AND. NetRLock()
-            REPLACE FAC_NA2->ANULADA   WITH .T.
-            REPLACE FAC_NA2->NUM_ABONO WITH cNumNA
+            DbFieldPutIf( "ANULADA", .T. )
+            DbFieldPutIf( "NUM_ABONO", cNumNA )
             DbUnlock()
         ENDIF
         FAC_NA2->( DbCloseArea() )

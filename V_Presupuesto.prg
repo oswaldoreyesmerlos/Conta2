@@ -133,8 +133,9 @@ STATIC FUNCTION _PreCargar()
                 PRE->SUBTOTAL, ;
                 PRE->IVA, ;
                 PRE->TOTAL, ;
-                _PreEstadoTexto( PRE->ESTADO, PRE->ID_OBRA ), ;
-                AllTrim( PRE->ID_OBRA ) } )
+                _PreEstadoTexto( DbFieldValue( "ESTADO", "P" ), ;
+                                  DbFieldValue( "ID_OBRA", "" ) ), ;
+                AllTrim( DbFieldValue( "ID_OBRA", "" ) ) } )
         ENDIF
         DbSkip()
     ENDDO
@@ -283,7 +284,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oGRet  := TGet():New(  6, 98, nPorcRet, "99.99",      oWin )
     oGObs  := TGet():New(  8, 14, cObserva, "@!",         oWin )
 
-    oGrid := TGrid():New( 10, 2, 26, 124, oWin )
+    oGrid := TGrid():New( 10, 2, 24, 124, oWin )
     oGrid:aData    := aLineas
     oGrid:nSeekCol := 2
 
@@ -300,15 +301,15 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
                      @nBase, @nIva, @nRet, @nTotal, ;
                      oLBase, oLIva, oLRet, oLTotal ) }
 
-    oWin:AddCtrl( TLabel():New( 26,  2, "BASE IMPONIBLE :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 27,  2, "TOTAL IVA      :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 28,  2, "RETENCION IRPF :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 29,  2, "TOTAL PRESUP.:", oWin ) )
+    oWin:AddCtrl( TLabel():New( 27,  2, "BASE IMPONIBLE :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 28,  2, "TOTAL IVA      :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 29,  2, "RETENCION IRPF :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 30,  2, "TOTAL PRESUP.:", oWin ) )
 
-    oLBase  := TLabel():New( 26, 20, _FmtNP( nBase  ), oWin )
-    oLIva   := TLabel():New( 27, 20, _FmtNP( nIva   ), oWin )
-    oLRet   := TLabel():New( 28, 20, _FmtNP( nRet   ), oWin )
-    oLTotal := TLabel():New( 29, 20, _FmtNP( nTotal ), oWin )
+    oLBase  := TLabel():New( 27, 20, _FmtNP( nBase  ), oWin )
+    oLIva   := TLabel():New( 28, 20, _FmtNP( nIva   ), oWin )
+    oLRet   := TLabel():New( 29, 20, _FmtNP( nRet   ), oWin )
+    oLTotal := TLabel():New( 30, 20, _FmtNP( nTotal ), oWin )
     oLTotal:cColor := "W+/B"
 
     oWin:AddCtrl( oLBase  )
@@ -316,17 +317,17 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oWin:AddCtrl( oLRet   )
     oWin:AddCtrl( oLTotal )
 
-    oBtNLin := TButton():New( 26, 60, 27, 78, oWin, "NUEVA LINEA (F5)", ;
+    oBtNLin := TButton():New( 25, 60, 25, 78, oWin, "NUEVA LINEA (F5)", ;
         {|| _PreNuevaLin( oGrid, @aLineas, nPorcRet, ;
                           @nBase, @nIva, @nRet, @nTotal, ;
                           oLBase, oLIva, oLRet, oLTotal ) } )
 
-    oBtELin := TButton():New( 26, 80, 27, 98, oWin, "EDITAR LINEA", ;
+    oBtELin := TButton():New( 25, 80, 25, 98, oWin, "EDITAR LINEA", ;
         {|| _PreEditLin( oGrid, @aLineas, nPorcRet, ;
                          @nBase, @nIva, @nRet, @nTotal, ;
                          oLBase, oLIva, oLRet, oLTotal ) } )
 
-    oBtDLin := TButton():New( 26,100, 27,118, oWin, "BORRAR LINEA", ;
+    oBtDLin := TButton():New( 25,100, 25,118, oWin, "BORRAR LINEA", ;
         {|| _PreBorrarLin( oGrid, @aLineas, nPorcRet, ;
                            @nBase, @nIva, @nRet, @nTotal, ;
                            oLBase, oLIva, oLRet, oLTotal ) } )
@@ -397,11 +398,12 @@ STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, 
 
     cCli  := AllTrim( PRE_C->CLIENTE_ )
     dFec  := PRE_C->FECHA
-    dVal  := PRE_C->VALIDEZ
-    cFP   := AllTrim( PRE_C->FORMA_PA )
-    nRet  := PRE_C->PORC_RET
-    cObs  := AllTrim( PRE_C->OBSERVA  )
-    lAnu  := ( PRE_C->ESTADO == "A" .OR. PRE_C->ESTADO == "F" )
+    dVal  := DbFieldValue( "VALIDEZ", PRE_C->FECHA )
+    cFP   := AllTrim( DbFieldValue( "FORMA_PA", "" ) )
+    nRet  := DbFieldValue( "PORC_RET", 0 )
+    cObs  := AllTrim( DbFieldValue( "OBSERVA", "" ) )
+    lAnu  := ( DbFieldValue( "ESTADO", "P" ) == "A" .OR. ;
+               DbFieldValue( "ESTADO", "P" ) == "F" )
 
     IF ABRIR_TABLA( "CLIENTES", "CLI_P", "CLI_ID" )
         IF CLI_P->( DbSeek( cCli ) )
@@ -799,9 +801,9 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
             RETURN NIL
         ENDIF
 
-        IF !Empty( AllTrim( PRE_G->ID_OBRA ) ) .OR. ;
-           AllTrim( PRE_G->ESTADO ) == "A" .OR. ;
-           AllTrim( PRE_G->ESTADO ) == "R"
+        IF !Empty( AllTrim( DbFieldValue( "ID_OBRA", "" ) ) ) .OR. ;
+           AllTrim( DbFieldValue( "ESTADO", "P" ) ) == "A" .OR. ;
+           AllTrim( DbFieldValue( "ESTADO", "P" ) ) == "R"
             MsgStop( "No se puede modificar un presupuesto aceptado, rechazado o con obra creada.", ;
                      "Guardar" )
             PRE_G->( DbCloseArea() )
@@ -815,21 +817,21 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
 
     REPLACE PRE_G->NUMERO   WITH cNum
     REPLACE PRE_G->FECHA    WITH dFec
-    REPLACE PRE_G->VALIDEZ  WITH dVal
+    DbFieldPutIf( "VALIDEZ", dVal )
     REPLACE PRE_G->CLIENTE_ WITH cCli
     REPLACE PRE_G->VENDEDOR WITH Space( 10 )
     REPLACE PRE_G->SUBTOTAL WITH nBase
     REPLACE PRE_G->IVA      WITH nIva
     REPLACE PRE_G->TOTAL    WITH nTotal
-    REPLACE PRE_G->OBSERVA  WITH cObs
-    REPLACE PRE_G->PIE_DOC  WITH cPieDoc
-    REPLACE PRE_G->PORC_RET WITH nPRet
+    DbFieldPutIf( "OBSERVA",  cObs )
+    DbFieldPutIf( "PIE_DOC",  cPieDoc )
+    DbFieldPutIf( "PORC_RET", nPRet )
 
     IF lNuevo
-        REPLACE PRE_G->ESTADO  WITH "P"
-        REPLACE PRE_G->NUM_FAC WITH Space( 10 )
-        REPLACE PRE_G->ID_OBRA WITH Space( 10 )
-        REPLACE PRE_G->TIPO    WITH "C"
+        DbFieldPutIf( "ESTADO",  "P" )
+        DbFieldPutIf( "NUM_FAC", Space( 10 ) )
+        DbFieldPutIf( "ID_OBRA", Space( 10 ) )
+        DbFieldPutIf( "TIPO",    "C" )
     ENDIF
 
     DbUnlock()
@@ -966,8 +968,8 @@ FUNCTION AceptarPresupuesto( cNumPre )
         RETURN .F.
     ENDIF
 
-    cEstado := AllTrim( PRE_AC->ESTADO  )
-    cIdObra := AllTrim( PRE_AC->ID_OBRA )
+    cEstado := AllTrim( DbFieldValue( "ESTADO", "P" ) )
+    cIdObra := AllTrim( DbFieldValue( "ID_OBRA", "" ) )
 
     PRE_AC->( DbCloseArea() )
 
@@ -996,7 +998,7 @@ FUNCTION AceptarPresupuesto( cNumPre )
     OrdSetFocus( "PRE_NUM" )
 
     IF ( DbSeek( PadR( AllTrim( cNumPre ), 10 ) ) .OR. DbSeek( AllTrim( cNumPre ) ) ) .AND. NetRLock()
-        REPLACE PRE_AM->ESTADO WITH "A"
+        DbFieldPutIf( "ESTADO", "A" )
         DbCommit()
         DbUnlock()
     ELSE
@@ -1092,8 +1094,8 @@ FUNCTION RechazarPresupuesto( cNumPre )
         RETURN .F.
     ENDIF
 
-    cEstado := AllTrim( PRE_RV->ESTADO )
-    cIdObra := AllTrim( PRE_RV->ID_OBRA )
+    cEstado := AllTrim( DbFieldValue( "ESTADO", "P" ) )
+    cIdObra := AllTrim( DbFieldValue( "ID_OBRA", "" ) )
 
     PRE_RV->( DbCloseArea() )
 
@@ -1155,8 +1157,8 @@ FUNCTION RechazarPresupuesto( cNumPre )
     OrdSetFocus( "PRE_NUM" )
 
     IF DbSeek( AllTrim( cNumPre ) ) .AND. NetRLock()
-        REPLACE PRE_RM->ESTADO  WITH "R"
-        REPLACE PRE_RM->OBSERVA WITH "RECHAZADO: " + cMotivo
+        DbFieldPutIf( "ESTADO", "R" )
+        DbFieldPutIf( "OBSERVA", "RECHAZADO: " + cMotivo )
         DbCommit()
         DbUnlock()
     ENDIF

@@ -152,17 +152,17 @@ RETURN cIdObra
 // ============================================================================
 FUNCTION GetResumenObra( cIdObra )
 
+   LOCAL nArea      := Select()
    LOCAL nTotal     := GetTotalObra( cIdObra )
    LOCAL nFacturado := GetFacturadoObra( cIdObra )
    LOCAL nPendiente := nTotal - nFacturado
    LOCAL cEstado    := ""
-   LOCAL nArea      := Select()
 
    IF ABRIR_TABLA( "OBRAS", "OBR_RES", "OBR_ID" )
       DbSelectArea( "OBR_RES" )
       OrdSetFocus( "OBR_ID" )
       IF DbSeek( PadR( cIdObra, 12 ) ) .OR. DbSeek( cIdObra )
-         cEstado := OBR_RES->ESTADO
+         cEstado := DbFieldValue( "ESTADO", "" )
       ENDIF
       OBR_RES->( DbCloseArea() )
    ENDIF
@@ -852,17 +852,18 @@ STATIC FUNCTION _ObrasCargar()
    DO WHILE !Eof()
       IF !Deleted()
          aRes := GetResumenObra( AllTrim( OBR->ID ) )
+         DbSelectArea( "OBR" )
          AAdd( aData, { ;
             AllTrim( OBR->ID       ), ;
             AllTrim( OBR->CLIENTE_ ), ;
             AllTrim( OBR->DESCRIP  ), ;
-            _ObraEstadoTexto( OBR->ESTADO ), ;
+            _ObraEstadoTexto( DbFieldValue( "ESTADO", "" ) ), ;
             aRes[1], ;
             aRes[2], ;
             aRes[3], ;
-            AllTrim( OBR->NUM_PRE  ) } )
+            AllTrim( DbFieldValue( "NUM_PRE", "" ) ) } )
       ENDIF
-      DbSkip()
+      OBR->( DbSkip() )
    ENDDO
 
 RETURN aData
@@ -1097,18 +1098,267 @@ RETURN NIL
 STATIC FUNCTION _ObraEstadoForm( cIdObra )
 
    LOCAL oWin
+   LOCAL oGrid
+   LOCAL oBtSal
    LOCAL aRes := GetResumenObra( cIdObra )
-   LOCAL cMsg
+   LOCAL aMov := _ObraMovCobros( cIdObra )
 
-   cMsg := "Obra: " + AllTrim( cIdObra ) + Chr(13) + ;
-           "Total obra: " + Transform( aRes[1], "999,999,999.99" ) + Chr(13) + ;
-           "Facturado : " + Transform( aRes[2], "999,999,999.99" ) + Chr(13) + ;
-           "Pendiente : " + Transform( aRes[3], "999,999,999.99" ) + Chr(13) + ;
-           "Estado    : " + _ObraEstadoTexto( aRes[4] )
+   oWin  := TWindow():New( 3, 6, 35, 126, "ESTADO ECONOMICO DE OBRA" )
+   oGrid := TGrid():New( 8, 2, 28, 116, oWin )
 
-   MsgInfo( cMsg, "Estado economico obra" )
+   oWin:AddCtrl( TLabel():New(  2,  2, "Obra       : " + AllTrim( cIdObra ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  3,  2, "Total obra : " + Transform( aRes[1], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  4,  2, "Facturado  : " + Transform( aRes[2], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  5,  2, "Pendiente  : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  6,  2, "Estado     : " + _ObraEstadoTexto( aRes[4] ), oWin ) )
+   oWin:AddCtrl( TLabel():New( 30,  2, "ENTER: detalle del movimiento   ESC/CERRAR: volver a obras", oWin ) )
+
+   oGrid:aData    := aMov
+   oGrid:nSeekCol := 3
+   oGrid:AddColumn( "Tipo",      8, "@!",         { |a| a[1] } )
+   oGrid:AddColumn( "Fecha",    10, "@!",         { |a| a[2] } )
+   oGrid:AddColumn( "Documento",14, "@!",         { |a| a[3] } )
+   oGrid:AddColumn( "Factura",  10, "@!",         { |a| a[4] } )
+   oGrid:AddColumn( "Importe",  12, "999,999.99", { |a| a[5] } )
+   oGrid:AddColumn( "Estado",   12, "@!",         { |a| a[6] } )
+   oGrid:AddColumn( "Forma",     9, "@!",         { |a| a[7] } )
+   oGrid:AddColumn( "Tercero",  28, "@!",         { |a| a[8] } )
+
+   oGrid:bEnter := {| g | ;
+      If( g:CurrentRow() != NIL, ;
+          MsgInfo( "Tipo     : " + g:CurrentRow()[1] + Chr(13) + ;
+                   "Fecha    : " + g:CurrentRow()[2] + Chr(13) + ;
+                   "Documento: " + g:CurrentRow()[3] + Chr(13) + ;
+                   "Factura  : " + g:CurrentRow()[4] + Chr(13) + ;
+                   "Importe  : " + Transform( g:CurrentRow()[5], "999,999,999.99" ) + Chr(13) + ;
+                   "Estado   : " + g:CurrentRow()[6] + Chr(13) + ;
+                   "Forma    : " + g:CurrentRow()[7] + Chr(13) + ;
+                   "Tercero  : " + g:CurrentRow()[8], ;
+                   "Movimiento de cobro" ), NIL ) }
+
+   oBtSal := TButton():New( 31, 98, 32, 116, oWin, "CERRAR", ;
+      {|| oWin:Close() } )
+
+   oWin:AddCtrl( oGrid  )
+   oWin:AddCtrl( oBtSal )
+
+   oWin:Run()
 
 RETURN NIL
+
+
+STATIC FUNCTION _ObraMovCobros( cIdObra )
+
+   LOCAL aMov  := {}
+   LOCAL aFacs := _ObraFacturas( cIdObra )
+
+   _ObraMovVencimientos( cIdObra, @aMov )
+   _ObraMovRecibos( aFacs, @aMov )
+
+   IF Empty( aMov )
+      AAdd( aMov, { "INFO", "", "Sin movimientos", "", 0.00, "", "", "" } )
+   ENDIF
+
+RETURN aMov
+
+
+STATIC FUNCTION _ObraMovVencimientos( cIdObra, aMov )
+
+   LOCAL nArea   := Select()
+   LOCAL cEstado
+   LOCAL cTercero
+
+   IF !ABRIR_TABLA( "VENCIMIEN", "VEN_OM", "VEN_OBR" )
+      Select( nArea )
+      RETURN NIL
+   ENDIF
+
+   DbSelectArea( "VEN_OM" )
+   DbGoTop()
+
+   DO WHILE !Eof()
+      IF !Deleted() .AND. ;
+         AllTrim( DbFieldValue( "ID_OBRA", "" ) ) == AllTrim( cIdObra ) .AND. ;
+         AllTrim( DbFieldValue( "TIPO", "" ) ) == "C"
+
+         cEstado  := If( DbFieldValue( "COBRADO", .F. ), "COBRADO", "PENDIENTE" )
+         cTercero := AllTrim( DbFieldValue( "NOMBRE", "" ) )
+         IF Empty( cTercero )
+            cTercero := AllTrim( DbFieldValue( "CODTERCE", "" ) )
+         ENDIF
+
+         AAdd( aMov, { ;
+            "VTO", ;
+            _ObraFechaTexto( DbFieldValue( "VENCTO", CToD( "" ) ) ), ;
+            AllTrim( DbFieldValue( "NUMERO", "" ) ), ;
+            AllTrim( DbFieldValue( "NUMERO", "" ) ), ;
+            DbFieldValue( "IMPORTE", 0.00 ), ;
+            cEstado, ;
+            "", ;
+            cTercero } )
+      ENDIF
+      VEN_OM->( DbSkip() )
+   ENDDO
+
+   VEN_OM->( DbCloseArea() )
+   Select( nArea )
+
+RETURN NIL
+
+
+STATIC FUNCTION _ObraMovRecibos( aFacs, aMov )
+
+   LOCAL nArea := Select()
+   LOCAL cFac
+   LOCAL cFecha
+   LOCAL cForma
+   LOCAL cTercero
+
+   IF Empty( aFacs )
+      Select( nArea )
+      RETURN NIL
+   ENDIF
+
+   IF !ABRIR_TABLA( "RC_DETAL", "RCD_OM", "RCD_FAC" )
+      Select( nArea )
+      RETURN NIL
+   ENDIF
+
+   DbSelectArea( "RCD_OM" )
+   DbGoTop()
+
+   DO WHILE !Eof()
+      IF !Deleted()
+         cFac := AllTrim( DbFieldValue( "NUM_FAC", "" ) )
+         IF AScan( aFacs, {| c | c == cFac } ) > 0
+            cFecha   := ""
+            cForma   := ""
+            cTercero := ""
+            _ObraReciboDatos( AllTrim( DbFieldValue( "NUMERO", "" ) ), ;
+                              @cFecha, @cForma, @cTercero )
+
+            AAdd( aMov, { ;
+               "COBRO", ;
+               cFecha, ;
+               AllTrim( DbFieldValue( "NUMERO", "" ) ), ;
+               cFac, ;
+               DbFieldValue( "IMPORTE", 0.00 ), ;
+               "COBRADO", ;
+               cForma, ;
+               cTercero } )
+         ENDIF
+      ENDIF
+      RCD_OM->( DbSkip() )
+   ENDDO
+
+   RCD_OM->( DbCloseArea() )
+   Select( nArea )
+
+RETURN NIL
+
+
+STATIC FUNCTION _ObraFacturas( cIdObra )
+
+   LOCAL nArea := Select()
+   LOCAL aFacs := {}
+   LOCAL cNum
+
+   IF !ABRIR_TABLA( "FACTURA", "FAC_OM", "FAC_OBR" )
+      Select( nArea )
+      RETURN aFacs
+   ENDIF
+
+   DbSelectArea( "FAC_OM" )
+   DbGoTop()
+
+   DO WHILE !Eof()
+      IF !Deleted() .AND. ;
+         AllTrim( DbFieldValue( "ID_OBRA", "" ) ) == AllTrim( cIdObra ) .AND. ;
+         !DbFieldValue( "ANULADA", .F. )
+
+         cNum := AllTrim( DbFieldValue( "NUMERO", "" ) )
+         IF !Empty( cNum ) .AND. AScan( aFacs, {| c | c == cNum } ) == 0
+            AAdd( aFacs, cNum )
+         ENDIF
+      ENDIF
+      FAC_OM->( DbSkip() )
+   ENDDO
+
+   FAC_OM->( DbCloseArea() )
+   Select( nArea )
+
+RETURN aFacs
+
+
+STATIC FUNCTION _ObraReciboDatos( cNumRec, cFecha, cForma, cTercero )
+
+   LOCAL nArea := Select()
+
+   IF !ABRIR_TABLA( "RECIBOS", "REC_OM", "REC_NUM" )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   DbSelectArea( "REC_OM" )
+   OrdSetFocus( "REC_NUM" )
+
+   IF DbSeek( PadR( cNumRec, 10 ) ) .OR. DbSeek( cNumRec )
+      cFecha   := _ObraFechaTexto( DbFieldValue( "FECHA", CToD( "" ) ) )
+      cForma   := _ObraFormaTexto( DbFieldValue( "FORMA_PA", "" ) )
+      cTercero := _ObraClienteNombre( DbFieldValue( "CLIENTE_", "" ) )
+   ENDIF
+
+   REC_OM->( DbCloseArea() )
+   Select( nArea )
+
+RETURN .T.
+
+
+STATIC FUNCTION _ObraClienteNombre( cCliente )
+
+   LOCAL nArea := Select()
+   LOCAL cNom  := AllTrim( cCliente )
+
+   IF ABRIR_TABLA( "CLIENTES", "CLI_OM", "CLI_ID" )
+      DbSelectArea( "CLI_OM" )
+      IF DbSeek( PadR( cCliente, 10 ) ) .OR. DbSeek( cCliente )
+         cNom := AllTrim( CLI_OM->NOMBRE + " " + CLI_OM->APELLIDO )
+      ENDIF
+      CLI_OM->( DbCloseArea() )
+   ENDIF
+
+   Select( nArea )
+
+RETURN cNom
+
+
+STATIC FUNCTION _ObraFechaTexto( dFecha )
+
+   IF ValType( dFecha ) == "D" .AND. !Empty( dFecha )
+      RETURN DToC( dFecha )
+   ENDIF
+
+RETURN ""
+
+
+STATIC FUNCTION _ObraFormaTexto( cForma )
+
+   cForma := Upper( AllTrim( cForma ) )
+
+   DO CASE
+   CASE cForma == "EFE"
+      RETURN "Efectivo"
+   CASE cForma == "TRF"
+      RETURN "Transf."
+   CASE cForma == "TAR"
+      RETURN "Tarjeta"
+   CASE cForma == "CHQ"
+      RETURN "Cheque"
+   CASE cForma == "OTR"
+      RETURN "Otro"
+   ENDCASE
+
+RETURN cForma
 
 
 STATIC FUNCTION _ObraEstadoTexto( cEstado )

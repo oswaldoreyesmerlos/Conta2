@@ -17,10 +17,6 @@
 // ============================================================================
 FUNCTION InformeClientes()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
 
@@ -64,24 +60,7 @@ FUNCTION InformeClientes()
     CLI_I->( DbCloseArea() )
     Select( nArea )
 
-    oWin := TWindow():New( 1, 2, 37, 129, "INFORME DE CLIENTES" )
-
-    oBrw := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
-
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "INFORME_CLIENTES.TXT" ) } )
-
-    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oBrw   )
-    oWin:AddCtrl( oBtPrn )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-RETURN NIL
+RETURN _MostrarInformeTexto( "INFORME DE CLIENTES", cTexto, "INFORME_CLIENTES.TXT" )
 
 
 // ============================================================================
@@ -89,10 +68,6 @@ RETURN NIL
 // ============================================================================
 FUNCTION InformeFacturas()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
 
@@ -130,7 +105,7 @@ FUNCTION InformeFacturas()
             cTexto += PadL( Transform( FAC_I->SUBTOTAL, "999,999.99" ), 12 ) + " "
             cTexto += PadL( Transform( FAC_I->IVA, "999,999.99" ), 10 ) + " "
             cTexto += PadL( Transform( FAC_I->TOTAL, "999,999.99" ), 12 ) + " "
-            cTexto += If( FAC_I->COBRADA, "SI", "NO" ) + hb_Eol()
+            cTexto += If( DbFieldValue( "COBRADA", .F. ), "SI", "NO" ) + hb_Eol()
         ENDIF
         DbSkip()
     ENDDO
@@ -138,24 +113,7 @@ FUNCTION InformeFacturas()
     FAC_I->( DbCloseArea() )
     Select( nArea )
 
-    oWin := TWindow():New( 1, 2, 37, 129, "INFORME DE FACTURAS" )
-
-    oBrw := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
-
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "INFORME_FACTURAS.TXT" ) } )
-
-    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oBrw   )
-    oWin:AddCtrl( oBtPrn )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-RETURN NIL
+RETURN _MostrarInformeTexto( "INFORME DE FACTURAS", cTexto, "INFORME_FACTURAS.TXT" )
 
 
 // ============================================================================
@@ -163,10 +121,6 @@ RETURN NIL
 // ============================================================================
 FUNCTION InformeArticulos()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
 
@@ -210,24 +164,7 @@ FUNCTION InformeArticulos()
     ART_I->( DbCloseArea() )
     Select( nArea )
 
-    oWin := TWindow():New( 1, 2, 37, 129, "INFORME DE ARTICULOS" )
-
-    oBrw := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
-
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "INFORME_ARTICULOS.TXT" ) } )
-
-    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oBrw   )
-    oWin:AddCtrl( oBtPrn )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-RETURN NIL
+RETURN _MostrarInformeTexto( "INFORME DE ARTICULOS", cTexto, "INFORME_ARTICULOS.TXT" )
 
 
 // ============================================================================
@@ -235,10 +172,6 @@ RETURN NIL
 // ============================================================================
 FUNCTION InformePresupuestos()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
 
@@ -282,24 +215,7 @@ FUNCTION InformePresupuestos()
     PRE_I->( DbCloseArea() )
     Select( nArea )
 
-    oWin := TWindow():New( 1, 2, 37, 129, "INFORME DE PRESUPUESTOS" )
-
-    oBrw := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
-
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "INFORME_PRESUPUESTOS.TXT" ) } )
-
-    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oBrw   )
-    oWin:AddCtrl( oBtPrn )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-RETURN NIL
+RETURN _MostrarInformeTexto( "INFORME DE PRESUPUESTOS", cTexto, "INFORME_PRESUPUESTOS.TXT" )
 
 
 // ============================================================================
@@ -327,10 +243,6 @@ RETURN NIL
 // ============================================================================
 FUNCTION InformeVencimientos()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
     LOCAL nDias
@@ -360,13 +272,14 @@ FUNCTION InformeVencimientos()
     cTexto += Replicate( "-", 90 ) + hb_Eol()
 
     DO WHILE !Eof()
-        IF !Deleted() .AND. !FAC_IV->COBRADA .AND. !FAC_IV->ANULADA
-            nDias   := Date() - FAC_IV->FECHA_VT
+        IF !Deleted() .AND. !DbFieldValue( "COBRADA", .F. ) .AND. ;
+           !DbFieldValue( "ANULADA", .F. )
+            nDias   := Date() - DbFieldValue( "FECHA_VT", FAC_IV->FECHA )
             cAlerta := If( nDias > 0, "VENCIDA +" + AllTrim( Str( nDias ) ) + "d", ;
                        If( nDias > -7, "PROXIMA", "OK" ) )
             cTexto += PadR( AllTrim( FAC_IV->NUMERO   ), 10 ) + " "
             cTexto += PadR( DToC(    FAC_IV->FECHA    ), 10 ) + " "
-            cTexto += PadR( DToC(    FAC_IV->FECHA_VT ), 10 ) + " "
+            cTexto += PadR( DToC( DbFieldValue( "FECHA_VT", FAC_IV->FECHA ) ), 10 ) + " "
             cTexto += PadR( AllTrim( FAC_IV->CLIENTE_ ), 30 ) + " "
             cTexto += PadL( Transform( FAC_IV->TOTAL, "999,999.99" ), 12 ) + " "
             cTexto += cAlerta + hb_Eol()
@@ -377,23 +290,7 @@ FUNCTION InformeVencimientos()
     FAC_IV->( DbCloseArea() )
     Select( nArea )
 
-    oWin   := TWindow():New( 1, 2, 37, 129, "VENCIMIENTOS PENDIENTES" )
-    oBrw   := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
-
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "VENCIMIENTOS.TXT" ) } )
-
-    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oBrw   )
-    oWin:AddCtrl( oBtPrn )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-RETURN NIL
+RETURN _MostrarInformeTexto( "VENCIMIENTOS PENDIENTES", cTexto, "VENCIMIENTOS.TXT" )
 
 
 // ============================================================================
@@ -401,10 +298,6 @@ RETURN NIL
 // ============================================================================
 FUNCTION InformeProveedores()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
 
@@ -446,23 +339,7 @@ FUNCTION InformeProveedores()
     PRV_IP->( DbCloseArea() )
     Select( nArea )
 
-    oWin   := TWindow():New( 1, 2, 37, 129, "INFORME DE PROVEEDORES" )
-    oBrw   := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
-
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "PROVEEDORES.TXT" ) } )
-
-    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oBrw   )
-    oWin:AddCtrl( oBtPrn )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-RETURN NIL
+RETURN _MostrarInformeTexto( "INFORME DE PROVEEDORES", cTexto, "PROVEEDORES.TXT" )
 
 
 // ============================================================================
@@ -471,10 +348,6 @@ RETURN NIL
 // ============================================================================
 FUNCTION InformeDiario()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
     LOCAL nEjer
@@ -532,23 +405,8 @@ FUNCTION InformeDiario()
     DIA_IP->( DbCloseArea() )
     Select( nArea )
 
-    oWin   := TWindow():New( 1, 2, 37, 129, "LIBRO DIARIO " + AllTrim( Str( nEjer ) ) )
-    oBrw   := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
-
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "LDIARIO_" + AllTrim( Str( nEjer ) ) + ".TXT" ) } )
-
-    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oBrw   )
-    oWin:AddCtrl( oBtPrn )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-RETURN NIL
+RETURN _MostrarInformeTexto( "LIBRO DIARIO " + AllTrim( Str( nEjer ) ), cTexto, ;
+    "LDIARIO_" + AllTrim( Str( nEjer ) ) + ".TXT" )
 
 
 // ============================================================================
@@ -557,10 +415,6 @@ RETURN NIL
 // ============================================================================
 FUNCTION InformeStockMinimo()
 
-    LOCAL oWin
-    LOCAL oBrw
-    LOCAL oBtPrn
-    LOCAL oBtSal
     LOCAL cTexto
     LOCAL nArea
     LOCAL nCont
@@ -610,23 +464,433 @@ FUNCTION InformeStockMinimo()
     ART_SM->( DbCloseArea() )
     Select( nArea )
 
-    oWin   := TWindow():New( 1, 2, 37, 129, "ARTICULOS BAJO STOCK MINIMO" )
-    oBrw   := TLabel():New( 2, 2, cTexto, oWin )
-    oBrw:cColor := "W+/N"
+RETURN _MostrarInformeTexto( "ARTICULOS BAJO STOCK MINIMO", cTexto, "STOCK_MINIMO.TXT" )
 
-    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "IMPRIMIR", ;
-        {|| _ImpTexto( cTexto, "STOCK_MINIMO.TXT" ) } )
 
+// ============================================================================
+// InformeMayor()
+// Mayor contable por cuenta para el ejercicio actual.
+// ============================================================================
+FUNCTION InformeMayor()
+
+    LOCAL cCuenta
+
+    cCuenta := Space( 10 )
+
+    IF !_PideCuenta( @cCuenta, "MAYOR DE CUENTA" )
+        RETURN NIL
+    ENDIF
+
+RETURN _InformeMayorCuenta( AllTrim( cCuenta ) )
+
+
+STATIC FUNCTION _InformeMayorCuenta( cCuenta )
+
+    LOCAL cTexto
+    LOCAL nArea
+    LOCAL nEjer
+    LOCAL nSaldo
+
+    IF Empty( cCuenta )
+        RETURN NIL
+    ENDIF
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_MR", "DIA_MAY" )
+        RETURN NIL
+    ENDIF
+
+    cTexto := ""
+    nArea  := Select()
+    nEjer  := Year( Date() )
+    nSaldo := 0
+
+    DbSelectArea( "DIA_MR" )
+    OrdSetFocus( "DIA_MAY" )
+    DbSeek( PadR( cCuenta, 10 ) )
+
+    cTexto += PadC( "LIBRO MAYOR - CUENTA " + cCuenta + " - EJERCICIO " + ;
+                    AllTrim( Str( nEjer ) ), 110 ) + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+    cTexto += PadR( "FECHA",    10 ) + " "
+    cTexto += PadR( "ASIENTO",  10 ) + " "
+    cTexto += PadL( "DEBE",     14 ) + " "
+    cTexto += PadL( "HABER",    14 ) + " "
+    cTexto += PadL( "SALDO",    14 ) + " "
+    cTexto += "DESCRIPCION" + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+
+    DO WHILE !Eof() .AND. AllTrim( DIA_MR->D_CUENTA ) == cCuenta
+        IF !Deleted() .AND. Year( DIA_MR->D_FECHA ) == nEjer
+            nSaldo += DIA_MR->D_DEBE - DIA_MR->D_HABER
+            cTexto += PadR( DToC( DIA_MR->D_FECHA ), 10 ) + " "
+            cTexto += PadR( AllTrim( DIA_MR->D_ASIENT ), 10 ) + " "
+            cTexto += PadL( Transform( DIA_MR->D_DEBE,  "999,999.99" ), 14 ) + " "
+            cTexto += PadL( Transform( DIA_MR->D_HABER, "999,999.99" ), 14 ) + " "
+            cTexto += PadL( Transform( nSaldo, "999,999.99" ), 14 ) + " "
+            cTexto += AllTrim( DIA_MR->D_DESCRI ) + hb_Eol()
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += "SALDO FINAL: " + Transform( nSaldo, "999,999,999.99" ) + hb_Eol()
+
+    DIA_MR->( DbCloseArea() )
+    Select( nArea )
+
+RETURN _MostrarInformeTexto( "MAYOR " + cCuenta, cTexto, ;
+    "MAYOR_" + cCuenta + "_" + AllTrim( Str( nEjer ) ) + ".TXT" )
+
+
+// ============================================================================
+// InformeBalanceSumasSaldos()
+// ============================================================================
+FUNCTION InformeBalanceSumasSaldos()
+
+    LOCAL aSaldos
+    LOCAL cTexto
+    LOCAL nEjer
+    LOCAL i
+    LOCAL nSaldo
+    LOCAL nDeudor
+    LOCAL nAcreed
+    LOCAL nTotDebe
+    LOCAL nTotHaber
+    LOCAL nTotDeu
+    LOCAL nTotAcr
+
+    nEjer     := Year( Date() )
+    aSaldos   := _ContSaldosEjercicio( nEjer )
+    cTexto    := ""
+    nTotDebe  := 0
+    nTotHaber := 0
+    nTotDeu   := 0
+    nTotAcr   := 0
+
+    cTexto += PadC( "BALANCE DE SUMAS Y SALDOS - EJERCICIO " + ;
+                    AllTrim( Str( nEjer ) ), 110 ) + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+    cTexto += PadR( "CUENTA", 10 ) + " "
+    cTexto += PadR( "NOMBRE", 38 ) + " "
+    cTexto += PadL( "DEBE", 14 ) + " "
+    cTexto += PadL( "HABER", 14 ) + " "
+    cTexto += PadL( "DEUDOR", 14 ) + " "
+    cTexto += PadL( "ACREEDOR", 14 ) + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+
+    FOR i := 1 TO Len( aSaldos )
+        nSaldo  := aSaldos[i, 3] - aSaldos[i, 4]
+        nDeudor := If( nSaldo > 0, nSaldo, 0 )
+        nAcreed := If( nSaldo < 0, Abs( nSaldo ), 0 )
+        nTotDebe  += aSaldos[i, 3]
+        nTotHaber += aSaldos[i, 4]
+        nTotDeu   += nDeudor
+        nTotAcr   += nAcreed
+
+        cTexto += PadR( aSaldos[i, 1], 10 ) + " "
+        cTexto += PadR( aSaldos[i, 2], 38 ) + " "
+        cTexto += PadL( Transform( aSaldos[i, 3], "999,999.99" ), 14 ) + " "
+        cTexto += PadL( Transform( aSaldos[i, 4], "999,999.99" ), 14 ) + " "
+        cTexto += PadL( Transform( nDeudor, "999,999.99" ), 14 ) + " "
+        cTexto += PadL( Transform( nAcreed, "999,999.99" ), 14 ) + hb_Eol()
+    NEXT
+
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += PadR( "TOTALES", 49 ) + " "
+    cTexto += PadL( Transform( nTotDebe,  "999,999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nTotHaber, "999,999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nTotDeu,   "999,999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nTotAcr,   "999,999,999.99" ), 14 ) + hb_Eol()
+
+RETURN _MostrarInformeTexto( "BALANCE SUMAS Y SALDOS", cTexto, ;
+    "BALANCE_SUMAS_SALDOS_" + AllTrim( Str( nEjer ) ) + ".TXT" )
+
+
+// ============================================================================
+// InformeBalanceGeneral()
+// ============================================================================
+FUNCTION InformeBalanceGeneral()
+
+    LOCAL aSaldos
+    LOCAL cTexto
+    LOCAL nEjer
+    LOCAL i
+    LOCAL cTipo
+    LOCAL nSaldo
+    LOCAL nActivo
+    LOCAL nPasivo
+
+    nEjer   := Year( Date() )
+    aSaldos := _ContSaldosEjercicio( nEjer )
+    cTexto  := ""
+    nActivo := 0
+    nPasivo := 0
+
+    cTexto += PadC( "BALANCE GENERAL - EJERCICIO " + ;
+                    AllTrim( Str( nEjer ) ), 100 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+    cTexto += PadR( "CUENTA", 10 ) + " "
+    cTexto += PadR( "NOMBRE", 50 ) + " "
+    cTexto += PadL( "ACTIVO", 14 ) + " "
+    cTexto += PadL( "PASIVO/PN", 14 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+
+    FOR i := 1 TO Len( aSaldos )
+        cTipo  := _CuentaTipo( aSaldos[i, 1] )
+        nSaldo := aSaldos[i, 3] - aSaldos[i, 4]
+        IF cTipo == "A"
+            nActivo += nSaldo
+            cTexto += PadR( aSaldos[i, 1], 10 ) + " "
+            cTexto += PadR( aSaldos[i, 2], 50 ) + " "
+            cTexto += PadL( Transform( nSaldo, "999,999.99" ), 14 ) + " "
+            cTexto += PadL( "", 14 ) + hb_Eol()
+        ELSEIF cTipo == "P"
+            nPasivo += -nSaldo
+            cTexto += PadR( aSaldos[i, 1], 10 ) + " "
+            cTexto += PadR( aSaldos[i, 2], 50 ) + " "
+            cTexto += PadL( "", 14 ) + " "
+            cTexto += PadL( Transform( -nSaldo, "999,999.99" ), 14 ) + hb_Eol()
+        ENDIF
+    NEXT
+
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += PadR( "TOTALES", 61 ) + " "
+    cTexto += PadL( Transform( nActivo, "999,999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nPasivo, "999,999,999.99" ), 14 ) + hb_Eol()
+    cTexto += "DIFERENCIA: " + Transform( nActivo - nPasivo, "999,999,999.99" ) + hb_Eol()
+
+RETURN _MostrarInformeTexto( "BALANCE GENERAL", cTexto, ;
+    "BALANCE_GENERAL_" + AllTrim( Str( nEjer ) ) + ".TXT" )
+
+
+// ============================================================================
+// InformePerdidasGanancias()
+// ============================================================================
+FUNCTION InformePerdidasGanancias()
+
+    LOCAL aSaldos
+    LOCAL cTexto
+    LOCAL nEjer
+    LOCAL i
+    LOCAL cTipo
+    LOCAL nSaldo
+    LOCAL nGastos
+    LOCAL nIngresos
+
+    nEjer     := Year( Date() )
+    aSaldos   := _ContSaldosEjercicio( nEjer )
+    cTexto    := ""
+    nGastos   := 0
+    nIngresos := 0
+
+    cTexto += PadC( "ESTADO DE PERDIDAS Y GANANCIAS - EJERCICIO " + ;
+                    AllTrim( Str( nEjer ) ), 100 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+    cTexto += PadR( "CUENTA", 10 ) + " "
+    cTexto += PadR( "NOMBRE", 55 ) + " "
+    cTexto += PadL( "GASTO", 14 ) + " "
+    cTexto += PadL( "INGRESO", 14 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+
+    FOR i := 1 TO Len( aSaldos )
+        cTipo  := _CuentaTipo( aSaldos[i, 1] )
+        nSaldo := aSaldos[i, 3] - aSaldos[i, 4]
+        IF cTipo == "G"
+            nGastos += nSaldo
+            cTexto += PadR( aSaldos[i, 1], 10 ) + " "
+            cTexto += PadR( aSaldos[i, 2], 55 ) + " "
+            cTexto += PadL( Transform( nSaldo, "999,999.99" ), 14 ) + " "
+            cTexto += PadL( "", 14 ) + hb_Eol()
+        ELSEIF cTipo == "I"
+            nIngresos += -nSaldo
+            cTexto += PadR( aSaldos[i, 1], 10 ) + " "
+            cTexto += PadR( aSaldos[i, 2], 55 ) + " "
+            cTexto += PadL( "", 14 ) + " "
+            cTexto += PadL( Transform( -nSaldo, "999,999.99" ), 14 ) + hb_Eol()
+        ENDIF
+    NEXT
+
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += PadR( "TOTALES", 66 ) + " "
+    cTexto += PadL( Transform( nGastos,   "999,999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nIngresos, "999,999,999.99" ), 14 ) + hb_Eol()
+    cTexto += "RESULTADO: " + Transform( nIngresos - nGastos, "999,999,999.99" ) + hb_Eol()
+
+RETURN _MostrarInformeTexto( "PERDIDAS Y GANANCIAS", cTexto, ;
+    "PERDIDAS_GANANCIAS_" + AllTrim( Str( nEjer ) ) + ".TXT" )
+
+
+STATIC FUNCTION _ContSaldosEjercicio( nEjer )
+
+    LOCAL aSaldos := {}
+    LOCAL nPos
+    LOCAL cCuenta
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_SL", "DIA_MAY" )
+        RETURN aSaldos
+    ENDIF
+
+    DbSelectArea( "DIA_SL" )
+    OrdSetFocus( "DIA_MAY" )
+    DbGoTop()
+
+    DO WHILE !DIA_SL->( Eof() )
+        IF !DIA_SL->( Deleted() ) .AND. Year( DIA_SL->D_FECHA ) == nEjer
+            cCuenta := AllTrim( DIA_SL->D_CUENTA )
+            IF !Empty( cCuenta )
+                nPos := AScan( aSaldos, {| a | a[1] == cCuenta } )
+                IF nPos == 0
+                    AAdd( aSaldos, { cCuenta, _CuentaNombre( cCuenta ), 0.00, 0.00 } )
+                    nPos := Len( aSaldos )
+                ENDIF
+                aSaldos[nPos, 3] += DIA_SL->D_DEBE
+                aSaldos[nPos, 4] += DIA_SL->D_HABER
+            ENDIF
+        ENDIF
+        DIA_SL->( DbSkip() )
+    ENDDO
+
+    DIA_SL->( DbCloseArea() )
+    ASort( aSaldos,,, {| x, y | x[1] < y[1] } )
+
+RETURN aSaldos
+
+
+STATIC FUNCTION _CuentaNombre( cCuenta )
+
+    LOCAL cNombre := cCuenta
+
+    IF ABRIR_TABLA( "CATALOGO", "CAT_NM", "CAT_CTA" )
+        IF CAT_NM->( DbSeek( cCuenta ) )
+            cNombre := AllTrim( CAT_NM->NOMBRE )
+        ENDIF
+        CAT_NM->( DbCloseArea() )
+    ENDIF
+
+RETURN cNombre
+
+
+STATIC FUNCTION _CuentaTipo( cCuenta )
+
+    LOCAL cTipo := ""
+
+    IF ABRIR_TABLA( "CATALOGO", "CAT_TP", "CAT_CTA" )
+        IF CAT_TP->( DbSeek( cCuenta ) )
+            cTipo := AllTrim( CAT_TP->TIPO )
+        ENDIF
+        CAT_TP->( DbCloseArea() )
+    ENDIF
+
+    IF Empty( cTipo )
+        DO CASE
+        CASE Left( cCuenta, 1 ) $ "12345"
+            cTipo := If( Left( cCuenta, 1 ) $ "12", "P", "A" )
+        CASE Left( cCuenta, 1 ) == "6"
+            cTipo := "G"
+        CASE Left( cCuenta, 1 ) == "7"
+            cTipo := "I"
+        OTHERWISE
+            cTipo := "N"
+        ENDCASE
+    ENDIF
+
+RETURN cTipo
+
+
+STATIC FUNCTION _PideCuenta( cCuenta, cTitulo )
+
+    LOCAL oWin
+    LOCAL oGCta
+    LOCAL oBtOk
+    LOCAL oBtCan
+    LOCAL lOK := .F.
+
+    oWin := TWindow():New( 10, 35, 20, 95, cTitulo )
+    oWin:AddCtrl( TLabel():New( 2, 3, "Cuenta:", oWin ) )
+    oGCta := TGet():New( 2, 12, cCuenta, "@!", oWin )
+    oBtOk := TButton():New( 6, 12, 7, 28, oWin, "ACEPTAR", ;
+        {|| lOK := .T., oWin:Close() } )
+    oBtCan := TButton():New( 6, 32, 7, 48, oWin, "CANCELAR", ;
+        {|| oWin:Close() } )
+    oWin:AddCtrl( oGCta )
+    oWin:AddCtrl( oBtOk )
+    oWin:AddCtrl( oBtCan )
+    oWin:Run()
+
+    IF lOK
+        cCuenta := AllTrim( oGCta:uVar )
+    ENDIF
+
+RETURN lOK
+
+
+STATIC FUNCTION _MostrarInformeTexto( cTitulo, cTexto, cFile )
+
+    LOCAL oWin
+    LOCAL oGrid
+    LOCAL oBtPrn
+    LOCAL oBtSal
+    LOCAL aLineas := _InformeTextoLineas( cTexto )
+
+    oWin   := TWindow():New( 1, 2, 37, 129, cTitulo )
+    oGrid  := TGrid():New( 2, 2, 30, 124, oWin )
+    oGrid:aData    := aLineas
+    oGrid:nSeekCol := 1
+    oGrid:AddColumn( "Vista previa TXT", 118, "@!", { |a| a[1] } )
+
+    oWin:AddCtrl( TLabel():New( 32, 2, ;
+        "Flechas/PgUp/PgDn: navegar   Letras: buscar texto   GUARDAR TXT: exportar", oWin ) )
+
+    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "GUARDAR TXT", ;
+        {|| _ImpTexto( cTexto, cFile ) } )
     oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
         {|| oWin:Close() } )
 
-    oWin:AddCtrl( oBrw   )
+    oWin:AddCtrl( oGrid  )
     oWin:AddCtrl( oBtPrn )
     oWin:AddCtrl( oBtSal )
-
     oWin:Run()
 
 RETURN NIL
+
+
+STATIC FUNCTION _InformeTextoLineas( cTexto )
+
+    LOCAL aLineas := {}
+    LOCAL nStart  := 1
+    LOCAL nPos
+    LOCAL cLine
+
+    DEFAULT cTexto TO ""
+
+    cTexto := StrTran( cTexto, Chr( 13 ) + Chr( 10 ), Chr( 10 ) )
+    cTexto := StrTran( cTexto, Chr( 13 ), Chr( 10 ) )
+
+    DO WHILE nStart <= Len( cTexto ) + 1
+        nPos := At( Chr( 10 ), SubStr( cTexto, nStart ) )
+        IF nPos == 0
+            cLine := SubStr( cTexto, nStart )
+            AAdd( aLineas, { cLine } )
+            EXIT
+        ENDIF
+        cLine := SubStr( cTexto, nStart, nPos - 1 )
+        AAdd( aLineas, { cLine } )
+        nStart += nPos
+    ENDDO
+
+    IF Empty( aLineas )
+        AAdd( aLineas, { "" } )
+    ENDIF
+
+RETURN aLineas
 
 
 // ============================================================================

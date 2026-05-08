@@ -315,11 +315,11 @@ FUNCTION GetFacturadoObra( cIdObra )
    DbGoTop()
 
    DO WHILE !Eof()
-      IF !Deleted() .AND. !FAC_OB->ANULADA .AND. ;
-         AllTrim( FAC_OB->ID_OBRA ) == AllTrim( cIdObra )
+      IF !Deleted() .AND. !DbFieldValue( "ANULADA", .F. ) .AND. ;
+         AllTrim( DbFieldValue( "ID_OBRA", "" ) ) == AllTrim( cIdObra )
          nFacturado += FAC_OB->TOTAL
       ENDIF
-      DbSkip()
+      FAC_OB->( DbSkip() )
    ENDDO
 
    FAC_OB->( DbCloseArea() )

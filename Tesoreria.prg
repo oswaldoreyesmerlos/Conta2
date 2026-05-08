@@ -311,7 +311,7 @@ STATIC FUNCTION _RecCargar()
                 AllTrim( REC->NUMERO   ), ;
                 DToC(    REC->FECHA    ), ;
                 _RecNomCli( AllTrim( REC->CLIENTE_ ) ), ;
-                _RecDescFP( AllTrim( REC->FORMA_PA ) ), ;
+                _RecDescFP( AllTrim( DbFieldValue( "FORMA_PA", "" ) ) ), ;
                 REC->TOTAL, ;
                 cFacs } )
         ENDIF
@@ -478,7 +478,8 @@ STATIC FUNCTION _CobCargar()
     DbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted() .AND. !FAC_CV->COBRADA .AND. !FAC_CV->ANULADA
+        IF !Deleted() .AND. !_AliasLogical( "FAC_CV", "COBRADA", .F. ) .AND. ;
+           !_AliasLogical( "FAC_CV", "ANULADA", .F. )
             nDias := Date() - FAC_CV->FECHA_VT
             DO CASE
             CASE nDias > 30  ; cEst := "VENCIDA +" + AllTrim( Str( nDias ) ) + "d"
@@ -644,7 +645,7 @@ STATIC FUNCTION _PagCargar()
     DbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted() .AND. !COM_PV->PAGADA
+        IF !Deleted() .AND. !_AliasLogical( "COM_PV", "PAGADA", .F. )
             nDias := Date() - COM_PV->FECHA_VT
             DO CASE
             CASE nDias > 30  ; cEst := "VENCIDA +" + AllTrim( Str( nDias ) ) + "d"
@@ -748,11 +749,33 @@ STATIC FUNCTION _PagRegistrar( cNumCom, nImporte )
     ENDIF
 
     // Generar asiento contable del pago
-    AsientoAutomatico( "COM", cNumCom )
+    AsientoAutomatico( "PAG", cNumCom )
 
     MsgInfo( "Pago registrado correctamente.", "Pago" )
 
 RETURN NIL
+
+
+STATIC FUNCTION _AliasLogical( cAlias, cField, lDefault )
+
+    LOCAL nOldArea
+    LOCAL lValue
+
+    nOldArea := Select()
+    lValue   := lDefault
+
+    IF Select( cAlias ) > 0
+        DbSelectArea( cAlias )
+        IF FieldPos( cField ) > 0
+            lValue := FieldGet( FieldPos( cField ) )
+        ENDIF
+    ENDIF
+
+    IF nOldArea > 0
+        DbSelectArea( nOldArea )
+    ENDIF
+
+RETURN lValue
 
 
 // ============================================================================

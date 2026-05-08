@@ -1,0 +1,11 @@
+# =============================================================================
+# ARCHIVO : admin_recovery.hbp
+# PROPOSITO: Compilar recuperador de acceso ADMIN
+# =============================================================================
+
+-oAdminRecovery
+-w0
+
+hbct.hbc
+
+AdminRecovery.prg

@@ -59,6 +59,10 @@ EXTERNAL InformePresupuestos
 EXTERNAL InformeVencimientos
 EXTERNAL InformeProveedores
 EXTERNAL InformeDiario
+EXTERNAL InformeMayor
+EXTERNAL InformeBalanceSumasSaldos
+EXTERNAL InformeBalanceGeneral
+EXTERNAL InformePerdidasGanancias
 EXTERNAL InformeStockMinimo
 EXTERNAL RolesEdit
 EXTERNAL ReindexarTodo
@@ -188,6 +192,10 @@ FUNCTION Menu_Init()
     AAdd( aInform, { "Vencimientos",  {|| InformeVencimientos()  }, NIL, "Cobros pendientes" } )
     AAdd( aInform, { "Proveedores",   {|| InformeProveedores()   }, NIL, "Listado de proveedores" } )
     AAdd( aInform, { "Libro Diario",  {|| InformeDiario()        }, NIL, "Libro diario contable" } )
+    AAdd( aInform, { "Libro Mayor",   {|| InformeMayor()         }, NIL, "Mayor por cuenta" } )
+    AAdd( aInform, { "Sumas/Saldos",  {|| InformeBalanceSumasSaldos() }, NIL, "Balance de sumas y saldos" } )
+    AAdd( aInform, { "Balance Gral.", {|| InformeBalanceGeneral() }, NIL, "Balance general" } )
+    AAdd( aInform, { "Perd./Gan.",    {|| InformePerdidasGanancias() }, NIL, "Estado de perdidas y ganancias" } )
     AAdd( aInform, { "Stock Minimo",  {|| InformeStockMinimo()   }, NIL, "Articulos bajo stock minimo" } )
 
     // -------------------------------------------------------------------------

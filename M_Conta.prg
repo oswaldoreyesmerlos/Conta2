@@ -40,7 +40,7 @@ FUNCTION PlanCuentasView()
     oGrid:AddColumn( "Baja",         4, "@!",         { |a| If( a[8], "SI", "NO" ) } )
 
     oGrid:bEnter := {| g | ;
-        PlanCuentasForm( g:CurrentRow()[1] ), ;
+        If( g:CurrentRow() != NIL, PlanCuentasForm( g:CurrentRow()[1] ), NIL ), ;
         aData := _CatCargar(), ;
         g:aData := aData, ;
         g:Paint() }
@@ -159,29 +159,29 @@ FUNCTION PlanCuentasForm( cCuenta )
     lEsBanco  := .F.
     lBaja     := .F.
 
-    IF !ABRIR_TABLA( "CATALOGO", "CAT", "CAT_CTA" )
+    IF !ABRIR_TABLA( "CATALOGO", "CATF", "CAT_CTA" )
         RETURN NIL
     ENDIF
 
     IF !lNuevo
-        DbSelectArea( "CAT" )
+        DbSelectArea( "CATF" )
         OrdSetFocus( "CAT_CTA" )
         IF DbSeek( AllTrim( cCuenta ) )
-            cCuenta_  := PadR( AllTrim( CAT->CUENTA   ), 10 )
-            cNombre  := PadR( AllTrim( CAT->NOMBRE   ), 60 )
-            nNivel   := CAT->NIVEL
-            cTipo    := PadR( AllTrim( CAT->TIPO     ),  1 )
-            cNaturale := PadR( AllTrim( CAT->NATURALE ),  1 )
-            cSumaEn  := PadR( AllTrim( CAT->SUMA_EN  ), 10 )
-            nSaldoAn  := CAT->SALDO_AN
-            nDebeAnu  := CAT->DEBE_ANU
-            nHaberAnu  := CAT->HABER_AN
-            nSaldoAc  := CAT->SALDO_AC
-            nPresupue := CAT->PRESUPUE
-            lBloqued  := CAT->BLOQUEAD
-            lReqAnal  := CAT->REQ_ANAL
-            lEsBanco  := CAT->ES_BANCO
-            lBaja     := CAT->BAJA
+            cCuenta_  := PadR( AllTrim( CATF->CUENTA   ), 10 )
+            cNombre  := PadR( AllTrim( CATF->NOMBRE   ), 60 )
+            nNivel   := CATF->NIVEL
+            cTipo    := PadR( AllTrim( CATF->TIPO     ),  1 )
+            cNaturale := PadR( AllTrim( CATF->NATURALE ),  1 )
+            cSumaEn  := PadR( AllTrim( CATF->SUMA_EN  ), 10 )
+            nSaldoAn  := CATF->SALDO_AN
+            nDebeAnu  := CATF->DEBE_ANU
+            nHaberAnu  := CATF->HABER_AN
+            nSaldoAc  := CATF->SALDO_AC
+            nPresupue := CATF->PRESUPUE
+            lBloqued  := CATF->BLOQUEAD
+            lReqAnal  := CATF->REQ_ANAL
+            lEsBanco  := CATF->ES_BANCO
+            lBaja     := CATF->BAJA
         ENDIF
     ENDIF
 
@@ -253,7 +253,7 @@ FUNCTION PlanCuentasForm( cCuenta )
 
     oWin:Run()
 
-    CAT->( DbCloseArea() )
+    CATF->( DbCloseArea() )
     Select( nArea )
 
 RETURN NIL
@@ -268,7 +268,7 @@ STATIC FUNCTION _CatGuardar( oGC, oGN, oGi, oGT, oGNt, ;
 
     cCuenta := AllTrim( oGC:uVar )
 
-    DbSelectArea( "CAT" )
+    DbSelectArea( "CATF" )
     OrdSetFocus( "CAT_CTA" )
 
     IF lNuevo
@@ -286,24 +286,24 @@ STATIC FUNCTION _CatGuardar( oGC, oGN, oGi, oGT, oGNt, ;
         ENDIF
     ENDIF
 
-    REPLACE CAT->CUENTA   WITH cCuenta
-    REPLACE CAT->NOMBRE   WITH AllTrim( oGN:uVar  )
-    REPLACE CAT->NIVEL    WITH oGi:uVar
-    REPLACE CAT->TIPO     WITH AllTrim( oGT:uVar  )
-    REPLACE CAT->NATURALE WITH AllTrim( oGNt:uVar )
-    REPLACE CAT->SUMA_EN  WITH AllTrim( oGS:uVar  )
-    REPLACE CAT->SALDO_AN WITH oGSA:uVar
-    REPLACE CAT->DEBE_ANU WITH oGDA:uVar
-    REPLACE CAT->HABER_AN WITH oGHA:uVar
-    REPLACE CAT->SALDO_AC WITH oGSAc:uVar
-    REPLACE CAT->PRESUPUE WITH oGPre:uVar
-    REPLACE CAT->BLOQUEAD WITH oCB:lValue
-    REPLACE CAT->REQ_ANAL WITH oCA:lValue
-    REPLACE CAT->ES_BANCO WITH oCBc:lValue
-    REPLACE CAT->BAJA     WITH oCBj:lValue
+    REPLACE CATF->CUENTA   WITH cCuenta
+    REPLACE CATF->NOMBRE   WITH AllTrim( oGN:uVar  )
+    REPLACE CATF->NIVEL    WITH oGi:uVar
+    REPLACE CATF->TIPO     WITH AllTrim( oGT:uVar  )
+    REPLACE CATF->NATURALE WITH AllTrim( oGNt:uVar )
+    REPLACE CATF->SUMA_EN  WITH AllTrim( oGS:uVar  )
+    REPLACE CATF->SALDO_AN WITH oGSA:uVar
+    REPLACE CATF->DEBE_ANU WITH oGDA:uVar
+    REPLACE CATF->HABER_AN WITH oGHA:uVar
+    REPLACE CATF->SALDO_AC WITH oGSAc:uVar
+    REPLACE CATF->PRESUPUE WITH oGPre:uVar
+    REPLACE CATF->BLOQUEAD WITH oCB:lValue
+    REPLACE CATF->REQ_ANAL WITH oCA:lValue
+    REPLACE CATF->ES_BANCO WITH oCBc:lValue
+    REPLACE CATF->BAJA     WITH oCBj:lValue
 
     IF lNuevo
-        REPLACE CAT->FECHA_AL WITH Date()
+        REPLACE CATF->FECHA_AL WITH Date()
     ENDIF
 
     DbCommit()
@@ -856,12 +856,14 @@ RETURN NIL
 // ----------------------------------------------------------------------------
 // Genera el asiento contable de un documento ya grabado.
 // cTipo  : "FAC" factura emitida / "COM" factura compra / "REC" recibo caja
+//          "PAG" pago a proveedor
 // cNumDoc: numero del documento
 //
 // Cuentas utilizadas (configuracion estandar PGC):
 //   FAC : D 430xxx Cliente   H 700 Ventas   H 477 IVA repercutido
 //   COM : D 600 Compras  D 472 IVA soportado  H 400xxx Proveedor
 //   REC : D 570/572 Caja/Banco  H 430xxx Cliente
+//   PAG : D 400xxx Proveedor  H 570/572 Caja/Banco
 // ============================================================================
 FUNCTION AsientoAutomatico( cTipo, cNumDoc )
 
@@ -885,6 +887,8 @@ FUNCTION AsientoAutomatico( cTipo, cNumDoc )
         lOK := _AsiCompra( cNumDoc_ )
     CASE cTipo_ == "REC"
         lOK := _AsiRecibo( cNumDoc_ )
+    CASE cTipo_ == "PAG"
+        lOK := _AsiPago( cNumDoc_ )
     OTHERWISE
         MsgStop( "Tipo de documento desconocido: " + cTipo_, "Asiento" )
     ENDCASE
@@ -1113,7 +1117,98 @@ STATIC FUNCTION _AsiCompra( cNumCom )
 
     DIA_C->( DbCloseArea() )
 
+    IF ABRIR_TABLA( "COMPRAS", "COM_AU", "COM_INT" )
+        DbSelectArea( "COM_AU" )
+        OrdSetFocus( "COM_INT" )
+        IF DbSeek( cNumCom ) .AND. NetRLock()
+            REPLACE COM_AU->ASIENTO WITH cAsi
+            DbUnlock()
+        ENDIF
+        COM_AU->( DbCloseArea() )
+    ENDIF
+
     MsgInfo( "Asiento " + cAsi + " generado para compra " + cNumCom, "Asiento" )
+
+RETURN .T.
+
+
+STATIC FUNCTION _AsiPago( cNumCom )
+
+    LOCAL cAsi
+    LOCAL dFec
+    LOCAL cPrv
+    LOCAL cCtaPrv
+    LOCAL cCtaHaber
+    LOCAL nTotal
+    LOCAL cConc
+
+    IF !ABRIR_TABLA( "COMPRAS", "COM_PG", "COM_INT" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "COM_PG" )
+    OrdSetFocus( "COM_INT" )
+
+    IF !DbSeek( cNumCom )
+        COM_PG->( DbCloseArea() )
+        MsgStop( "Compra " + cNumCom + " no encontrada.", "Asiento pago" )
+        RETURN .F.
+    ENDIF
+
+    dFec   := Date()
+    cPrv   := AllTrim( COM_PG->PROV_ID )
+    nTotal := COM_PG->TOTAL
+
+    COM_PG->( DbCloseArea() )
+
+    cCtaPrv   := "400"
+    cCtaHaber := "572"
+
+    IF ABRIR_TABLA( "PROVEED", "PRV_PG", "PRV_ID" )
+        IF PRV_PG->( DbSeek( cPrv ) ) .AND. !Empty( AllTrim( PRV_PG->CTA_CONT ) )
+            cCtaPrv := AllTrim( PRV_PG->CTA_CONT )
+        ENDIF
+        PRV_PG->( DbCloseArea() )
+    ENDIF
+
+    cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    cConc := "Pago compra " + cNumCom + " / " + cPrv
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_PG", "DIA_ASI" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_PG" )
+
+    IF NetFLock()
+        DbAppend()
+        REPLACE DIA_PG->D_ASIENT WITH cAsi
+        REPLACE DIA_PG->D_LINEA  WITH 1
+        REPLACE DIA_PG->D_FECHA  WITH dFec
+        REPLACE DIA_PG->D_CUENTA WITH cCtaPrv
+        REPLACE DIA_PG->D_DEBE   WITH nTotal
+        REPLACE DIA_PG->D_HABER  WITH 0
+        REPLACE DIA_PG->D_DESCRI WITH cConc
+        REPLACE DIA_PG->TIP_ORIG WITH "PAG"
+        REPLACE DIA_PG->DOC_ORIG WITH cNumCom
+
+        DbAppend()
+        REPLACE DIA_PG->D_ASIENT WITH cAsi
+        REPLACE DIA_PG->D_LINEA  WITH 2
+        REPLACE DIA_PG->D_FECHA  WITH dFec
+        REPLACE DIA_PG->D_CUENTA WITH cCtaHaber
+        REPLACE DIA_PG->D_DEBE   WITH 0
+        REPLACE DIA_PG->D_HABER  WITH nTotal
+        REPLACE DIA_PG->D_DESCRI WITH cConc
+        REPLACE DIA_PG->TIP_ORIG WITH "PAG"
+        REPLACE DIA_PG->DOC_ORIG WITH cNumCom
+
+        DbUnlock()
+    ENDIF
+
+    DIA_PG->( DbCloseArea() )
+
+    MsgInfo( "Asiento " + cAsi + " generado para pago " + cNumCom, "Asiento" )
 
 RETURN .T.
 
@@ -1241,6 +1336,7 @@ FUNCTION CierreEjercicio()
     LOCAL cAsi
     LOCAL dFecCie
     LOCAL dFecApe
+    LOCAL dUltCie
 
     MEMVAR cUserRol
 
@@ -1253,6 +1349,22 @@ FUNCTION CierreEjercicio()
     nEjerNvo := nEjer + 1
     dFecCie := CToD( "31/12/" + AllTrim( Str( nEjer ) ) )
     dFecApe := CToD( "01/01/" + AllTrim( Str( nEjerNvo ) ) )
+
+    IF ABRIR_TABLA( "EMPRESA", "EMP_CV", "" )
+        EMP_CV->( DbGoTop() )
+        IF !EMP_CV->( Eof() )
+            dUltCie := DbFieldValue( "FEC_CIER", CToD( "" ) )
+        ENDIF
+        EMP_CV->( DbCloseArea() )
+    ENDIF
+
+    IF ValType( dUltCie ) == "D" .AND. !Empty( dUltCie ) .AND. Year( dUltCie ) >= nEjer
+        MsgStop( "El ejercicio " + AllTrim( Str( nEjer ) ) + ;
+                 " ya figura cerrado." + Chr(13) + ;
+                 "Fecha de cierre registrada: " + DToC( dUltCie ), ;
+                 "Cierre de ejercicio" )
+        RETURN .F.
+    ENDIF
 
     IF !MsgYesNo( "CIERRE DEL EJERCICIO " + AllTrim( Str( nEjer ) ) + Chr(13) + ;
                   "Esta operacion requiere copia de seguridad previa." + Chr(13) + ;
@@ -1273,12 +1385,12 @@ FUNCTION CierreEjercicio()
     DbSelectArea( "DIA_CI" )
     DbGoTop()
 
-    DO WHILE !Eof()
-        IF !Deleted() .AND. Year( DIA_CI->D_FECHA ) == nEjer
+    DO WHILE !DIA_CI->( Eof() )
+        IF !DIA_CI->( Deleted() ) .AND. Year( DIA_CI->D_FECHA ) == nEjer
             nDebe  += DIA_CI->D_DEBE
             nHaber += DIA_CI->D_HABER
         ENDIF
-        DbSkip()
+        DIA_CI->( DbSkip() )
     ENDDO
 
     DIA_CI->( DbCloseArea() )
@@ -1289,6 +1401,17 @@ FUNCTION CierreEjercicio()
         MsgStop( "El diario NO esta cuadrado." + Chr(13) + ;
                  "Diferencia: " + Transform( nDif, "999,999.99" ) + " EUR" + Chr(13) + ;
                  "Corrija los asientos antes de cerrar.", "Cierre" )
+        RETURN .F.
+    ENDIF
+
+    IF !MsgYesNo( "VALIDACION CORRECTA DEL EJERCICIO " + AllTrim( Str( nEjer ) ) + Chr(13) + ;
+                  "Debe : " + Transform( nDebe,  "999,999,999.99" ) + Chr(13) + ;
+                  "Haber: " + Transform( nHaber, "999,999,999.99" ) + Chr(13) + ;
+                  Chr(13) + ;
+                  "Se generara el asiento de cierre y se marcara la empresa " + ;
+                  "con fecha " + DToC( dFecCie ) + "." + Chr(13) + ;
+                  "Confirma DEFINITIVAMENTE el cierre?", ;
+                  "Confirmar cierre" )
         RETURN .F.
     ENDIF
 

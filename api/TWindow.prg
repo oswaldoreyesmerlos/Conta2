@@ -545,6 +545,16 @@ METHOD Run() CLASS TWindow
 
     ENDDO
 
+    // Si la ventana se cierra con ESC o por boton, puede no producirse un
+    // cambio normal de foco.  Limpiamos el foco sin repintar sobre la zona
+    // que vamos a restaurar.
+    IF ::oFocus != NIL
+        ::oFocus:lFocused := .F.
+        ::oFocus := NIL
+        ::nFocPos := 0
+    ENDIF
+    GfxCursor( SC_NONE )
+
     // [7] RESTORE clasico ampliado.  Las coordenadas DEBEN ser las
     //     mismas que el Save.  Esto borra todo lo que pintamos
     //     (caracteres + capa grafica WVG residual) de una sola
@@ -577,5 +587,6 @@ RETURN NIL
 // Cerrar
 // ----------------------------------------------------------------------------
 METHOD Close() CLASS TWindow
+    GfxCursor( SC_NONE )
     ::lExit := .T.
 RETURN Self
