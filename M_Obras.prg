@@ -138,6 +138,9 @@ FUNCTION CrearObraManual( cCliente, cDescripcion, cDireccionObra, nTotal, dFecha
       RETURN ""
    ENDIF
 
+   AuditLog( "ALTA", "OBRAS", cIdObra, ;
+             "Obra manual creada", .T. )
+
    Select( nArea )
 
 RETURN cIdObra
@@ -254,6 +257,9 @@ FUNCTION FacturarObra( cIdObra, nImporte, cTipoFac, nPorcIva, cConcepto, dFecha 
    _ObraGenVencimiento( cSerie, cNumFac, cCliente, dVto, nTotal, cIdObra )
    _ObraActualizarEstado( cIdObra )
 
+   AuditLog( "FACTURA", "OBRAS", AllTrim( cIdObra ), ;
+             "Factura " + cNumFac + " tipo " + cTipoFac, .T. )
+
    Select( nArea )
 
 RETURN cNumFac
@@ -284,12 +290,45 @@ RETURN _ObraCambiarEstado( cIdObra, "F" )
 // ============================================================================
 FUNCTION CancelarObra( cIdObra )
 
-   IF GetFacturadoObra( cIdObra ) > 0.01
-      MsgStop( "No se puede cancelar una obra con facturas emitidas.", "Obras" )
+   IF _ObraTieneFacturas( cIdObra )
+      MsgStop( "No se puede cancelar una obra que ya tuvo facturas emitidas." + Chr(13) + ;
+               "Use nota de abono o regularizacion para conservar trazabilidad.", ;
+               "Obras" )
       RETURN .F.
    ENDIF
 
 RETURN _ObraCambiarEstado( cIdObra, "C" )
+
+
+STATIC FUNCTION _ObraTieneFacturas( cIdObra )
+
+   LOCAL lTiene := .F.
+   LOCAL nArea  := Select()
+
+   IF Empty( cIdObra )
+      RETURN .F.
+   ENDIF
+
+   IF !ABRIR_TABLA( "FACTURA", "FAC_OBR_H", "FAC_OBR" )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   DbSelectArea( "FAC_OBR_H" )
+   OrdSetFocus( "FAC_OBR" )
+   DbGoTop()
+
+   DO WHILE !Eof() .AND. !lTiene
+      IF !Deleted() .AND. AllTrim( FAC_OBR_H->ID_OBRA ) == AllTrim( cIdObra )
+         lTiene := .T.
+      ENDIF
+      DbSkip()
+   ENDDO
+
+   FAC_OBR_H->( DbCloseArea() )
+   Select( nArea )
+
+RETURN lTiene
 
 
 // ============================================================================
@@ -561,6 +600,8 @@ STATIC FUNCTION _ObraCambiarEstado( cIdObra, cEstado )
          DbCommit()
          DbUnlock()
          lOk := .T.
+         AuditLog( "ESTADO", "OBRAS", AllTrim( cIdObra ), ;
+                   "Cambio de estado a " + cEstado, .T. )
       ENDIF
    ENDIF
 

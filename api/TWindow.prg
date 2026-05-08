@@ -31,6 +31,11 @@
 STATIC s_oCurrentWnd := NIL
 
 
+STATIC FUNCTION _WinFlushKeys()
+    CLEAR TYPEAHEAD
+RETURN NIL
+
+
 // ============================================================================
 // CLASE: TWindow
 // Ventana principal del framework pseudo grafico
@@ -562,6 +567,8 @@ METHOD Run() CLASS TWindow
     ::lVisible    := .F.
     ::lRegistered := .F.        // Reseteamos para que un futuro Run() vuelva
                                 // a registrar los bloques desde cero.
+
+    _WinFlushKeys()
 
 RETURN NIL
 

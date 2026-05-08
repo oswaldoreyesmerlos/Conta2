@@ -12,7 +12,7 @@
  *   M_Vendedor.prg    -> VendedoresView, VendedoresForm
  *   M_Usuarios.prg    -> UsuariosView
  *   M_Conta.prg       -> PlanCuentasView, LibroDiarioView
- *   V_Facturas.prg    -> FacturasView, AltaFact
+ *   V_Facturas.prg    -> FacturasView
  *   V_Presupuesto.prg -> PresupuestosView, AltaPresupuesto
  *   Tesoreria.prg     -> TesoreriaView
  *   Informes.prg      -> InformeClientes, InformeFacturas,
@@ -42,12 +42,11 @@ EXTERNAL AsientoAutomatico
 EXTERNAL CierreEjercicio
 EXTERNAL LibroDiarioView
 EXTERNAL FacturasView
-EXTERNAL AltaFact
 EXTERNAL ObrasView
 EXTERNAL NotaAbonoForm
 EXTERNAL PresupuestosView
 EXTERNAL AltaPresupuesto
-EXTERNAL ConvertirAFactura
+EXTERNAL AceptarPresupuesto
 EXTERNAL RechazarPresupuesto
 EXTERNAL CajaView
 EXTERNAL BancosView
@@ -136,7 +135,6 @@ FUNCTION Menu_Init()
 
     // Facturas
     AAdd( aSubFac, { "Historial", {|| FacturasView() }, NIL, "Facturas emitidas" } )
-    AAdd( aSubFac, { "Nueva",     {|| AltaFact()     }, NIL, "Nueva factura" } )
 
     // -------------------------------------------------------------------------
     // MAESTROS

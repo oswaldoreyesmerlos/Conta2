@@ -5,8 +5,7 @@
  * FUNCIONES PUBLICAS
  * ------------------
  *   FacturasView()           - grid listado de facturas
- *   AltaFact()               - alta directa de factura nueva
- *   AltaFactDesdePre( cNum ) - convierte presupuesto en factura
+ *   AltaFact()               - bloqueo de alta directa; facturar desde obras
  *
  * NUMERACION
  * ----------
@@ -40,7 +39,7 @@ FUNCTION FacturasView()
 
     LOCAL oWin
     LOCAL oGrid
-    LOCAL oBtNvo
+    LOCAL oBtAbo
     LOCAL oBtSal
     LOCAL oLbl
     LOCAL aData
@@ -74,16 +73,9 @@ FUNCTION FacturasView()
         g:Paint() }
 
     oLbl := TLabel():New( 32, 2, ;
-        "ENTER: ver/editar   F5: nueva factura   Letras: buscar cliente", oWin )
+        "ENTER: ver/editar   Las facturas nuevas se emiten desde OBRAS", oWin )
 
-    oBtNvo := TButton():New( 33,  2, 34, 18, oWin, "NUEVA (F5)", ;
-        {|| AltaFact(), ;
-            aData := _FacCargar(), ;
-            oGrid:aData := aData, ;
-            oGrid:nCurRow := Len( aData ), ;
-            oGrid:Paint() } )
-
-    oBtAbo := TButton():New( 33, 20, 34, 38, oWin, "NOTA ABONO", ;
+    oBtAbo := TButton():New( 33, 2, 34, 20, oWin, "NOTA ABONO", ;
         {|| If( oGrid:CurrentRow() != NIL, ;
                NotaAbonoForm( oGrid:CurrentRow()[1] ), NIL ), ;
             aData := _FacCargar(), ;
@@ -95,7 +87,6 @@ FUNCTION FacturasView()
 
     oWin:AddCtrl( oGrid  )
     oWin:AddCtrl( oLbl   )
-    oWin:AddCtrl( oBtNvo )
     oWin:AddCtrl( oBtAbo )
     oWin:AddCtrl( oBtSal )
 
@@ -136,14 +127,13 @@ RETURN aData
 
 
 // ============================================================================
-// AltaFact / AltaFactDesdePre / _FacEditar
+// AltaFact / _FacEditar
 // ============================================================================
 FUNCTION AltaFact()
-RETURN _FacForm( "", NIL )
-
-
-FUNCTION AltaFactDesdePre( cNumPre )
-RETURN _FacForm( "", cNumPre )
+    MsgStop( "Las facturas nuevas se emiten desde la obra." + Chr(13) + ;
+             "Use Ventas -> Obras y facture anticipo, certificacion o final.", ;
+             "Facturas" )
+RETURN NIL
 
 
 STATIC FUNCTION _FacEditar( cNumero )
@@ -271,10 +261,12 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     oGrid:AddColumn( "IVA %",      6, "99.99",     { |a| a[LIN_IVA]  } )
     oGrid:AddColumn( "Importe",   12, "99,999.99", { |a| a[LIN_IMP]  } )
 
-    oGrid:bEnter := {| g | ;
-        _FacEditLin( g, @aLineas, nPorcRet, ;
-                     @nBase, @nIva, @nRet, @nTotal, ;
-                     oLBase, oLIva, oLRet, oLTotal ) }
+    IF lNuevo
+        oGrid:bEnter := {| g | ;
+            _FacEditLin( g, @aLineas, nPorcRet, ;
+                         @nBase, @nIva, @nRet, @nTotal, ;
+                         oLBase, oLIva, oLRet, oLTotal ) }
+    ENDIF
 
     oWin:AddCtrl( TLabel():New( 28,  2, "BASE IMPONIBLE :", oWin ) )
     oWin:AddCtrl( TLabel():New( 29,  2, "TOTAL IVA      :", oWin ) )
@@ -292,25 +284,27 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     oWin:AddCtrl( oLRet   )
     oWin:AddCtrl( oLTotal )
 
-    oBtNLin := TButton():New( 28, 60, 29, 78, oWin, "NUEVA LINEA (F5)", ;
-        {|| _FacNuevaLin( oGrid, @aLineas, nPorcRet, ;
-                          @nBase, @nIva, @nRet, @nTotal, ;
-                          oLBase, oLIva, oLRet, oLTotal ) } )
+    IF lNuevo
+        oBtNLin := TButton():New( 28, 60, 29, 78, oWin, "NUEVA LINEA (F5)", ;
+            {|| _FacNuevaLin( oGrid, @aLineas, nPorcRet, ;
+                              @nBase, @nIva, @nRet, @nTotal, ;
+                              oLBase, oLIva, oLRet, oLTotal ) } )
 
-    oBtELin := TButton():New( 28, 80, 29, 98, oWin, "EDITAR LINEA", ;
-        {|| _FacEditLin( oGrid, @aLineas, nPorcRet, ;
-                         @nBase, @nIva, @nRet, @nTotal, ;
-                         oLBase, oLIva, oLRet, oLTotal ) } )
+        oBtELin := TButton():New( 28, 80, 29, 98, oWin, "EDITAR LINEA", ;
+            {|| _FacEditLin( oGrid, @aLineas, nPorcRet, ;
+                             @nBase, @nIva, @nRet, @nTotal, ;
+                             oLBase, oLIva, oLRet, oLTotal ) } )
 
-    oBtDLin := TButton():New( 28,100, 29,118, oWin, "BORRAR LINEA", ;
-        {|| _FacBorrarLin( oGrid, @aLineas, nPorcRet, ;
-                           @nBase, @nIva, @nRet, @nTotal, ;
-                           oLBase, oLIva, oLRet, oLTotal ) } )
+        oBtDLin := TButton():New( 28,100, 29,118, oWin, "BORRAR LINEA", ;
+            {|| _FacBorrarLin( oGrid, @aLineas, nPorcRet, ;
+                               @nBase, @nIva, @nRet, @nTotal, ;
+                               oLBase, oLIva, oLRet, oLTotal ) } )
 
-    oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
-        {|| _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
-                         aLineas, cPieDoc, cNumero, cNumPre, lNuevo, ;
-                         nBase, nIva, nRet, nTotal, oLNumero, oWin ) } )
+        oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
+            {|| _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
+                             aLineas, cPieDoc, cNumero, cNumPre, lNuevo, ;
+                             nBase, nIva, nRet, nTotal, oLNumero, oWin ) } )
+    ENDIF
 
     oBtImp := TButton():New( 33, 20, 34, 36, oWin, "IMPRIMIR", ;
         {|| ImprimirFactura( cNumero ) } )
@@ -325,10 +319,12 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     oWin:AddCtrl( oGRet   )
     oWin:AddCtrl( oGObs   )
     oWin:AddCtrl( oGrid   )
-    oWin:AddCtrl( oBtNLin )
-    oWin:AddCtrl( oBtELin )
-    oWin:AddCtrl( oBtDLin )
-    oWin:AddCtrl( oBtGua  )
+    IF lNuevo
+        oWin:AddCtrl( oBtNLin )
+        oWin:AddCtrl( oBtELin )
+        oWin:AddCtrl( oBtDLin )
+        oWin:AddCtrl( oBtGua  )
+    ENDIF
     oWin:AddCtrl( oBtImp  )
     oWin:AddCtrl( oBtCan  )
 
@@ -775,6 +771,13 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
         RETURN NIL
     ENDIF
 
+    IF !lNuevo
+        MsgStop( "Una factura emitida no se modifica." + Chr(13) + ;
+                 "Use nota de abono o factura rectificativa para mantener trazabilidad.", ;
+                 "Factura fiscal" )
+        RETURN NIL
+    ENDIF
+
     IF Len( aLins ) == 0
         MsgStop( "Debe introducir al menos una linea.", "Guardar" )
         RETURN NIL
@@ -832,10 +835,6 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
 
     DbUnlock()
 
-    IF !lNuevo
-        _FacBorrarLinsDB( cNum )
-    ENDIF
-
     IF !ABRIR_TABLA( "FACTUR_DE", "FAC_D", "FAC_LIN" )
         RETURN NIL
     ENDIF
@@ -862,10 +861,6 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
 
     _FacGenVencim( cNum, cCli, dVto, nTotal )
 
-    IF !Empty( cNumPre )
-        _FacMarcarPresup( cNumPre, cNum )
-    ENDIF
-
     IF lNuevo
         oLNumero:SetText( PadR( cNum, 24 ) )
         cNumero := cNum
@@ -889,29 +884,6 @@ STATIC FUNCTION _FacSiguiente()
     cCod  := "FAC" + cAnio
 
 RETURN GetNextNum( cCod, "Facturas " + cAnio )
-
-
-STATIC FUNCTION _FacBorrarLinsDB( cNum )
-
-    IF !ABRIR_TABLA( "FACTUR_DE", "FAC_D2", "FAC_LIN" )
-        RETURN NIL
-    ENDIF
-
-    DbSelectArea( "FAC_D2" )
-    OrdSetFocus( "FAC_LIN" )
-    DbSeek( PadR( "A", 4 ) + PadR( cNum, 10 ) )
-
-    DO WHILE !Eof() .AND. AllTrim( FAC_D2->NUMERO ) == AllTrim( cNum )
-        IF NetRLock()
-            FAC_D2->( DbDelete() )
-            DbUnlock()
-        ENDIF
-        DbSkip()
-    ENDDO
-
-    FAC_D2->( DbCloseArea() )
-
-RETURN NIL
 
 
 STATIC FUNCTION _FacGenVencim( cNum, cCli, dVto, nTotal )
@@ -949,27 +921,6 @@ STATIC FUNCTION _FacGenVencim( cNum, cCli, dVto, nTotal )
     VEN_F->( DbCloseArea() )
 
 RETURN NIL
-
-
-STATIC FUNCTION _FacMarcarPresup( cNumPre, cNumFac )
-
-    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_M", "PRE_NUM" )
-        RETURN NIL
-    ENDIF
-
-    DbSelectArea( "PRE_M" )
-    OrdSetFocus( "PRE_NUM" )
-
-    IF DbSeek( cNumPre ) .AND. NetRLock()
-        REPLACE PRE_M->ESTADO  WITH "F"
-        REPLACE PRE_M->NUM_FAC WITH cNumFac
-        DbUnlock()
-    ENDIF
-
-    PRE_M->( DbCloseArea() )
-
-RETURN NIL
-
 
 
 // ============================================================================
@@ -1192,10 +1143,10 @@ STATIC FUNCTION _NaGuardar( cNumFac, cCliID, cCtaCli, oGFec, oGMot, ;
         RETURN NIL
     ENDIF
 
-    // Cuenta de debe: 570 Caja o la que sea (en abono la devolucion va al cliente)
-    // D  430xxxxxxx   nTotal   (eliminamos la deuda del cliente)
-    // H  700/ingresos nBase    (menor ingreso)
-    // H  477 IVA      nIva     (IVA repercutido negativo)
+    // Asiento inverso de venta:
+    // D 700/ingresos  nBase
+    // D 477 IVA       nIva
+    // H 430 cliente   nTotal
     cCtaDebe := If( Empty( cCtaCli ), "430", cCtaCli )
 
     // Grabar cabecera NOTASDC
@@ -1295,8 +1246,8 @@ STATIC FUNCTION _NaAsiento( cNumNA, dFec, cCliID, cCtaCli, ;
         REPLACE DIA_NA->D_ASIENT WITH cAsi
         REPLACE DIA_NA->D_LINEA  WITH 1
         REPLACE DIA_NA->D_FECHA  WITH dFec
-        REPLACE DIA_NA->D_CUENTA WITH cCtaCli
-        REPLACE DIA_NA->D_DEBE   WITH nTotal
+        REPLACE DIA_NA->D_CUENTA WITH cCta700
+        REPLACE DIA_NA->D_DEBE   WITH nBase
         REPLACE DIA_NA->D_HABER  WITH 0
         REPLACE DIA_NA->D_DESCRI WITH cConcepto
         REPLACE DIA_NA->TIP_ORIG WITH "NA"
@@ -1307,9 +1258,9 @@ STATIC FUNCTION _NaAsiento( cNumNA, dFec, cCliID, cCtaCli, ;
         REPLACE DIA_NA->D_ASIENT WITH cAsi
         REPLACE DIA_NA->D_LINEA  WITH 2
         REPLACE DIA_NA->D_FECHA  WITH dFec
-        REPLACE DIA_NA->D_CUENTA WITH cCta700
+        REPLACE DIA_NA->D_CUENTA WITH cCtaCli
         REPLACE DIA_NA->D_DEBE   WITH 0
-        REPLACE DIA_NA->D_HABER  WITH nBase
+        REPLACE DIA_NA->D_HABER  WITH nTotal
         REPLACE DIA_NA->D_DESCRI WITH cConcepto
         REPLACE DIA_NA->TIP_ORIG WITH "NA"
         REPLACE DIA_NA->DOC_ORIG WITH cNumNA
@@ -1321,8 +1272,8 @@ STATIC FUNCTION _NaAsiento( cNumNA, dFec, cCliID, cCtaCli, ;
             REPLACE DIA_NA->D_LINEA  WITH 3
             REPLACE DIA_NA->D_FECHA  WITH dFec
             REPLACE DIA_NA->D_CUENTA WITH "477"
-            REPLACE DIA_NA->D_DEBE   WITH 0
-            REPLACE DIA_NA->D_HABER  WITH nIva
+            REPLACE DIA_NA->D_DEBE   WITH nIva
+            REPLACE DIA_NA->D_HABER  WITH 0
             REPLACE DIA_NA->D_DESCRI WITH cConcepto
             REPLACE DIA_NA->TIP_ORIG WITH "NA"
             REPLACE DIA_NA->DOC_ORIG WITH cNumNA

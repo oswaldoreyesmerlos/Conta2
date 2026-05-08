@@ -135,34 +135,29 @@ STATIC FUNCTION TesoreriaForm( lNuevo, cCodigo )
     oWin := TWindow():New( 5, 20, 25, 100, ;
         If( lNuevo, "NUEVO BANCO", "EDITAR BANCO" ) )
 
-    TLabel():New( 6, 22, "Codigo:", oWin )
-    oGet[1] := TGet():New( 6, 30, 7, 38, oWin, ;
-        If( lNuevo, @cCodigo_, BAN->BAN_COD ), ;
-        "9999999999", If( lNuevo, nil, {|| .F. } ) )
+    oWin:AddCtrl( TLabel():New(  2,  3, "Codigo    :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4,  3, "Nombre    :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6,  3, "IBAN      :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  8,  3, "Cta.Cont. :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 10,  3, "Saldo     :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 12,  3, "Chequera  :", oWin ) )
 
-    TLabel():New( 8, 22, "Nombre:", oWin )
-    oGet[2] := TGet():New( 8, 30, 9, 68, oWin, @cNombre, "@!" )
+    oGet[1] := TGet():New(  2, 15, cCodigo_,  "@!",              oWin )
+    oGet[2] := TGet():New(  4, 15, cNombre,   "@!",              oWin )
+    oGet[3] := TGet():New(  6, 15, cIban,     "@!",              oWin )
+    oGet[4] := TGet():New(  8, 15, cCtaCont,  "@!",              oWin )
+    oGet[5] := TGet():New( 10, 15, nSaldo,    "999999999999.99", oWin )
+    oGet[6] := TGet():New( 12, 15, cChequera, "@!",              oWin )
+    oGet[7] := TCheck():New( 14, 15, "Baja", lBaja, oWin )
 
-    TLabel():New( 10, 22, "IBAN:", oWin )
-    oGet[3] := TGet():New( 10, 30, 11, 68, oWin, @cIban, "@!" )
+    IF !lNuevo
+        oGet[1]:bWhen := {|| .F. }
+    ENDIF
 
-    TLabel():New( 12, 22, "Cta.Cont.:", oWin )
-    oGet[4] := TGet():New( 12, 30, 13, 40, oWin, @cCtaCont, "@!" )
-
-    TLabel():New( 14, 22, "Saldo:", oWin )
-    oGet[5] := TGet():New( 14, 30, 15, 48, oWin, @nSaldo, ;
-        "@E 999,999,999.99" )
-
-    TLabel():New( 16, 22, "Chequera:", oWin )
-    oGet[6] := TGet():New( 16, 30, 17, 48, oWin, @cChequera, "@!" )
-
-    TLabel():New( 18, 22, "Baja:", oWin )
-    oGet[7] := TCheck():New( 18, 30, 19, 40, oWin, @lBaja, "SI/NO" )
-
-    oBtOk := TButton():New( 20, 30, 22, 50, oWin, "GRABAR", ;
+    oBtOk := TButton():New( 16, 15, 16, 34, oWin, "GRABAR", ;
         {|| lGrabar := .T., oWin:Close() } )
 
-    oBtCan := TButton():New( 20, 52, 22, 72, oWin, "CANCELAR", ;
+    oBtCan := TButton():New( 16, 37, 16, 56, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGet[1] )
@@ -178,6 +173,14 @@ STATIC FUNCTION TesoreriaForm( lNuevo, cCodigo )
     oWin:Run()
 
     IF lGrabar
+        cCodigo_  := AllTrim( oGet[1]:uVar )
+        cNombre   := AllTrim( oGet[2]:uVar )
+        cIban     := AllTrim( oGet[3]:uVar )
+        cCtaCont  := AllTrim( oGet[4]:uVar )
+        nSaldo    := oGet[5]:uVar
+        cChequera := AllTrim( oGet[6]:uVar )
+        lBaja     := oGet[7]:lValue
+
         _BanGuardar( lNuevo, cCodigo_, cNombre, cIban, cCtaCont, ;
             nSaldo, cChequera, lBaja )
     ENDIF
@@ -189,9 +192,9 @@ STATIC FUNCTION _BanGuardar( lNuevo, cCodigo, cNombre, cIban, ;
     cCtaCont, nSaldo, cChequera, lBaja )
 
     IF lNuevo
-        IF NetFLock( "BAN", 0.5 )
+        IF NetFLock()
             DbAppend()
-            IF !NetFLock( "BAN", 0.5 )
+            IF !NetRLock()
                 MsgStop( "No se pudo bloquear el registro", "Error" )
                 RETURN .F.
             ENDIF
@@ -203,7 +206,7 @@ STATIC FUNCTION _BanGuardar( lNuevo, cCodigo, cNombre, cIban, ;
         DbSelectArea( "BAN" )
         OrdSetFocus( "BAN_COD" )
         DbSeek( cCodigo )
-        IF !Found() .OR. !NetFLock( "BAN", 0.5 )
+        IF !Found() .OR. !NetRLock()
             MsgStop( "No se pudo bloquear el registro", "Error" )
             RETURN .F.
         ENDIF
@@ -641,7 +644,7 @@ STATIC FUNCTION _PagCargar()
     DbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted() .AND. !COM_PV->PAGADA .AND. !COM_PV->ANULADA
+        IF !Deleted() .AND. !COM_PV->PAGADA
             nDias := Date() - COM_PV->FECHA_VT
             DO CASE
             CASE nDias > 30  ; cEst := "VENCIDA +" + AllTrim( Str( nDias ) ) + "d"
@@ -736,7 +739,9 @@ STATIC FUNCTION _PagRegistrar( cNumCom, nImporte )
         OrdSetFocus( "COM_INT" )
         IF DbSeek( cNumCom ) .AND. NetRLock()
             REPLACE COM_PR->PAGADA   WITH .T.
-            REPLACE COM_PR->FEC_PAGO WITH oGFec:uVar
+            IF FieldPos( "METODO_P" ) > 0
+                REPLACE COM_PR->METODO_P WITH AllTrim( oGFP:uVar )
+            ENDIF
             DbUnlock()
         ENDIF
         COM_PR->( DbCloseArea() )

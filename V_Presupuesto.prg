@@ -40,6 +40,8 @@ FUNCTION PresupuestosView()
     LOCAL oWin
     LOCAL oGrid
     LOCAL oBtNvo
+    LOCAL oBtObr
+    LOCAL oBtRec
     LOCAL oBtSal
     LOCAL oLbl
     LOCAL aData
@@ -62,8 +64,8 @@ FUNCTION PresupuestosView()
     oGrid:AddColumn( "Base",      12, "999,999.99", { |a| a[4] } )
     oGrid:AddColumn( "IVA",       10, "999,999.99", { |a| a[5] } )
     oGrid:AddColumn( "Total",     12, "999,999.99", { |a| a[6] } )
-    oGrid:AddColumn( "Estado",     8, "@!",         { |a| a[7] } )
-    oGrid:AddColumn( "F.Actual",  10, "@!",         { |a| a[8] } )
+    oGrid:AddColumn( "Estado",    10, "@!",         { |a| a[7] } )
+    oGrid:AddColumn( "Obra",      10, "@!",         { |a| a[8] } )
 
     oGrid:bEnter := {| g | ;
         _PreEditar( g:CurrentRow()[1] ), ;
@@ -72,7 +74,7 @@ FUNCTION PresupuestosView()
         g:Paint() }
 
     oLbl := TLabel():New( 32, 2, ;
-        "ENTER: ver/editar   F5: nuevo presupuesto   Letras: buscar cliente", oWin )
+        "ENTER: ver/editar   F5: nuevo presupuesto   ACEPTAR: crea obra   Letras: buscar cliente", oWin )
 
     oBtNvo := TButton():New( 33,  2, 34, 18, oWin, "NUEVO (F5)", ;
         {|| AltaPresupuesto(), ;
@@ -81,9 +83,9 @@ FUNCTION PresupuestosView()
             oGrid:nCurRow := Len( aData ), ;
             oGrid:Paint() } )
 
-    oBtFac := TButton():New( 33, 20, 34, 38, oWin, "FACTURAR", ;
+    oBtObr := TButton():New( 33, 20, 34, 38, oWin, "ACEPTAR", ;
         {|| If( oGrid:CurrentRow() != NIL, ;
-               ConvertirAFactura( oGrid:CurrentRow()[1] ), NIL ), ;
+               AceptarPresupuesto( oGrid:CurrentRow()[1] ), NIL ), ;
             aData := _PreCargar(), ;
             oGrid:aData := aData, ;
             oGrid:Paint() } )
@@ -101,7 +103,7 @@ FUNCTION PresupuestosView()
     oWin:AddCtrl( oGrid  )
     oWin:AddCtrl( oLbl   )
     oWin:AddCtrl( oBtNvo )
-    oWin:AddCtrl( oBtFac )
+    oWin:AddCtrl( oBtObr )
     oWin:AddCtrl( oBtRec )
     oWin:AddCtrl( oBtSal )
 
@@ -131,13 +133,31 @@ STATIC FUNCTION _PreCargar()
                 PRE->SUBTOTAL, ;
                 PRE->IVA, ;
                 PRE->TOTAL, ;
-                If( PRE->ESTADO == "F", "FACTURADO", If( PRE->ESTADO == "A", "ACEPTADO", "PENDIENTE" ) ), ;
-                AllTrim( PRE->NUM_FAC ) } )
+                _PreEstadoTexto( PRE->ESTADO, PRE->ID_OBRA ), ;
+                AllTrim( PRE->ID_OBRA ) } )
         ENDIF
         DbSkip()
     ENDDO
 
 RETURN aData
+
+
+STATIC FUNCTION _PreEstadoTexto( cEstado, cIdObra )
+
+    IF !Empty( AllTrim( cIdObra ) )
+        RETURN "OBRA"
+    ENDIF
+
+    DO CASE
+    CASE AllTrim( cEstado ) == "A"
+        RETURN "ACEPTADO"
+    CASE AllTrim( cEstado ) == "R"
+        RETURN "RECHAZADO"
+    OTHERWISE
+        RETURN "PENDIENTE"
+    ENDCASE
+
+RETURN "PENDIENTE"
 
 
 // ============================================================================
@@ -160,6 +180,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL nArea
     LOCAL cCliID
     LOCAL cCliNom
+    LOCAL cCliInfo
     LOCAL dFecha
     LOCAL dValidez
     LOCAL cFormPag
@@ -182,6 +203,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL oGObs
     LOCAL oLNumero
     LOCAL oLCliNom
+    LOCAL oLCliInfo
     LOCAL oLBase
     LOCAL oLIva
     LOCAL oLRet
@@ -197,7 +219,8 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     lNuevo   := Empty( AllTrim( cNumero ) )
     nArea    := Select()
     cCliID   := Space( 10 )
-    cCliNom  := Space( 50 )
+    cCliNom  := Space( 70 )
+    cCliInfo := Space( 80 )
     dFecha   := Date()
     dValidez := Date() + 30
     cFormPag := Space(  3 )
@@ -215,7 +238,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     _PreCargarEmpPie( @cPieDoc )
 
     IF !lNuevo
-        IF !_PreCargarCab( cNumero, @cCliID, @cCliNom, @dFecha, @dValidez, ;
+        IF !_PreCargarCab( cNumero, @cCliID, @cCliNom, @cCliInfo, @dFecha, @dValidez, ;
                              @cFormPag, @nDias, @nPorcRet, @cObserva, @lAnulada )
             RETURN NIL
         ENDIF
@@ -230,10 +253,12 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oWin:AddCtrl( TLabel():New(  2,  2, "Numero    :", oWin ) )
     oWin:AddCtrl( TLabel():New(  2, 40, "Fecha     :", oWin ) )
     oWin:AddCtrl( TLabel():New(  4,  2, "Cliente   :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  4, 40, "Validez   :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  6,  2, "Forma pago:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  6, 40, "Dias pago :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  6, 70, "Ret.IRPF %:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4, 28, "Nombre    :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  5, 28, "Datos     :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6,  2, "Validez   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6, 32, "Forma pago:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6, 62, "Dias pago :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6, 86, "Ret.IRPF %:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8,  2, "Observ.   :", oWin ) )
 
     oLNumero := TLabel():New( 2, 14, PadR( If( lNuevo, "(se asigna al grabar)", cNumero ), 24 ), oWin )
@@ -241,17 +266,21 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oWin:AddCtrl( oLNumero )
 
     oGCli := TGet():New( 4, 14, cCliID, "@!", oWin )
-    oGCli:bValid := {| o | _PreBuscarCli( o, @cCliNom, @cFormPag, ;
-                                               @nDias, @nPorcRet, oWin ) }
+    oGCli:bValid := {| o | _PreBuscarCli( o, @cCliNom, @cCliInfo, @cFormPag, ;
+                                               @nDias, @nPorcRet, oLCliNom, ;
+                                               oLCliInfo, oGFP, oGDias, oGRet ) }
 
-    oLCliNom := TLabel():New( 4, 40, PadR( cCliNom, 50 ), oWin )
+    oLCliNom := TLabel():New( 4, 40, PadR( cCliNom, 70 ), oWin )
     oWin:AddCtrl( oLCliNom )
 
+    oLCliInfo := TLabel():New( 5, 40, PadR( cCliInfo, 80 ), oWin )
+    oWin:AddCtrl( oLCliInfo )
+
     oGFec  := TGet():New(  2, 52, dFecha,   "99/99/9999", oWin )
-    oGVal  := TGet():New(  4, 52, dValidez, "99/99/9999", oWin )
-    oGFP   := TGet():New(  6, 14, cFormPag, "@!",         oWin )
-    oGDias := TGet():New(  6, 52, nDias,    "999",        oWin )
-    oGRet  := TGet():New(  6, 82, nPorcRet, "99.99",      oWin )
+    oGVal  := TGet():New(  6, 14, dValidez, "99/99/9999", oWin )
+    oGFP   := TGet():New(  6, 44, cFormPag, "@!",         oWin )
+    oGDias := TGet():New(  6, 74, nDias,    "999",        oWin )
+    oGRet  := TGet():New(  6, 98, nPorcRet, "99.99",      oWin )
     oGObs  := TGet():New(  8, 14, cObserva, "@!",         oWin )
 
     oGrid := TGrid():New( 10, 2, 26, 124, oWin )
@@ -352,7 +381,7 @@ STATIC FUNCTION _PreCargarEmpPie( cPie )
 RETURN NIL
 
 
-STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, dFec, dVal, cFP, nDias, nRet, cObs, lAnu )
+STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, nRet, cObs, lAnu )
 
     IF !ABRIR_TABLA( "PRESUPUEST", "PRE_C", "PRE_NUM" )
         RETURN .F.
@@ -377,11 +406,36 @@ STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, dFec, dVal, cFP, nDias, nRet, c
     IF ABRIR_TABLA( "CLIENTES", "CLI_P", "CLI_ID" )
         IF CLI_P->( DbSeek( cCli ) )
             cNom := AllTrim( CLI_P->NOMBRE + " " + CLI_P->APELLIDO )
+            cInfo := _PreClienteInfo( CLI_P->NIF, CLI_P->TELEFONO, CLI_P->MOVIL, ;
+                                      CLI_P->CIUDAD )
         ENDIF
         CLI_P->( DbCloseArea() )
     ENDIF
 
 RETURN .T.
+
+
+STATIC FUNCTION _PreClienteInfo( cNif, cTel, cMovil, cCiudad )
+
+    LOCAL cInfo
+
+    cInfo := ""
+
+    IF !Empty( AllTrim( cNif ) )
+        cInfo += "NIF: " + AllTrim( cNif )
+    ENDIF
+
+    IF !Empty( AllTrim( cTel ) )
+        cInfo += If( Empty( cInfo ), "", "  " ) + "Tel: " + AllTrim( cTel )
+    ELSEIF !Empty( AllTrim( cMovil ) )
+        cInfo += If( Empty( cInfo ), "", "  " ) + "Movil: " + AllTrim( cMovil )
+    ENDIF
+
+    IF !Empty( AllTrim( cCiudad ) )
+        cInfo += If( Empty( cInfo ), "", "  " ) + AllTrim( cCiudad )
+    ENDIF
+
+RETURN cInfo
 
 
 STATIC FUNCTION _PreCargarLins( cNum, aLins )
@@ -419,7 +473,8 @@ STATIC FUNCTION _PreCargarLins( cNum, aLins )
 RETURN NIL
 
 
-STATIC FUNCTION _PreBuscarCli( oGet, cNom, cFP, nDias, nRet, oWin )
+STATIC FUNCTION _PreBuscarCli( oGet, cNom, cInfo, cFP, nDias, nRet, ;
+                               oLCliNom, oLCliInfo, oGFP, oGDias, oGRet )
 
     LOCAL cId
 
@@ -435,6 +490,8 @@ STATIC FUNCTION _PreBuscarCli( oGet, cNom, cFP, nDias, nRet, oWin )
 
     IF CLI_BP->( DbSeek( cId ) )
         cNom  := AllTrim( CLI_BP->NOMBRE + " " + CLI_BP->APELLIDO )
+        cInfo := _PreClienteInfo( CLI_BP->NIF, CLI_BP->TELEFONO, CLI_BP->MOVIL, ;
+                                  CLI_BP->CIUDAD )
         cFP   := AllTrim( CLI_BP->FORPAGO )
         nDias := CLI_BP->DIAS_PAG
         nRet  := If( CLI_BP->APL_IRPF, 15.00, 0.00 )
@@ -446,7 +503,20 @@ STATIC FUNCTION _PreBuscarCli( oGet, cNom, cFP, nDias, nRet, oWin )
 
     CLI_BP->( DbCloseArea() )
 
-    oWin:Refresh()
+    oLCliNom:SetText( PadR( cNom, 70 ) )
+    oLCliInfo:SetText( PadR( cInfo, 80 ) )
+
+    oGFP:uVar    := cFP
+    oGFP:cBuffer := PadR( cFP, oGFP:nLen )
+    oGFP:Paint()
+
+    oGDias:uVar    := nDias
+    oGDias:cBuffer := PadL( LTrim( Str( nDias ) ), oGDias:nLen )
+    oGDias:Paint()
+
+    oGRet:uVar    := nRet
+    oGRet:cBuffer := PadL( LTrim( Str( nRet ) ), oGRet:nLen )
+    oGRet:Paint()
 
 RETURN .T.
 
@@ -725,7 +795,20 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
         ENDIF
         DbAppend()
     ELSE
-        IF !DbSeek( cNum ) .OR. !NetRLock()
+        IF !DbSeek( cNum )
+            RETURN NIL
+        ENDIF
+
+        IF !Empty( AllTrim( PRE_G->ID_OBRA ) ) .OR. ;
+           AllTrim( PRE_G->ESTADO ) == "A" .OR. ;
+           AllTrim( PRE_G->ESTADO ) == "R"
+            MsgStop( "No se puede modificar un presupuesto aceptado, rechazado o con obra creada.", ;
+                     "Guardar" )
+            PRE_G->( DbCloseArea() )
+            RETURN NIL
+        ENDIF
+
+        IF !NetRLock()
             RETURN NIL
         ENDIF
     ENDIF
@@ -738,11 +821,16 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
     REPLACE PRE_G->SUBTOTAL WITH nBase
     REPLACE PRE_G->IVA      WITH nIva
     REPLACE PRE_G->TOTAL    WITH nTotal
-    REPLACE PRE_G->ESTADO   WITH "P"
     REPLACE PRE_G->OBSERVA  WITH cObs
     REPLACE PRE_G->PIE_DOC  WITH cPieDoc
     REPLACE PRE_G->PORC_RET WITH nPRet
-    REPLACE PRE_G->NUM_FAC  WITH Space( 10 )
+
+    IF lNuevo
+        REPLACE PRE_G->ESTADO  WITH "P"
+        REPLACE PRE_G->NUM_FAC WITH Space( 10 )
+        REPLACE PRE_G->ID_OBRA WITH Space( 10 )
+        REPLACE PRE_G->TIPO    WITH "C"
+    ENDIF
 
     DbUnlock()
 
@@ -845,60 +933,123 @@ RETURN .T.
 
 
 // ============================================================================
-// ConvertirAFactura( cNumPre )
+// AceptarPresupuesto( cNumPre )
 // ----------------------------------------------------------------------------
-// Convierte un presupuesto en factura.
-// Verifica estado — solo presupuestos pendientes o aceptados se pueden facturar.
+// Acepta un presupuesto y crea una obra.
+// La factura fiscal nace despues, siempre vinculada a esa obra.
 // ============================================================================
-FUNCTION ConvertirAFactura( cNumPre )
+FUNCTION AceptarPresupuesto( cNumPre )
 
     LOCAL cEstado
-    LOCAL cNumFac
+    LOCAL cIdObra
+    LOCAL cDesc
 
     cEstado := ""
-    cNumFac := ""
+    cIdObra := ""
+    cDesc   := ""
 
     IF Empty( AllTrim( cNumPre ) )
-        MsgStop( "Seleccione un presupuesto.", "Facturar" )
+        MsgStop( "Seleccione un presupuesto.", "Aceptar" )
         RETURN .F.
     ENDIF
 
-    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_CV", "PRE_NUM" )
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_AC", "PRE_NUM" )
         RETURN .F.
     ENDIF
 
-    DbSelectArea( "PRE_CV" )
+    DbSelectArea( "PRE_AC" )
     OrdSetFocus( "PRE_NUM" )
 
-    IF !DbSeek( AllTrim( cNumPre ) )
-        PRE_CV->( DbCloseArea() )
-        MsgStop( "Presupuesto " + cNumPre + " no encontrado.", "Facturar" )
+    IF !( DbSeek( PadR( AllTrim( cNumPre ), 10 ) ) .OR. DbSeek( AllTrim( cNumPre ) ) )
+        PRE_AC->( DbCloseArea() )
+        MsgStop( "Presupuesto " + cNumPre + " no encontrado.", "Aceptar" )
         RETURN .F.
     ENDIF
 
-    cEstado := AllTrim( PRE_CV->ESTADO  )
-    cNumFac := AllTrim( PRE_CV->NUM_FAC )
+    cEstado := AllTrim( PRE_AC->ESTADO  )
+    cIdObra := AllTrim( PRE_AC->ID_OBRA )
 
-    PRE_CV->( DbCloseArea() )
+    PRE_AC->( DbCloseArea() )
 
     DO CASE
-    CASE cEstado == "F"
-        MsgStop( "Este presupuesto ya fue facturado." + Chr(13) + ;
-                 "Factura: " + cNumFac, "Facturar" )
+    CASE !Empty( cIdObra )
+        MsgStop( "Este presupuesto ya tiene obra creada." + Chr(13) + ;
+                 "Obra: " + cIdObra, "Aceptar" )
         RETURN .F.
     CASE cEstado == "R"
-        MsgStop( "No se puede facturar un presupuesto rechazado.", "Facturar" )
+        MsgStop( "No se puede aceptar un presupuesto rechazado.", "Aceptar" )
         RETURN .F.
     ENDCASE
 
-    IF !MsgYesNo( "Convertir presupuesto " + AllTrim( cNumPre ) + ;
-                  " en factura?", "Facturar" )
+    IF !MsgYesNo( "Aceptar presupuesto " + AllTrim( cNumPre ) + ;
+                  " y crear la obra?", "Aceptar" )
         RETURN .F.
     ENDIF
 
-    AltaFactDesdePre( AllTrim( cNumPre ) )
+    cDesc := _PreDescripcionObra( AllTrim( cNumPre ) )
+
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_AM", "PRE_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "PRE_AM" )
+    OrdSetFocus( "PRE_NUM" )
+
+    IF ( DbSeek( PadR( AllTrim( cNumPre ), 10 ) ) .OR. DbSeek( AllTrim( cNumPre ) ) ) .AND. NetRLock()
+        REPLACE PRE_AM->ESTADO WITH "A"
+        DbCommit()
+        DbUnlock()
+    ELSE
+        PRE_AM->( DbCloseArea() )
+        MsgStop( "No se pudo marcar el presupuesto como aceptado.", "Aceptar" )
+        RETURN .F.
+    ENDIF
+
+    PRE_AM->( DbCloseArea() )
+
+    AuditLog( "ACEPTA", "PRESUPUEST", AllTrim( cNumPre ), ;
+              "Presupuesto aceptado para crear obra", .T. )
+
+    cIdObra := CrearObraDesdePresupuesto( AllTrim( cNumPre ), cDesc, "", Date(), CToD( "" ) )
+
+    IF Empty( cIdObra )
+        MsgStop( "El presupuesto quedo aceptado, pero no se pudo crear la obra.", "Aceptar" )
+        RETURN .F.
+    ENDIF
+
+    AuditLog( "ALTA", "OBRAS", cIdObra, ;
+              "Obra creada desde presupuesto " + AllTrim( cNumPre ), .T. )
+
+    MsgInfo( "Presupuesto aceptado." + Chr(13) + ;
+             "Obra creada: " + cIdObra, "Aceptar" )
 
 RETURN .T.
+
+
+STATIC FUNCTION _PreDescripcionObra( cNumPre )
+
+    LOCAL cDesc
+
+    cDesc := ""
+
+    IF !ABRIR_TABLA( "PRESUP_DE", "PRD_DESC", "PRD_LIN" )
+        RETURN "Obra segun presupuesto " + AllTrim( cNumPre )
+    ENDIF
+
+    DbSelectArea( "PRD_DESC" )
+    OrdSetFocus( "PRD_LIN" )
+
+    IF DbSeek( PadR( AllTrim( cNumPre ), 10 ) + "  1" )
+        cDesc := AllTrim( PRD_DESC->DESCRIPC )
+    ENDIF
+
+    PRD_DESC->( DbCloseArea() )
+
+    IF Empty( cDesc )
+        cDesc := "Obra segun presupuesto " + AllTrim( cNumPre )
+    ENDIF
+
+RETURN cDesc
 
 
 // ============================================================================
@@ -911,6 +1062,7 @@ FUNCTION RechazarPresupuesto( cNumPre )
 
     LOCAL cEstado
     LOCAL cMotivo
+    LOCAL cIdObra
     LOCAL oWin
     LOCAL oGMot
     LOCAL oBtOk
@@ -919,6 +1071,7 @@ FUNCTION RechazarPresupuesto( cNumPre )
 
     cEstado := ""
     cMotivo := Space( 60 )
+    cIdObra := ""
     lOK     := .F.
 
     IF Empty( AllTrim( cNumPre ) )
@@ -940,12 +1093,14 @@ FUNCTION RechazarPresupuesto( cNumPre )
     ENDIF
 
     cEstado := AllTrim( PRE_RV->ESTADO )
+    cIdObra := AllTrim( PRE_RV->ID_OBRA )
 
     PRE_RV->( DbCloseArea() )
 
     DO CASE
-    CASE cEstado == "F"
-        MsgStop( "No se puede rechazar un presupuesto ya facturado.", "Rechazar" )
+    CASE !Empty( cIdObra )
+        MsgStop( "No se puede rechazar un presupuesto con obra creada." + Chr(13) + ;
+                 "Cancele la obra si procede.", "Rechazar" )
         RETURN .F.
     CASE cEstado == "R"
         MsgStop( "Este presupuesto ya esta rechazado.", "Rechazar" )
@@ -1002,10 +1157,13 @@ FUNCTION RechazarPresupuesto( cNumPre )
     IF DbSeek( AllTrim( cNumPre ) ) .AND. NetRLock()
         REPLACE PRE_RM->ESTADO  WITH "R"
         REPLACE PRE_RM->OBSERVA WITH "RECHAZADO: " + cMotivo
+        DbCommit()
         DbUnlock()
     ENDIF
 
     PRE_RM->( DbCloseArea() )
+
+    AuditLog( "RECHAZA", "PRESUPUEST", AllTrim( cNumPre ), cMotivo, .T. )
 
     MsgInfo( "Presupuesto " + AllTrim( cNumPre ) + " marcado como rechazado.", ;
              "Rechazar" )

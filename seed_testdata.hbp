@@ -1,0 +1,34 @@
+# =============================================================================
+# ARCHIVO : seed_testdata.hbp
+# PROPOSITO: Compilar inyector de datos de prueba TST
+# USO     : hbmk2 seed_testdata.hbp
+#           .\SeedTestData.exe
+# =============================================================================
+
+-oSeedTestData
+-w0
+-main=SEEDMAIN
+
+hbct.hbc
+gtwvg.hbc
+
+-i.\API
+-i.
+
+API\Gfx.prg
+API\TControl.prg
+API\TLabel.prg
+API\TGet.prg
+API\TButton.prg
+API\TCheck.prg
+API\TCombo.prg
+API\TGrid.prg
+API\TWindow.prg
+API\TMenu.prg
+API\MsgBox.prg
+API\MsgYesNo.prg
+
+Util.prg
+InicioDBF.prg
+Seguridad.prg
+SeedTestData.prg

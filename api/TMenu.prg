@@ -452,9 +452,19 @@ METHOD ExecItem() CLASS TMenuPop
 
     LOCAL bA   := ::aItems[::nSel, 2]
     LOCAL lSub := ::aItems[::nSel, 3]
+    LOCAL oErr
+    LOCAL bErr
 
     IF ValType( bA ) == "B"
-        Eval( bA, ::nTop + ::nSel - 1, ::nRight - 1 )
+        bErr := ErrorBlock( {| e | Break( e ) } )
+        BEGIN SEQUENCE
+            Eval( bA, ::nTop + ::nSel - 1, ::nRight - 1 )
+        RECOVER USING oErr
+        END SEQUENCE
+        ErrorBlock( bErr )
+        IF oErr != NIL
+            _MenuError( oErr )
+        ENDIF
     ENDIF
 
 RETURN lSub
@@ -491,6 +501,36 @@ STATIC FUNCTION _RedrawStack()
     FOR nI := 1 TO Len( aPopStack )
         aPopStack[nI]:Paint()
     NEXT
+
+RETURN NIL
+
+
+STATIC FUNCTION _MenuError( oErr )
+
+    LOCAL cMsg
+    LOCAL cLog
+    LOCAL cPrev
+
+    cMsg := "La opcion no pudo ejecutarse."
+    cLog := Replicate( "=", 70 ) + hb_Eol() + ;
+        "FECHA: " + DToC( Date() ) + " HORA: " + Time() + hb_Eol() + ;
+        "ERROR EN OPCION DE MENU" + hb_Eol()
+
+    IF oErr != NIL
+        cMsg += Chr( 13 ) + Chr( 10 ) + ;
+            AllTrim( hb_CStr( oErr:Operation ) ) + ": " + ;
+            AllTrim( hb_CStr( oErr:Description ) )
+        cLog += "Operacion   : " + hb_CStr( oErr:Operation ) + hb_Eol()
+        cLog += "Descripcion : " + hb_CStr( oErr:Description ) + hb_Eol()
+    ENDIF
+
+    BEGIN SEQUENCE
+        cPrev := If( File( "error.log" ), hb_MemoRead( "error.log" ), "" )
+        hb_MemoWrit( "error.log", cPrev + cLog )
+    RECOVER
+    END SEQUENCE
+
+    MsgStop( cMsg, "Menu" )
 
 RETURN NIL
 

@@ -93,7 +93,7 @@ RETURN .T.
 // ValidarCrearObraDesdePresupuesto()
 // Evita crear obras duplicadas o desde presupuestos no aceptados.
 // Estados previstos de PRESUPUEST->ESTADO:
-//   P=Pendiente/Borrador, A=Aceptado, R=Rechazado, F=Facturado/Convertido
+//   P=Pendiente/Borrador, A=Aceptado, R=Rechazado
 // ============================================================================
 FUNCTION ValidarCrearObraDesdePresupuesto( cNumPre )
 
