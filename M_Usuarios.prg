@@ -22,8 +22,7 @@ FUNCTION UsuariosView()
 
     MEMVAR cUserRol
 
-    IF AllTrim( cUserRol ) != "ADM"
-        MsgStop( "Acceso restringido a Administrador.", "Usuarios" )
+    IF !RequirePerm( "SEG_USR", "Mantenimiento de usuarios" )
         RETURN NIL
     ENDIF
 
@@ -133,7 +132,7 @@ FUNCTION UsuariosForm( cCodigo )
     nArea    := Select()
     cCod_    := Space( 10 )
     cNombre  := Space( 40 )
-    cClave   := Space( 10 )
+    cClave   := Space( 20 )
     cRolID   := Space(  3 )
     nNivel   := 1
     dUltAcc  := CToD( "" )
@@ -149,7 +148,7 @@ FUNCTION UsuariosForm( cCodigo )
         IF DbSeek( AllTrim( cCodigo ) )
             cCod_    := PadR( AllTrim( USR->CODIGO   ), 10 )
             cNombre  := PadR( AllTrim( USR->NOMBRE   ), 40 )
-            cClave   := PadR( AllTrim( USR->CLAVE    ), 10 )
+            cClave   := Space( 20 )
             cRolID   := PadR( AllTrim( USR->ROLID    ),  3 )
             nNivel   := USR->NIVEL
             dUltAcc  := USR->ULT_ACCE
@@ -176,7 +175,7 @@ FUNCTION UsuariosForm( cCodigo )
     oGNom:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
 
     oGPas := TGet():New(  6, 17, cClave, "@K!", oWin )
-    oGPas:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
+    oGPas:bValid := {| o | !lNuevo .OR. !Empty( AllTrim( o:cBuffer ) ) }
 
     oGRol := TGet():New(  8, 17, cRolID, "@!", oWin )
     oGRol:bValid := {| o | AllTrim( o:cBuffer ) $ "ADM,CONT,CAJA" }
@@ -211,8 +210,10 @@ RETURN NIL
 STATIC FUNCTION _UsrGuardar( oGC, oGN, oGP, oGR, oGNv, oChk, lNuevo, oWin )
 
     LOCAL cCodigo
+    LOCAL cClave
 
     cCodigo := AllTrim( oGC:uVar )
+    cClave  := AllTrim( oGP:uVar )
 
     DbSelectArea( "USR" )
     OrdSetFocus( "USR_COD" )
@@ -237,9 +238,16 @@ STATIC FUNCTION _UsrGuardar( oGC, oGN, oGP, oGR, oGNv, oChk, lNuevo, oWin )
 
     REPLACE USR->CODIGO   WITH cCodigo
     REPLACE USR->NOMBRE   WITH AllTrim( oGN:uVar )
-    REPLACE USR->CLAVE    WITH AllTrim( oGP:uVar )
     REPLACE USR->ROLID    WITH AllTrim( oGR:uVar )
     REPLACE USR->NIVEL    WITH oGNv:uVar
+
+    IF lNuevo .OR. !Empty( cClave )
+        IF !UserSetPassword( cCodigo, cClave )
+            DbUnlock()
+            MsgStop( "Debe indicar una clave valida.", "Usuario" )
+            RETURN NIL
+        ENDIF
+    ENDIF
 
     IF lNuevo
         REPLACE USR->FECHA_AL WITH Date()
@@ -247,9 +255,15 @@ STATIC FUNCTION _UsrGuardar( oGC, oGN, oGP, oGR, oGNv, oChk, lNuevo, oWin )
     ENDIF
 
     REPLACE USR->BAJA     WITH oChk:lValue
+    IF FieldPos( "INT_FAL" ) > 0 .AND. !oChk:lValue
+        REPLACE USR->INT_FAL WITH 0
+    ENDIF
 
     DbCommit()
     DbUnlock()
+
+    AuditLog( If( lNuevo, "ALTA", "MODIF" ), "USUARIOS", cCodigo, ;
+              "Usuario/rol actualizado", .T. )
 
     oWin:Close()
 

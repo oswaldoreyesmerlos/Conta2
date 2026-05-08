@@ -10,6 +10,7 @@ CLASS TGet FROM TControl
     DATA cBuffer
     DATA cPicture
     DATA cType
+    DATA lPassword
 
     DATA nLen
     DATA nPos
@@ -37,6 +38,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
     ::uVar     := uValue
     ::cPicture := cPic
     ::cType    := ValType( uValue )
+    ::lPassword := ( "@K" $ Upper( cPic ) )
 
     DO CASE
 
@@ -103,7 +105,9 @@ METHOD Paint() CLASS TGet
 
     cCol := If( ::lFocused, CLR_GET_FOC, CLR_GET )
 
-    IF ::cType == "N"
+    IF ::lPassword
+        cShow := PadR( Replicate( "*", Len( RTrim( ::cBuffer ) ) ), ::nLen )
+    ELSEIF ::cType == "N"
         cShow := PadL( AllTrim( ::cBuffer ), ::nLen )
     ELSE
         cShow := PadR( ::cBuffer, ::nLen )

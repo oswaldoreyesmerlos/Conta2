@@ -6,7 +6,7 @@
  * -----------------
  * 1. InitApp()             configura entorno WVG, fuente, modo pantalla
  * 2. _CrearTablasBoot()    crea SOLO USUARIOS + EMPRESA si no existen
- *                          siembra usuario ADMIN/1234 si USUARIOS esta vacia
+ *                          siembra usuario ADMIN/1234 con cambio obligatorio
  * 3. Login()               autenticacion obligatoria — sin ella nada mas
  * 4. CheckEmpresa()        verifica NIF + Nombre configurados
  *    → si falta → Empresa() formulario obligatorio
@@ -24,6 +24,7 @@ MEMVAR cUserID, cUserNom, cUserRol, cEmpNom
 
 EXTERNAL Menu_Init
 EXTERNAL Login
+EXTERNAL SecurityEnsureSchema
 EXTERNAL InicioDBF
 EXTERNAL Empresa
 
@@ -78,12 +79,18 @@ FUNCTION Main()
         RETURN NIL
     ENDIF
 
+    IF !SecurityEnsureSchema()
+        MsgStop( "Error critico preparando seguridad y auditoria.", "Inicio" )
+        App_Exit()
+        RETURN NIL
+    ENDIF
+
     DesktopPaint( "SISTEMA DE GESTION" )
 
     // ------------------------------------------------------------------
     // PASO 2: LOGIN — autenticacion obligatoria
     //         Sin credenciales validas no se puede continuar.
-    //         Usuario por defecto: ADMIN / 1234
+    //         Usuario por defecto: ADMIN / 1234 con cambio obligatorio
     // ------------------------------------------------------------------
     IF !Login()
         App_Exit()
@@ -267,12 +274,17 @@ STATIC FUNCTION _BootUsuarios()
 
         AAdd( aCampos, { "CODIGO",   "C", 10, 0 } )
         AAdd( aCampos, { "NOMBRE",   "C", 40, 0 } )
-        AAdd( aCampos, { "CLAVE",    "C", 10, 0 } )
         AAdd( aCampos, { "ROLID",    "C",  3, 0 } )
         AAdd( aCampos, { "NIVEL",    "N",  1, 0 } )
         AAdd( aCampos, { "FECHA_AL", "D",  8, 0 } )
         AAdd( aCampos, { "ULT_ACCE", "D",  8, 0 } )
+        AAdd( aCampos, { "ULT_HORA", "C",  8, 0 } )
         AAdd( aCampos, { "BAJA",     "L",  1, 0 } )
+        AAdd( aCampos, { "CLAVE_H",  "C", 64, 0 } )
+        AAdd( aCampos, { "SALT",     "C", 32, 0 } )
+        AAdd( aCampos, { "CAMB_CL",  "L",  1, 0 } )
+        AAdd( aCampos, { "FEC_CL",   "D",  8, 0 } )
+        AAdd( aCampos, { "INT_FAL",  "N",  3, 0 } )
 
         DbCreate( cDbf, aCampos )
 
@@ -301,12 +313,15 @@ STATIC FUNCTION _BootUsuarios()
             USR_B->( DbAppend() )
             REPLACE USR_B->CODIGO   WITH "ADMIN"
             REPLACE USR_B->NOMBRE   WITH "Administrador"
-            REPLACE USR_B->CLAVE    WITH "1234"
             REPLACE USR_B->ROLID    WITH "ADM"
             REPLACE USR_B->NIVEL    WITH 9
             REPLACE USR_B->FECHA_AL WITH Date()
             REPLACE USR_B->ULT_ACCE WITH Date()
+            REPLACE USR_B->ULT_HORA WITH Time()
             REPLACE USR_B->BAJA     WITH .F.
+            UserSetPassword( "ADMIN", "1234" )
+            REPLACE USR_B->CAMB_CL  WITH .T.
+            DbCommit()
             DbUnlock()
         ENDIF
     ENDIF

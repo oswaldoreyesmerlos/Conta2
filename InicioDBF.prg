@@ -288,12 +288,17 @@ FUNCTION InicioDBF()
     aIndices := {}
     AAdd( aCampos, { "CODIGO",   "C", 10, 0 } )
     AAdd( aCampos, { "NOMBRE",   "C", 40, 0 } )
-    AAdd( aCampos, { "CLAVE",    "C", 10, 0 } )
     AAdd( aCampos, { "ROLID",    "C",  3, 0 } )
     AAdd( aCampos, { "NIVEL",    "N",  1, 0 } )
     AAdd( aCampos, { "FECHA_AL", "D",  8, 0 } )
     AAdd( aCampos, { "ULT_ACCE", "D",  8, 0 } )
+    AAdd( aCampos, { "ULT_HORA", "C",  8, 0 } )
     AAdd( aCampos, { "BAJA",     "L",  1, 0 } )
+    AAdd( aCampos, { "CLAVE_H",  "C", 64, 0 } )
+    AAdd( aCampos, { "SALT",     "C", 32, 0 } )
+    AAdd( aCampos, { "CAMB_CL",  "L",  1, 0 } )
+    AAdd( aCampos, { "FEC_CL",   "D",  8, 0 } )
+    AAdd( aCampos, { "INT_FAL",  "N",  3, 0 } )
     AAdd( aIndices, { "USR_COD", "CODIGO" } )
     AAdd( aIndices, { "USR_NOM", "Upper(NOMBRE)" } )
     AAdd( aTablas, { "USUARIOS", aCampos, aIndices } )
@@ -303,10 +308,42 @@ FUNCTION InicioDBF()
     aIndices := {}
     AAdd( aCampos, { "ID",       "C",  3, 0 } )
     AAdd( aCampos, { "DESCRIP",  "C", 30, 0 } )
+    AAdd( aCampos, { "NIVEL",    "N",  1, 0 } )
+    AAdd( aCampos, { "BAJA",     "L",  1, 0 } )
     AAdd( aIndices, { "ROLID",   "ID" } )
     AAdd( aTablas, { "ROLES", aCampos, aIndices } )
 
-    // -- 12. GEOLOC --
+    // -- 12. ROL_PERM --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "ROLID",   "C",  3, 0 } )
+    AAdd( aCampos, { "PERMISO", "C", 20, 0 } )
+    AAdd( aCampos, { "DESCRIP", "C", 60, 0 } )
+    AAdd( aCampos, { "BAJA",    "L",  1, 0 } )
+    AAdd( aIndices, { "RPM_ROL", "ROLID+PERMISO" } )
+    AAdd( aIndices, { "RPM_PER", "PERMISO+ROLID" } )
+    AAdd( aTablas, { "ROL_PERM", aCampos, aIndices } )
+
+    // -- 13. AUDITLOG --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "ID",      "C", 18, 0 } )
+    AAdd( aCampos, { "FECHA",   "D",  8, 0 } )
+    AAdd( aCampos, { "HORA",    "C",  8, 0 } )
+    AAdd( aCampos, { "USUARIO", "C", 10, 0 } )
+    AAdd( aCampos, { "ROL",     "C",  3, 0 } )
+    AAdd( aCampos, { "ACCION",  "C", 20, 0 } )
+    AAdd( aCampos, { "TABLA",   "C", 12, 0 } )
+    AAdd( aCampos, { "CLAVE",   "C", 30, 0 } )
+    AAdd( aCampos, { "DETALLE", "C",120, 0 } )
+    AAdd( aCampos, { "EQUIPO",  "C", 30, 0 } )
+    AAdd( aCampos, { "OK",      "L",  1, 0 } )
+    AAdd( aIndices, { "AUD_ID",  "ID" } )
+    AAdd( aIndices, { "AUD_FEC", "DtoS(FECHA)+HORA" } )
+    AAdd( aIndices, { "AUD_USR", "USUARIO+DtoS(FECHA)" } )
+    AAdd( aTablas, { "AUDITLOG", aCampos, aIndices } )
+
+    // -- 14. GEOLOC --
     aCampos  := {}
     aIndices := {}
     AAdd( aCampos, { "CP",       "C",  5, 0 } )
@@ -865,12 +902,15 @@ STATIC FUNCTION _SiembraAdmin()
             DbAppend()
             REPLACE USR_S->CODIGO   WITH "ADMIN"
             REPLACE USR_S->NOMBRE   WITH "Administrador"
-            REPLACE USR_S->CLAVE    WITH "1234"
             REPLACE USR_S->ROLID    WITH "ADM"
             REPLACE USR_S->NIVEL    WITH 9
             REPLACE USR_S->FECHA_AL WITH Date()
             REPLACE USR_S->ULT_ACCE WITH Date()
+            REPLACE USR_S->ULT_HORA WITH Time()
             REPLACE USR_S->BAJA     WITH .F.
+            UserSetPassword( "ADMIN", "1234" )
+            REPLACE USR_S->CAMB_CL WITH .T.
+            DbCommit()
 
             DbUnlock()
 
@@ -1165,11 +1205,7 @@ FUNCTION ReindexarTodo()
     LOCAL nOK
     LOCAL cMsg
 
-    MEMVAR cUserRol
-
-    // Solo ADM puede reindexar
-    IF AllTrim( cUserRol ) != "ADM"
-        MsgStop( "Solo el Administrador puede reindexar.", "Acceso denegado" )
+    IF !RequirePerm( "SEG_REINDEX", "Reindexar tablas" )
         RETURN .F.
     ENDIF
 
@@ -1276,6 +1312,11 @@ STATIC FUNCTION _GetTablasList()
     AAdd( aTablas, { "USUARIOS",   { { "USR_COD",  "CODIGO"                     }, ;
                                      { "USR_NOM",  "Upper(NOMBRE)"              } } } )
     AAdd( aTablas, { "ROLES",      { { "ROLID",    "ID"                         } } } )
+    AAdd( aTablas, { "ROL_PERM",   { { "RPM_ROL",  "ROLID+PERMISO"              }, ;
+                                     { "RPM_PER",  "PERMISO+ROLID"              } } } )
+    AAdd( aTablas, { "AUDITLOG",   { { "AUD_ID",   "ID"                         }, ;
+                                     { "AUD_FEC",  "DtoS(FECHA)+HORA"           }, ;
+                                     { "AUD_USR",  "USUARIO+DtoS(FECHA)"        } } } )
     AAdd( aTablas, { "GEOLOC",     { { "GEO_CP",   "CP"                         }, ;
                                      { "GEO_CIU",  "Upper(CIUDAD)"              }, ;
                                      { "GEO_PRV",  "Upper(PROVINCI)"            } } } )

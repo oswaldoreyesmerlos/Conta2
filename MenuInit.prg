@@ -103,9 +103,9 @@ FUNCTION Menu_Init()
     aSubObr  := {}
     aSubPre  := {}
 
-    lEsAdm  := ( AllTrim( cUserRol ) == "ADM" )
-    lEsCont := ( AllTrim( cUserRol ) $ "ADM,CONT" )
-    lEsCaja := ( AllTrim( cUserRol ) $ "ADM,CAJA" )
+    lEsAdm  := HasPerm( "SEG_USR" ) .OR. HasPerm( "SEG_ROL" )
+    lEsCont := HasPerm( "CONT" )
+    lEsCaja := HasPerm( "TESO" )
 
     // -------------------------------------------------------------------------
     // SUBMENUS
