@@ -620,41 +620,65 @@ RETURN nSkipped
 
 
 // ============================================================================
-// _ValidNif( cNif )
-// Valida NIF/NIE/CIF español (validacion basica)
+// ValidNif( cNif, lSilent )
+// Valida NIF/NIE/CIF espanol. Para CIF mantiene validacion basica.
 // ============================================================================
-FUNCTION _ValidNif( cNif )
+FUNCTION ValidNif( cNif, lSilent )
 
-    LOCAL cNum
-    LOCAL nLen
-    LOCAL lValid := .T.
+    LOCAL cLetra
+    LOCAL nNum
+    LOCAL cLetraCalc
+    LOCAL cTipo
+
+    DEFAULT lSilent TO .F.
+
+    cLetra := "TRWAGMYFPDXBNJZSQVHLCKE"
+    cNif   := Upper( AllTrim( cNif ) )
 
     IF Empty( cNif )
         RETURN .T.
     ENDIF
 
-    cNif := Upper( AllTrim( cNif ) )
-    nLen := Len( cNif )
-
-    // NIF personal (8 numeros + 1 letra)
-    IF nLen == 9 .AND. SubStr( cNif, 1, 1 ) $ "0123456789"
-        cNum := SubStr( cNif, 1, 8 )
-        IF !Empty( cNum ) .AND. Val( cNum ) > 0
-            RETURN .T.
+    IF Len( cNif ) < 7
+        IF !lSilent
+            MsgStop( "NIF demasiado corto.", "Validacion NIF" )
         ENDIF
+        RETURN .F.
     ENDIF
 
-    // NIE (X/Y/Z + 7 numeros + 1 letra)
-    IF nLen == 9 .AND. SubStr( cNif, 1, 1 ) $ "XYZ"
+    cTipo := Left( cNif, 1 )
+
+    IF cTipo $ "XYZ"
+        cNif  := If( cTipo == "X", "0", If( cTipo == "Y", "1", "2" ) ) + SubStr( cNif, 2 )
+        cTipo := "0"
+    ENDIF
+
+    IF IsDigit( cTipo ) .AND. Len( cNif ) == 9
+        nNum       := Val( Left( cNif, 8 ) )
+        cLetraCalc := SubStr( cLetra, ( nNum % 23 ) + 1, 1 )
+        IF Right( cNif, 1 ) != cLetraCalc
+            IF !lSilent
+                MsgStop( "La letra del NIF no es correcta.", "Validacion NIF" )
+            ENDIF
+            RETURN .F.
+        ENDIF
         RETURN .T.
     ENDIF
 
-    // CIF (letra + 7 numeros + control)
-    IF nLen >= 8 .AND. nLen <= 9 .AND. SubStr( cNif, 1, 1 ) $ "ABCDEFGHJKLMNPQRSUVW"
+    IF cTipo $ "ABCDEFGHJKLMNPQRSUVW"
         RETURN .T.
+    ENDIF
+
+    IF !lSilent
+        MsgStop( "Formato de NIF/CIF no reconocido.", "Validacion NIF" )
     ENDIF
 
 RETURN .F.
+
+
+FUNCTION _ValidNif( cNif, lSilent )
+
+RETURN ValidNif( cNif, lSilent )
 
 
 // ============================================================================

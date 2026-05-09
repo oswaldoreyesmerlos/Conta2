@@ -335,7 +335,7 @@ STATIC FUNCTION ProveedorGuardar( hProveedor, lNuevo )
     cNif    := hProveedor[ "NIF" ]
     cCtaCon := hProveedor[ "CTA_CONT" ]
 
-    IF !_PrvValidNif( cNif, .T. )
+    IF !ValidNif( cNif, .T. )
         MsgInfo( "El NIF/CIF no tiene formato fiscal reconocido." + Chr(13) + ;
                  "Se guardara igualmente para permitir datos provisionales.", ;
                  "Aviso NIF" )
@@ -427,59 +427,6 @@ STATIC FUNCTION _PrvSubcuenta( cId )
     ENDIF
 
 RETURN "400" + StrZero( Val( cNum ), 7 )
-
-
-STATIC FUNCTION _PrvValidNif( cNif, lSilent )
-
-    LOCAL cLetra
-    LOCAL nNum
-    LOCAL cLetraCalc
-    LOCAL cTipo
-
-    DEFAULT lSilent TO .F.
-
-    cLetra := "TRWAGMYFPDXBNJZSQVHLCKE"
-    cNif   := Upper( AllTrim( cNif ) )
-
-    IF Empty( cNif )
-        RETURN .T.
-    ENDIF
-
-    IF Len( cNif ) < 7
-        IF !lSilent
-            MsgStop( "NIF demasiado corto.", "Validacion NIF" )
-        ENDIF
-        RETURN .F.
-    ENDIF
-
-    cTipo := Left( cNif, 1 )
-
-    IF cTipo $ "XYZ"
-        cNif  := If( cTipo == "X", "0", If( cTipo == "Y", "1", "2" ) ) + SubStr( cNif, 2 )
-        cTipo := "0"
-    ENDIF
-
-    IF IsDigit( cTipo ) .AND. Len( cNif ) == 9
-        nNum       := Val( Left( cNif, 8 ) )
-        cLetraCalc := SubStr( cLetra, ( nNum % 23 ) + 1, 1 )
-        IF Right( cNif, 1 ) != cLetraCalc
-            IF !lSilent
-                MsgStop( "La letra del NIF no es correcta.", "Validacion NIF" )
-            ENDIF
-            RETURN .F.
-        ENDIF
-        RETURN .T.
-    ENDIF
-
-    IF cTipo $ "ABCDEFGHJKLMNPQRSUVW"
-        RETURN .T.
-    ENDIF
-
-    IF !lSilent
-        MsgStop( "Formato de NIF/CIF no reconocido.", "Validacion NIF" )
-    ENDIF
-
-RETURN .F.
 
 
 // ============================================================================
