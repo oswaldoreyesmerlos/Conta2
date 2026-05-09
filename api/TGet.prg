@@ -80,7 +80,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
         ::cBuffer := PadR( hb_CStr( uValue ), ::nLen )
 
     CASE ::cType == "N"
-        ::cBuffer := PadL( LTrim( Str( uValue ) ), ::nLen )
+        ::cBuffer := _TGetFormatNum( uValue, ::cPicture, ::nLen )
 
     CASE ::cType == "D"
         ::cBuffer := DToC( uValue )
@@ -182,7 +182,9 @@ METHOD Validate() CLASS TGet
         ::uVar := RTrim( ::cBuffer )
 
     CASE ::cType == "N"
-        ::uVar := Val( AllTrim( ::cBuffer ) )
+        ::uVar    := _TGetValNum( ::cBuffer )
+        ::cBuffer := _TGetFormatNum( ::uVar, ::cPicture, ::nLen )
+        ::nPos    := ::nLen
 
     CASE ::cType == "D"
         ::uVar := Ctod( ::cBuffer )
@@ -394,7 +396,7 @@ METHOD SetValue( uValue ) CLASS TGet
         ::cBuffer := PadR( hb_CStr( uValue ), ::nLen )
 
     CASE ::cType == "N"
-        ::cBuffer := PadL( LTrim( Str( uValue ) ), ::nLen )
+        ::cBuffer := _TGetFormatNum( uValue, ::cPicture, ::nLen )
 
     CASE ::cType == "D"
         ::cBuffer := DToC( uValue )
@@ -411,6 +413,24 @@ METHOD SetValue( uValue ) CLASS TGet
     ::Paint()
 
 RETURN Self
+
+
+STATIC FUNCTION _TGetFormatNum( nValue, cPicture, nLen )
+
+    LOCAL cText
+
+    IF !Empty( cPicture ) .AND. "9" $ cPicture
+        cText := Transform( nValue, cPicture )
+    ELSE
+        cText := LTrim( Str( nValue ) )
+    ENDIF
+
+RETURN PadL( AllTrim( cText ), nLen )
+
+
+STATIC FUNCTION _TGetValNum( cBuffer )
+
+RETURN Val( StrTran( AllTrim( cBuffer ), ",", "" ) )
 
 
 STATIC FUNCTION _TGetDeleteAt( cBuffer, nPos, nLen )
