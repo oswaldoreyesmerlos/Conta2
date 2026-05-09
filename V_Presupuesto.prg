@@ -215,6 +215,8 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL oBtNLin
     LOCAL oBtELin
     LOCAL oBtDLin
+    LOCAL oBtCli
+    LOCAL oBtFP
     LOCAL oGrid
 
     lNuevo   := Empty( AllTrim( cNumero ) )
@@ -284,6 +286,16 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oGRet  := TGet():New(  6, 98, nPorcRet, "99.99",      oWin )
     oGObs  := TGet():New(  8, 14, cObserva, "@!",         oWin )
 
+    IF lNuevo
+        oBtCli := TButton():New( 3, 14, 3, 25, oWin, "BUSCAR CLI", ;
+            {|| _PreLookupCli( oGCli, @cCliNom, @cCliInfo, @cFormPag, ;
+                               @nDias, @nPorcRet, oLCliNom, oLCliInfo, ;
+                               oGFP, oGDias, oGRet ) } )
+
+        oBtFP := TButton():New( 6, 49, 6, 58, oWin, "BUSCAR", ;
+            {|| _PreLookupFP( oGFP ) } )
+    ENDIF
+
     oGrid := TGrid():New( 10, 2, 24, 124, oWin )
     oGrid:aData    := aLineas
     oGrid:nSeekCol := 2
@@ -344,9 +356,15 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGCli   )
+    IF lNuevo
+        oWin:AddCtrl( oBtCli )
+    ENDIF
     oWin:AddCtrl( oGFec   )
     oWin:AddCtrl( oGVal   )
     oWin:AddCtrl( oGFP    )
+    IF lNuevo
+        oWin:AddCtrl( oBtFP  )
+    ENDIF
     oWin:AddCtrl( oGDias  )
     oWin:AddCtrl( oGRet   )
     oWin:AddCtrl( oGObs   )
@@ -521,6 +539,34 @@ STATIC FUNCTION _PreBuscarCli( oGet, cNom, cInfo, cFP, nDias, nRet, ;
     oGRet:Paint()
 
 RETURN .T.
+
+
+STATIC FUNCTION _PreLookupCli( oGet, cNom, cInfo, cFP, nDias, nRet, ;
+                               oLCliNom, oLCliInfo, oGFP, oGDias, oGRet )
+
+    LOCAL cId
+
+    cId := LookupCliente()
+    IF Empty( cId )
+        RETURN NIL
+    ENDIF
+
+    oGet:SetValue( cId )
+
+RETURN _PreBuscarCli( oGet, @cNom, @cInfo, @cFP, @nDias, @nRet, ;
+                      oLCliNom, oLCliInfo, oGFP, oGDias, oGRet )
+
+
+STATIC FUNCTION _PreLookupFP( oGFP )
+
+    LOCAL cFP
+
+    cFP := LookupFormaPago()
+    IF !Empty( cFP )
+        oGFP:SetValue( cFP )
+    ENDIF
+
+RETURN NIL
 
 
 // ============================================================================

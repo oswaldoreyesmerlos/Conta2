@@ -620,6 +620,146 @@ RETURN nSkipped
 
 
 // ============================================================================
+// PopupSelect()
+// Muestra una lista modal y devuelve el codigo de la fila seleccionada.
+// aCols: { { cTitulo, nAncho, cPicture, nCampo }, ... }
+// ============================================================================
+FUNCTION PopupSelect( cTitle, aData, aCols, nSeekCol )
+
+    LOCAL oWin
+    LOCAL oGrid
+    LOCAL oLbl
+    LOCAL oBtOk
+    LOCAL oBtCan
+    LOCAL cRet := ""
+    LOCAL i
+
+    DEFAULT cTitle   TO "SELECCION"
+    DEFAULT aData    TO {}
+    DEFAULT aCols    TO {}
+    DEFAULT nSeekCol TO 1
+
+    IF Len( aData ) == 0
+        MsgInfo( "No hay datos para seleccionar.", cTitle )
+        RETURN ""
+    ENDIF
+
+    oWin  := TWindow():New( 5, 18, 27, 114, cTitle )
+    oGrid := TGrid():New( 2, 2, 17, 92, oWin )
+
+    oGrid:aData    := aData
+    oGrid:nSeekCol := nSeekCol
+
+    FOR i := 1 TO Len( aCols )
+        oGrid:AddColumn( aCols[i, 1], aCols[i, 2], aCols[i, 3], ;
+                         _PopupColBlock( aCols[i, 4] ) )
+    NEXT
+
+    oGrid:bEnter := {| g | If( g:CurrentRow() != NIL, ;
+                               ( cRet := AllTrim( g:CurrentRow()[1] ), ;
+                                 oWin:Close() ), NIL ) }
+
+    oLbl := TLabel():New( 18, 2, ;
+        "ENTER: seleccionar   Letras: buscar   ESC: cancelar", oWin )
+
+    oBtOk := TButton():New( 20, 27, 20, 44, oWin, "ACEPTAR", ;
+        {|| If( oGrid:CurrentRow() != NIL, ;
+                ( cRet := AllTrim( oGrid:CurrentRow()[1] ), ;
+                  oWin:Close() ), NIL ) } )
+
+    oBtCan := TButton():New( 20, 50, 20, 67, oWin, "CANCELAR", ;
+        {|| cRet := "", oWin:Close() } )
+
+    oWin:AddCtrl( oGrid  )
+    oWin:AddCtrl( oLbl   )
+    oWin:AddCtrl( oBtOk  )
+    oWin:AddCtrl( oBtCan )
+
+    oWin:Run()
+
+RETURN cRet
+
+
+FUNCTION LookupCliente()
+
+    LOCAL nArea := Select()
+    LOCAL aData := {}
+    LOCAL cRet
+
+    IF !ABRIR_TABLA( "CLIENTES", "CLI_LKP", "CLI_NOM" )
+        RETURN ""
+    ENDIF
+
+    DbSelectArea( "CLI_LKP" )
+    OrdSetFocus( "CLI_NOM" )
+    DbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted() .AND. !DbFieldValue( "BAJA", .F. )
+            AAdd( aData, { ;
+                AllTrim( CLI_LKP->ID ), ;
+                AllTrim( CLI_LKP->NOMBRE + " " + CLI_LKP->APELLIDO ), ;
+                AllTrim( CLI_LKP->NIF ), ;
+                AllTrim( CLI_LKP->CIUDAD ) } )
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    CLI_LKP->( DbCloseArea() )
+    Select( nArea )
+
+    cRet := PopupSelect( "SELECCIONAR CLIENTE", aData, ;
+        { { "Codigo", 10, "@!", 1 }, ;
+          { "Nombre", 42, "@!", 2 }, ;
+          { "NIF",    14, "@!", 3 }, ;
+          { "Ciudad", 20, "@!", 4 } }, 2 )
+
+RETURN cRet
+
+
+FUNCTION LookupFormaPago()
+
+    LOCAL nArea := Select()
+    LOCAL aData := {}
+    LOCAL cRet
+
+    IF !ABRIR_TABLA( "FORMAPAGO", "FP_LKP", "FP_COD" )
+        RETURN ""
+    ENDIF
+
+    DbSelectArea( "FP_LKP" )
+    OrdSetFocus( "FP_COD" )
+    DbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted() .AND. !DbFieldValue( "BAJA", .F. )
+            AAdd( aData, { ;
+                AllTrim( FP_LKP->CODIGO ), ;
+                AllTrim( FP_LKP->DESCRIP ), ;
+                FP_LKP->DIAS, ;
+                FP_LKP->NUM_PAGS } )
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    FP_LKP->( DbCloseArea() )
+    Select( nArea )
+
+    cRet := PopupSelect( "SELECCIONAR FORMA DE PAGO", aData, ;
+        { { "Cod",         5, "@!",  1 }, ;
+          { "Descripcion", 40, "@!", 2 }, ;
+          { "Dias",        6, "999", 3 }, ;
+          { "Pagos",       6, "99",  4 } }, 2 )
+
+RETURN cRet
+
+
+STATIC FUNCTION _PopupColBlock( nIndex )
+
+RETURN {| aRow | If( nIndex >= 1 .AND. nIndex <= Len( aRow ), aRow[nIndex], "" ) }
+
+
+// ============================================================================
 // ValidNifFormato( cNif, lSilent )
 // Valida solo formato general NIF/NIE/CIF. Util para datos provisionales.
 // ============================================================================

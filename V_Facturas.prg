@@ -179,6 +179,8 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     LOCAL oBtNLin
     LOCAL oBtELin
     LOCAL oBtDLin
+    LOCAL oBtCli
+    LOCAL oBtFP
     LOCAL oGrid
 
     lNuevo   := Empty( AllTrim( cNumero ) )
@@ -235,7 +237,8 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
 
     oGCli := TGet():New( 4, 14, cCliID, "@!", oWin )
     oGCli:bValid := {| o | _FacBuscarCli( o, @cCliNom, @cFormPag, ;
-                                           @nDias, @nPorcRet, oWin ) }
+                                           @nDias, @nPorcRet, ;
+                                           oLCliNom, oGFP, oGDias, oGRet ) }
 
     oLCliNom := TLabel():New( 6, 14, PadR( cCliNom, 50 ), oWin )
     oWin:AddCtrl( oLCliNom )
@@ -245,6 +248,16 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     oGDias := TGet():New(  8, 52, nDias,    "999",        oWin )
     oGRet  := TGet():New(  8, 82, nPorcRet, "99.99",      oWin )
     oGObs  := TGet():New( 10, 14, cObserva, "@!",         oWin )
+
+    IF lNuevo
+        oBtCli := TButton():New( 4, 25, 4, 34, oWin, "BUSCAR", ;
+            {|| _FacLookupCli( oGCli, @cCliNom, @cFormPag, ;
+                               @nDias, @nPorcRet, ;
+                               oLCliNom, oGFP, oGDias, oGRet ) } )
+
+        oBtFP := TButton():New( 8, 19, 8, 28, oWin, "BUSCAR", ;
+            {|| _FacLookupFP( oGFP ) } )
+    ENDIF
 
     oGrid := TGrid():New( 12, 2, 26, 124, oWin )
     oGrid:aData    := aLineas
@@ -310,8 +323,14 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGCli   )
+    IF lNuevo
+        oWin:AddCtrl( oBtCli )
+    ENDIF
     oWin:AddCtrl( oGFec   )
     oWin:AddCtrl( oGFP    )
+    IF lNuevo
+        oWin:AddCtrl( oBtFP  )
+    ENDIF
     oWin:AddCtrl( oGDias  )
     oWin:AddCtrl( oGRet   )
     oWin:AddCtrl( oGObs   )
@@ -488,7 +507,8 @@ RETURN NIL
 // ============================================================================
 // BUSQUEDA DE CLIENTE
 // ============================================================================
-STATIC FUNCTION _FacBuscarCli( oGet, cNom, cFP, nDias, nRet, oWin )
+STATIC FUNCTION _FacBuscarCli( oGet, cNom, cFP, nDias, nRet, ;
+                               oLCliNom, oGFP, oGDias, oGRet )
 
     LOCAL cId
 
@@ -515,9 +535,51 @@ STATIC FUNCTION _FacBuscarCli( oGet, cNom, cFP, nDias, nRet, oWin )
 
     CLI_BF->( DbCloseArea() )
 
-    oWin:Refresh()
+    IF oLCliNom != NIL
+        oLCliNom:SetText( PadR( cNom, 50 ) )
+    ENDIF
+
+    IF oGFP != NIL
+        oGFP:SetValue( cFP )
+    ENDIF
+
+    IF oGDias != NIL
+        oGDias:SetValue( nDias )
+    ENDIF
+
+    IF oGRet != NIL
+        oGRet:SetValue( nRet )
+    ENDIF
 
 RETURN .T.
+
+
+STATIC FUNCTION _FacLookupCli( oGet, cNom, cFP, nDias, nRet, ;
+                               oLCliNom, oGFP, oGDias, oGRet )
+
+    LOCAL cId
+
+    cId := LookupCliente()
+    IF Empty( cId )
+        RETURN NIL
+    ENDIF
+
+    oGet:SetValue( cId )
+
+RETURN _FacBuscarCli( oGet, @cNom, @cFP, @nDias, @nRet, ;
+                      oLCliNom, oGFP, oGDias, oGRet )
+
+
+STATIC FUNCTION _FacLookupFP( oGFP )
+
+    LOCAL cFP
+
+    cFP := LookupFormaPago()
+    IF !Empty( cFP )
+        oGFP:SetValue( cFP )
+    ENDIF
+
+RETURN NIL
 
 
 // ============================================================================
