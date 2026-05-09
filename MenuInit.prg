@@ -139,6 +139,7 @@ FUNCTION Menu_Init()
 
     // Facturas
     AAdd( aSubFac, { "Historial", {|| FacturasView() }, NIL, "Facturas emitidas" } )
+    AAdd( aSubFac, { "Nueva directa", {|| AltaFact() }, NIL, "Factura sin presupuesto ni obra" } )
 
     // -------------------------------------------------------------------------
     // MAESTROS

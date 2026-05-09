@@ -5,7 +5,7 @@
  * FUNCIONES PUBLICAS
  * ------------------
  *   FacturasView()           - grid listado de facturas
- *   AltaFact()               - bloqueo de alta directa; facturar desde obras
+ *   AltaFact()               - alta directa sin presupuesto/obra
  *
  * NUMERACION
  * ----------
@@ -73,7 +73,7 @@ FUNCTION FacturasView()
         g:Paint() }
 
     oLbl := TLabel():New( 32, 2, ;
-        "ENTER: ver/editar   Las facturas nuevas se emiten desde OBRAS", oWin )
+        "ENTER: ver/editar   Nueva directa desde menu Facturas", oWin )
 
     oBtAbo := TButton():New( 33, 2, 34, 20, oWin, "NOTA ABONO", ;
         {|| If( oGrid:CurrentRow() != NIL, ;
@@ -130,10 +130,7 @@ RETURN aData
 // AltaFact / _FacEditar
 // ============================================================================
 FUNCTION AltaFact()
-    MsgStop( "Las facturas nuevas se emiten desde la obra." + Chr(13) + ;
-             "Use Ventas -> Obras y facture anticipo, certificacion o final.", ;
-             "Facturas" )
-RETURN NIL
+RETURN _FacForm( "", NIL )
 
 
 STATIC FUNCTION _FacEditar( cNumero )
@@ -302,7 +299,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
 
         oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
             {|| _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
-                             aLineas, cPieDoc, cNumero, cNumPre, lNuevo, ;
+                             aLineas, cPieDoc, @cNumero, cNumPre, lNuevo, ;
                              nBase, nIva, nRet, nTotal, oLNumero, oWin ) } )
     ENDIF
 
