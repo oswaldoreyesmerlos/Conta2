@@ -814,15 +814,16 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
     LOCAL cObs
     LOCAL cNum
     LOCAL dVto
-    LOCAL i
+    LOCAL hFac
 
-    cCli  := AllTrim( oGCli:uVar  )
-    dFec  := oGFec:uVar
-    cFP   := AllTrim( oGFP:uVar   )
-    nDias := oGDias:uVar
-    nPRet := oGRet:uVar
-    cObs  := AllTrim( oGObs:uVar  )
+    cCli  := AllTrim( oGCli:GetValue() )
+    dFec  := oGFec:GetValue()
+    cFP   := AllTrim( oGFP:GetValue() )
+    nDias := oGDias:GetValue()
+    nPRet := oGRet:GetValue()
+    cObs  := AllTrim( oGObs:GetValue() )
     cNum  := cNumero
+    cNumPre := If( cNumPre == NIL, "", AllTrim( cNumPre ) )
     dVto  := ctod( "" )
 
     IF Empty( cCli )
@@ -851,74 +852,29 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
         ENDIF
     ENDIF
 
-    IF !ABRIR_TABLA( "FACTURA", "FAC", "FAC_NUM" )
+    hFac := {=>}
+    hFac[ "NUMERO"   ] := cNum
+    hFac[ "SERIE"    ] := "A"
+    hFac[ "CLIENTE_" ] := cCli
+    hFac[ "FECHA"    ] := dFec
+    hFac[ "FORMA_PA" ] := cFP
+    hFac[ "DIAS_PAG" ] := nDias
+    hFac[ "PORC_RET" ] := nPRet
+    hFac[ "SUBTOTAL" ] := nBase
+    hFac[ "IVA"      ] := nIva
+    hFac[ "RETENCIO" ] := nRet
+    hFac[ "TOTAL"    ] := nTotal
+    hFac[ "FECHA_VT" ] := dVto
+    hFac[ "OBSERVA"  ] := cObs
+    hFac[ "PIE_DOC"  ] := cPieDoc
+    hFac[ "NUM_PRE"  ] := cNumPre
+    hFac[ "ID_OBRA"  ] := ""
+    hFac[ "TIPO_FAC" ] := ""
+    hFac[ "TIPO_DOC" ] := "F"
+
+    IF !FacturaGuardar( hFac, aLins, lNuevo )
         RETURN NIL
     ENDIF
-
-    DbSelectArea( "FAC" )
-    OrdSetFocus( "FAC_NUM" )
-
-    IF lNuevo
-        IF !NetFLock()
-            RETURN NIL
-        ENDIF
-        DbAppend()
-    ELSE
-        IF !DbSeek( _FacKey( cNum ) ) .OR. !NetRLock()
-            RETURN NIL
-        ENDIF
-    ENDIF
-
-    REPLACE FAC->NUMERO   WITH cNum
-    REPLACE FAC->SERIE    WITH "A"
-    REPLACE FAC->CLIENTE_ WITH cCli
-    REPLACE FAC->FECHA    WITH dFec
-    DbFieldPutIf( "FORMA_PA", cFP )
-    REPLACE FAC->SUBTOTAL WITH nBase
-    REPLACE FAC->IVA      WITH nIva
-    REPLACE FAC->RETENCIO WITH nRet
-    DbFieldPutIf( "PORC_RET", nPRet )
-    REPLACE FAC->TOTAL    WITH nTotal
-    DbFieldPutIf( "FECHA_VT", dVto )
-    DbFieldPutIf( "FECHA_OP", Date() )
-    DbFieldPutIf( "OBSERVA",  cObs )
-    DbFieldPutIf( "PIE_DOC",  cPieDoc )
-    DbFieldPutIf( "ANULADA",  .F. )
-    DbFieldPutIf( "COBRADA",  .F. )
-    REPLACE FAC->HORA     WITH Time()
-    DbFieldPutIf( "TIPO_DOC", "F" )
-
-    IF !Empty( cNumPre )
-        REPLACE FAC->NUM_PRE WITH cNumPre
-    ENDIF
-
-    DbUnlock()
-
-    IF !ABRIR_TABLA( "FACTUR_DE", "FAC_D", "FAC_LIN" )
-        RETURN NIL
-    ENDIF
-
-    DbSelectArea( "FAC_D" )
-
-    IF NetFLock()
-        FOR i := 1 TO Len( aLins )
-            DbAppend()
-            REPLACE FAC_D->SERIE    WITH "A"
-            REPLACE FAC_D->NUMERO   WITH cNum
-            REPLACE FAC_D->LINEA    WITH i
-            REPLACE FAC_D->DESCRIPC WITH aLins[i, LIN_DESC]
-            REPLACE FAC_D->CANTIDAD WITH aLins[i, LIN_CANT]
-            REPLACE FAC_D->PRECIO   WITH aLins[i, LIN_PRE]
-            REPLACE FAC_D->DESCUENT WITH aLins[i, LIN_DTO]
-            REPLACE FAC_D->PORC_IVA WITH aLins[i, LIN_IVA]
-            REPLACE FAC_D->IMPORTE  WITH aLins[i, LIN_IMP]
-        NEXT
-        DbUnlock()
-    ENDIF
-
-    FAC_D->( DbCloseArea() )
-
-    _FacGenVencim( cNum, cCli, dVto, nTotal )
 
     IF lNuevo
         oLNumero:SetText( PadR( cNum, 24 ) )
@@ -934,6 +890,107 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
     oWin:Close()
 
 RETURN NIL
+
+
+FUNCTION FacturaGuardar( hFac, aLins, lNuevo )
+
+    IF !_FacGuardarCab( hFac, lNuevo )
+        RETURN .F.
+    ENDIF
+
+    IF !_FacGuardarLins( hFac, aLins )
+        RETURN .F.
+    ENDIF
+
+    _FacGenVencim( hFac[ "NUMERO" ], hFac[ "CLIENTE_" ], ;
+                   hFac[ "FECHA_VT" ], hFac[ "TOTAL" ] )
+
+RETURN .T.
+
+
+STATIC FUNCTION _FacGuardarCab( hFac, lNuevo )
+
+    IF !ABRIR_TABLA( "FACTURA", "FAC", "FAC_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "FAC" )
+    OrdSetFocus( "FAC_NUM" )
+
+    IF lNuevo
+        IF !NetFLock()
+            RETURN .F.
+        ENDIF
+        DbAppend()
+    ELSE
+        IF !DbSeek( _FacKey( hFac[ "NUMERO" ] ) ) .OR. !NetRLock()
+            RETURN .F.
+        ENDIF
+    ENDIF
+
+    REPLACE FAC->NUMERO   WITH hFac[ "NUMERO"   ]
+    REPLACE FAC->SERIE    WITH hFac[ "SERIE"    ]
+    REPLACE FAC->CLIENTE_ WITH hFac[ "CLIENTE_" ]
+    REPLACE FAC->FECHA    WITH hFac[ "FECHA"    ]
+    DbFieldPutIf( "FORMA_PA", hFac[ "FORMA_PA" ] )
+    REPLACE FAC->SUBTOTAL WITH hFac[ "SUBTOTAL" ]
+    REPLACE FAC->IVA      WITH hFac[ "IVA"      ]
+    REPLACE FAC->RETENCIO WITH hFac[ "RETENCIO" ]
+    DbFieldPutIf( "PORC_RET", hFac[ "PORC_RET" ] )
+    REPLACE FAC->TOTAL    WITH hFac[ "TOTAL"    ]
+    DbFieldPutIf( "FECHA_VT", hFac[ "FECHA_VT" ] )
+    DbFieldPutIf( "FECHA_OP", Date() )
+    DbFieldPutIf( "OBSERVA",  hFac[ "OBSERVA"  ] )
+    DbFieldPutIf( "PIE_DOC",  hFac[ "PIE_DOC"  ] )
+    DbFieldPutIf( "ANULADA",  .F. )
+    DbFieldPutIf( "COBRADA",  .F. )
+    REPLACE FAC->HORA     WITH Time()
+    DbFieldPutIf( "TIPO_DOC", hFac[ "TIPO_DOC" ] )
+    DbFieldPutIf( "ID_OBRA",  hFac[ "ID_OBRA"  ] )
+    DbFieldPutIf( "TIPO_FAC", hFac[ "TIPO_FAC" ] )
+
+    IF !Empty( hFac[ "NUM_PRE" ] )
+        REPLACE FAC->NUM_PRE WITH hFac[ "NUM_PRE" ]
+    ENDIF
+
+    DbUnlock()
+
+RETURN .T.
+
+
+STATIC FUNCTION _FacGuardarLins( hFac, aLins )
+
+    LOCAL i
+
+    IF !ABRIR_TABLA( "FACTUR_DE", "FAC_D", "FAC_LIN" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "FAC_D" )
+
+    IF !NetFLock()
+        FAC_D->( DbCloseArea() )
+        RETURN .F.
+    ENDIF
+
+    FOR i := 1 TO Len( aLins )
+        DbAppend()
+        REPLACE FAC_D->SERIE    WITH hFac[ "SERIE"  ]
+        REPLACE FAC_D->NUMERO   WITH hFac[ "NUMERO" ]
+        REPLACE FAC_D->LINEA    WITH i
+        REPLACE FAC_D->DESCRIPC WITH aLins[i, LIN_DESC]
+        REPLACE FAC_D->CANTIDAD WITH aLins[i, LIN_CANT]
+        REPLACE FAC_D->PRECIO   WITH aLins[i, LIN_PRE]
+        REPLACE FAC_D->DESCUENT WITH aLins[i, LIN_DTO]
+        REPLACE FAC_D->PORC_IVA WITH aLins[i, LIN_IVA]
+        REPLACE FAC_D->IMPORTE  WITH aLins[i, LIN_IMP]
+    NEXT
+
+    DbUnlock()
+
+    FAC_D->( DbCloseArea() )
+
+RETURN .T.
 
 
 STATIC FUNCTION _FacSiguiente()
