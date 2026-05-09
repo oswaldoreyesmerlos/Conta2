@@ -620,10 +620,48 @@ RETURN nSkipped
 
 
 // ============================================================================
-// ValidNif( cNif, lSilent )
-// Valida NIF/NIE/CIF espanol. Para CIF mantiene validacion basica.
+// ValidNifFormato( cNif, lSilent )
+// Valida solo formato general NIF/NIE/CIF. Util para datos provisionales.
 // ============================================================================
-FUNCTION ValidNif( cNif, lSilent )
+FUNCTION ValidNifFormato( cNif, lSilent )
+
+    LOCAL cTipo
+
+    DEFAULT lSilent TO .F.
+
+    cNif := Upper( AllTrim( cNif ) )
+
+    IF Empty( cNif )
+        RETURN .T.
+    ENDIF
+
+    cTipo := Left( cNif, 1 )
+
+    IF Len( cNif ) == 9 .AND. ;
+       ( ( cTipo >= "0" .AND. cTipo <= "9" ) .OR. cTipo $ "XYZ" ) .AND. ;
+       _IsAllDigits( SubStr( cNif, 2, 7 ) ) .AND. ;
+       Right( cNif, 1 ) $ "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        RETURN .T.
+    ENDIF
+
+    IF Len( cNif ) >= 8 .AND. Len( cNif ) <= 9 .AND. ;
+       cTipo $ "ABCDEFGHJKLMNPQRSUVW" .AND. ;
+       _IsAllDigits( SubStr( cNif, 2, Min( 7, Len( cNif ) - 1 ) ) )
+        RETURN .T.
+    ENDIF
+
+    IF !lSilent
+        MsgStop( "Formato de NIF/CIF no reconocido.", "Validacion NIF" )
+    ENDIF
+
+RETURN .F.
+
+
+// ============================================================================
+// ValidNifFiscal( cNif, lSilent )
+// Valida NIF/NIE/CIF con digito/letra de control.
+// ============================================================================
+FUNCTION ValidNifFiscal( cNif, lSilent )
 
     LOCAL cLetra
     LOCAL nNum
@@ -639,9 +677,9 @@ FUNCTION ValidNif( cNif, lSilent )
         RETURN .T.
     ENDIF
 
-    IF Len( cNif ) < 7
+    IF Len( cNif ) != 9
         IF !lSilent
-            MsgStop( "NIF demasiado corto.", "Validacion NIF" )
+            MsgStop( "El NIF/CIF debe tener 9 caracteres.", "Validacion NIF" )
         ENDIF
         RETURN .F.
     ENDIF
@@ -653,7 +691,14 @@ FUNCTION ValidNif( cNif, lSilent )
         cTipo := "0"
     ENDIF
 
-    IF IsDigit( cTipo ) .AND. Len( cNif ) == 9
+    IF IsDigit( cTipo )
+        IF !_IsAllDigits( Left( cNif, 8 ) )
+            IF !lSilent
+                MsgStop( "Los primeros 8 caracteres del NIF deben ser numericos.", "Validacion NIF" )
+            ENDIF
+            RETURN .F.
+        ENDIF
+
         nNum       := Val( Left( cNif, 8 ) )
         cLetraCalc := SubStr( cLetra, ( nNum % 23 ) + 1, 1 )
         IF Right( cNif, 1 ) != cLetraCalc
@@ -666,7 +711,13 @@ FUNCTION ValidNif( cNif, lSilent )
     ENDIF
 
     IF cTipo $ "ABCDEFGHJKLMNPQRSUVW"
-        RETURN .T.
+        IF _ValidCifFiscal( cNif )
+            RETURN .T.
+        ENDIF
+        IF !lSilent
+            MsgStop( "El control del CIF no es correcto.", "Validacion NIF" )
+        ENDIF
+        RETURN .F.
     ENDIF
 
     IF !lSilent
@@ -676,9 +727,80 @@ FUNCTION ValidNif( cNif, lSilent )
 RETURN .F.
 
 
+FUNCTION ValidNif( cNif, lSilent )
+
+RETURN ValidNifFiscal( cNif, lSilent )
+
+
 FUNCTION _ValidNif( cNif, lSilent )
 
 RETURN ValidNif( cNif, lSilent )
+
+
+STATIC FUNCTION _IsAllDigits( cValue )
+
+    LOCAL nPos
+    LOCAL cChar
+
+    cValue := AllTrim( cValue )
+
+    IF Empty( cValue )
+        RETURN .F.
+    ENDIF
+
+    FOR nPos := 1 TO Len( cValue )
+        cChar := SubStr( cValue, nPos, 1 )
+        IF cChar < "0" .OR. cChar > "9"
+            RETURN .F.
+        ENDIF
+    NEXT
+
+RETURN .T.
+
+
+STATIC FUNCTION _ValidCifFiscal( cCif )
+
+    LOCAL cTipo
+    LOCAL cNum
+    LOCAL cCtrl
+    LOCAL cCtrlLetra
+    LOCAL nSuma := 0
+    LOCAL nPos
+    LOCAL nDig
+    LOCAL nDoble
+    LOCAL nCtrl
+
+    cCif  := Upper( AllTrim( cCif ) )
+    cTipo := Left( cCif, 1 )
+    cNum  := SubStr( cCif, 2, 7 )
+    cCtrl := Right( cCif, 1 )
+
+    IF Len( cCif ) != 9 .OR. !_IsAllDigits( cNum )
+        RETURN .F.
+    ENDIF
+
+    FOR nPos := 1 TO 7
+        nDig := Val( SubStr( cNum, nPos, 1 ) )
+        IF nPos % 2 == 1
+            nDoble := nDig * 2
+            nSuma  += Int( nDoble / 10 ) + ( nDoble % 10 )
+        ELSE
+            nSuma += nDig
+        ENDIF
+    NEXT
+
+    nCtrl      := ( 10 - ( nSuma % 10 ) ) % 10
+    cCtrlLetra := SubStr( "JABCDEFGHI", nCtrl + 1, 1 )
+
+    IF cTipo $ "PQRSNW"
+        RETURN cCtrl == cCtrlLetra
+    ENDIF
+
+    IF cTipo $ "ABEH"
+        RETURN cCtrl == Str( nCtrl, 1 )
+    ENDIF
+
+RETURN cCtrl == Str( nCtrl, 1 ) .OR. cCtrl == cCtrlLetra
 
 
 // ============================================================================

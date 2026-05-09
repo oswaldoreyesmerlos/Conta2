@@ -335,7 +335,7 @@ STATIC FUNCTION ProveedorGuardar( hProveedor, lNuevo )
     cNif    := hProveedor[ "NIF" ]
     cCtaCon := hProveedor[ "CTA_CONT" ]
 
-    IF !ValidNif( cNif, .T. )
+    IF !ValidNifFormato( cNif, .T. )
         MsgInfo( "El NIF/CIF no tiene formato fiscal reconocido." + Chr(13) + ;
                  "Se guardara igualmente para permitir datos provisionales.", ;
                  "Aviso NIF" )
