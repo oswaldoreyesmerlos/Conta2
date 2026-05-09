@@ -23,6 +23,8 @@
 STATIC s_nAppLockHandle := -1
 STATIC s_cAppLockFile   := ""
 
+#define POPUP_NEW "__POPUP_NEW__"
+
 // ============================================================================
 // 1) REQUEST / InitApp
 // ============================================================================
@@ -624,12 +626,13 @@ RETURN nSkipped
 // Muestra una lista modal y devuelve el codigo de la fila seleccionada.
 // aCols: { { cTitulo, nAncho, cPicture, nCampo }, ... }
 // ============================================================================
-FUNCTION PopupSelect( cTitle, aData, aCols, nSeekCol )
+FUNCTION PopupSelect( cTitle, aData, aCols, nSeekCol, cNewCaption )
 
     LOCAL oWin
     LOCAL oGrid
     LOCAL oLbl
     LOCAL oBtOk
+    LOCAL oBtNew
     LOCAL oBtCan
     LOCAL cRet := ""
     LOCAL i
@@ -638,8 +641,9 @@ FUNCTION PopupSelect( cTitle, aData, aCols, nSeekCol )
     DEFAULT aData    TO {}
     DEFAULT aCols    TO {}
     DEFAULT nSeekCol TO 1
+    DEFAULT cNewCaption TO ""
 
-    IF Len( aData ) == 0
+    IF Len( aData ) == 0 .AND. Empty( cNewCaption )
         MsgInfo( "No hay datos para seleccionar.", cTitle )
         RETURN ""
     ENDIF
@@ -660,19 +664,28 @@ FUNCTION PopupSelect( cTitle, aData, aCols, nSeekCol )
                                  oWin:Close() ), NIL ) }
 
     oLbl := TLabel():New( 18, 2, ;
-        "ENTER: seleccionar   Letras: buscar   ESC: cancelar", oWin )
+        "ENTER: seleccionar   Letras: buscar   ESC: cancelar" + ;
+        If( !Empty( cNewCaption ), "   TAB: " + AllTrim( cNewCaption ), "" ), oWin )
 
-    oBtOk := TButton():New( 20, 27, 20, 44, oWin, "ACEPTAR", ;
+    oBtOk := TButton():New( 20, 18, 20, 35, oWin, "ACEPTAR", ;
         {|| If( oGrid:CurrentRow() != NIL, ;
                 ( cRet := AllTrim( oGrid:CurrentRow()[1] ), ;
                   oWin:Close() ), NIL ) } )
 
-    oBtCan := TButton():New( 20, 50, 20, 67, oWin, "CANCELAR", ;
+    oBtNew := TButton():New( 20, 39, 20, 56, oWin, cNewCaption, ;
+        {|| cRet := POPUP_NEW, oWin:Close() } )
+
+    IF Empty( cNewCaption )
+        oBtNew:Hide()
+    ENDIF
+
+    oBtCan := TButton():New( 20, 60, 20, 77, oWin, "CANCELAR", ;
         {|| cRet := "", oWin:Close() } )
 
     oWin:AddCtrl( oGrid  )
     oWin:AddCtrl( oLbl   )
     oWin:AddCtrl( oBtOk  )
+    oWin:AddCtrl( oBtNew )
     oWin:AddCtrl( oBtCan )
 
     oWin:Run()
@@ -682,12 +695,35 @@ RETURN cRet
 
 FUNCTION LookupCliente()
 
-    LOCAL nArea := Select()
-    LOCAL aData := {}
+    LOCAL aData
     LOCAL cRet
 
+    DO WHILE .T.
+        aData := _LookupClientesData()
+
+        cRet := PopupSelect( "SELECCIONAR CLIENTE", aData, ;
+            { { "Codigo", 10, "@!", 1 }, ;
+              { "Nombre", 42, "@!", 2 }, ;
+              { "NIF",    14, "@!", 3 }, ;
+              { "Ciudad", 20, "@!", 4 } }, 2, "NUEVO" )
+
+        IF cRet == POPUP_NEW
+            ClientesForm( .T., "" )
+        ELSE
+            EXIT
+        ENDIF
+    ENDDO
+
+RETURN cRet
+
+
+STATIC FUNCTION _LookupClientesData()
+
+    LOCAL nArea := Select()
+    LOCAL aData := {}
+
     IF !ABRIR_TABLA( "CLIENTES", "CLI_LKP", "CLI_NOM" )
-        RETURN ""
+        RETURN aData
     ENDIF
 
     DbSelectArea( "CLI_LKP" )
@@ -708,13 +744,7 @@ FUNCTION LookupCliente()
     CLI_LKP->( DbCloseArea() )
     Select( nArea )
 
-    cRet := PopupSelect( "SELECCIONAR CLIENTE", aData, ;
-        { { "Codigo", 10, "@!", 1 }, ;
-          { "Nombre", 42, "@!", 2 }, ;
-          { "NIF",    14, "@!", 3 }, ;
-          { "Ciudad", 20, "@!", 4 } }, 2 )
-
-RETURN cRet
+RETURN aData
 
 
 FUNCTION LookupFormaPago()
