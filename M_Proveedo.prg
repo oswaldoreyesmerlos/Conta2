@@ -230,7 +230,6 @@ FUNCTION ProveedForm( lNuevo, cId )
     ENDIF
 
     oGNif := TGet():New(  4, 20, cNif,    "@!",    oWin )
-    oGNif:bValid := {| o | _ValidNif( AllTrim( o:cBuffer ) ) }
 
     oGNom  := TGet():New(  6, 20, cNombre, "@!", oWin )
     oGNom:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
@@ -255,12 +254,13 @@ FUNCTION ProveedForm( lNuevo, cId )
     oChkBaja := TCheck():New( 28, 72, "Baja", lBaja, oWin )
 
     oBtGua := TButton():New( 33, 40, 34, 59, oWin, "GUARDAR", ;
-        {|| _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
-                         oGCiu, oGPro, oGPais, oGCP, oGTel, ;
-                         oGMov, oGMail, oGWeb, oGIban, oGFP, ;
-                         oGDias, oGCtaCon, oGCtaAnt, ;
-                         oChkBaja, ;
-                         lNuevo, oWin ) } )
+        {|| If( ProveedorGuardar( _PrvFormHash( oGId, oGNif, oGNom, oGApe, ;
+                                                oGDir, oGCiu, oGPro, oGPais, ;
+                                                oGCP, oGTel, oGMov, oGMail, ;
+                                                oGWeb, oGIban, oGFP, oGDias, ;
+                                                oGCtaCon, oGCtaAnt, oChkBaja ), ;
+                                  lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 33, 63, 34, 82, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -295,20 +295,51 @@ FUNCTION ProveedForm( lNuevo, cId )
 RETURN NIL
 
 
-STATIC FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
-                               oGCiu, oGPro, oGPais, oGCP, oGTel, ;
-                               oGMov, oGMail, oGWeb, oGIban, oGFP, ;
-                               oGDias, oGCtaCon, oGCtaAnt, ;
-                               oChkBaja, ;
-                               lNuevo, oWin )
+STATIC FUNCTION _PrvFormHash( oGId, oGNif, oGNom, oGApe, oGDir, ;
+                                oGCiu, oGPro, oGPais, oGCP, oGTel, ;
+                                oGMov, oGMail, oGWeb, oGIban, oGFP, ;
+                                oGDias, oGCtaCon, oGCtaAnt, oChkBaja )
+
+    LOCAL hProveedor := {=>}
+
+    hProveedor[ "ID"       ] := AllTrim( oGId:GetValue() )
+    hProveedor[ "NIF"      ] := AllTrim( oGNif:GetValue() )
+    hProveedor[ "NOMBRE"   ] := AllTrim( oGNom:GetValue() )
+    hProveedor[ "APELLIDO" ] := AllTrim( oGApe:GetValue() )
+    hProveedor[ "DIRECCIO" ] := AllTrim( oGDir:GetValue() )
+    hProveedor[ "CIUDAD"   ] := AllTrim( oGCiu:GetValue() )
+    hProveedor[ "PROVINCI" ] := AllTrim( oGPro:GetValue() )
+    hProveedor[ "PAIS"     ] := AllTrim( oGPais:GetValue() )
+    hProveedor[ "CP"       ] := AllTrim( oGCP:GetValue() )
+    hProveedor[ "TELEFONO" ] := AllTrim( oGTel:GetValue() )
+    hProveedor[ "MOVIL"    ] := AllTrim( oGMov:GetValue() )
+    hProveedor[ "EMAIL"    ] := AllTrim( oGMail:GetValue() )
+    hProveedor[ "WEB"      ] := AllTrim( oGWeb:GetValue() )
+    hProveedor[ "CTA_BANC" ] := AllTrim( oGIban:GetValue() )
+    hProveedor[ "FORPAGO"  ] := AllTrim( oGFP:GetValue() )
+    hProveedor[ "DIAS_PAG" ] := oGDias:GetValue()
+    hProveedor[ "CTA_CONT" ] := AllTrim( oGCtaCon:GetValue() )
+    hProveedor[ "CTA_ANTI" ] := AllTrim( oGCtaAnt:GetValue() )
+    hProveedor[ "BAJA"     ] := oChkBaja:GetValue()
+
+RETURN hProveedor
+
+
+STATIC FUNCTION ProveedorGuardar( hProveedor, lNuevo )
 
     LOCAL cId
     LOCAL cNif
     LOCAL cCtaCon
 
-    cId     := AllTrim( oGId:uVar    )
-    cNif    := AllTrim( oGNif:uVar   )
-    cCtaCon := AllTrim( oGCtaCon:uVar )
+    cId     := hProveedor[ "ID" ]
+    cNif    := hProveedor[ "NIF" ]
+    cCtaCon := hProveedor[ "CTA_CONT" ]
+
+    IF !_PrvValidNif( cNif, .T. )
+        MsgInfo( "El NIF/CIF no tiene formato fiscal reconocido." + Chr(13) + ;
+                 "Se guardara igualmente para permitir datos provisionales.", ;
+                 "Aviso NIF" )
+    ENDIF
 
     DbSelectArea( "PRV" )
     OrdSetFocus( "PRV_ID" )
@@ -316,19 +347,19 @@ STATIC FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
     IF lNuevo
         IF DbSeek( cId )
             MsgStop( "El codigo " + cId + " ya existe.", "Alta proveedor" )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !Empty( cNif )
             OrdSetFocus( "PRV_NIF" )
             IF DbSeek( Upper( cNif ) )
                 MsgStop( "El NIF " + cNif + " ya esta registrado.", "Alta proveedor" )
                 OrdSetFocus( "PRV_ID" )
-                RETURN NIL
+                RETURN .F.
             ENDIF
             OrdSetFocus( "PRV_ID" )
         ENDIF
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
         IF Empty( cCtaCon )
@@ -336,10 +367,10 @@ STATIC FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
         ENDIF
     ELSE
         IF !DbSeek( cId )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF Empty( cCtaCon )
             cCtaCon := _PrvSubcuenta( cId )
@@ -347,24 +378,24 @@ STATIC FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
     ENDIF
 
     REPLACE PRV->ID       WITH cId
-    REPLACE PRV->NIF      WITH AllTrim( oGNif:uVar  )
-    REPLACE PRV->NOMBRE   WITH AllTrim( oGNom:uVar  )
-    REPLACE PRV->APELLIDO WITH AllTrim( oGApe:uVar  )
-    REPLACE PRV->DIRECCIO WITH AllTrim( oGDir:uVar  )
-    REPLACE PRV->CIUDAD   WITH AllTrim( oGCiu:uVar  )
-    REPLACE PRV->PROVINCI WITH AllTrim( oGPro:uVar  )
-    REPLACE PRV->PAIS     WITH AllTrim( oGPais:uVar )
-    REPLACE PRV->CP       WITH AllTrim( oGCP:uVar   )
-    REPLACE PRV->TELEFONO WITH AllTrim( oGTel:uVar  )
-    REPLACE PRV->MOVIL    WITH AllTrim( oGMov:uVar  )
-    REPLACE PRV->EMAIL    WITH AllTrim( oGMail:uVar )
-    REPLACE PRV->WEB      WITH AllTrim( oGWeb:uVar  )
-    REPLACE PRV->CTA_BANC WITH AllTrim( oGIban:uVar )
-    REPLACE PRV->FORPAGO  WITH AllTrim( oGFP:uVar   )
-    REPLACE PRV->DIAS_PAG WITH oGDias:uVar
+    REPLACE PRV->NIF      WITH hProveedor[ "NIF"      ]
+    REPLACE PRV->NOMBRE   WITH hProveedor[ "NOMBRE"   ]
+    REPLACE PRV->APELLIDO WITH hProveedor[ "APELLIDO" ]
+    REPLACE PRV->DIRECCIO WITH hProveedor[ "DIRECCIO" ]
+    REPLACE PRV->CIUDAD   WITH hProveedor[ "CIUDAD"   ]
+    REPLACE PRV->PROVINCI WITH hProveedor[ "PROVINCI" ]
+    REPLACE PRV->PAIS     WITH hProveedor[ "PAIS"     ]
+    REPLACE PRV->CP       WITH hProveedor[ "CP"       ]
+    REPLACE PRV->TELEFONO WITH hProveedor[ "TELEFONO" ]
+    REPLACE PRV->MOVIL    WITH hProveedor[ "MOVIL"    ]
+    REPLACE PRV->EMAIL    WITH hProveedor[ "EMAIL"    ]
+    REPLACE PRV->WEB      WITH hProveedor[ "WEB"      ]
+    REPLACE PRV->CTA_BANC WITH hProveedor[ "CTA_BANC" ]
+    REPLACE PRV->FORPAGO  WITH hProveedor[ "FORPAGO"  ]
+    REPLACE PRV->DIAS_PAG WITH hProveedor[ "DIAS_PAG" ]
     REPLACE PRV->CTA_CONT WITH cCtaCon
-    REPLACE PRV->CTA_ANTI WITH AllTrim( oGCtaAnt:uVar )
-    REPLACE PRV->BAJA     WITH oChkBaja:lValue
+    REPLACE PRV->CTA_ANTI WITH hProveedor[ "CTA_ANTI" ]
+    REPLACE PRV->BAJA     WITH hProveedor[ "BAJA"     ]
 
     IF lNuevo
         REPLACE PRV->FECHA_AL WITH Date()
@@ -373,9 +404,7 @@ STATIC FUNCTION _PrvGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
     DbCommit()
     DbUnlock()
 
-    oWin:Close()
-
-RETURN NIL
+RETURN .T.
 
 
 STATIC FUNCTION _PrvSubcuenta( cId )
@@ -398,6 +427,59 @@ STATIC FUNCTION _PrvSubcuenta( cId )
     ENDIF
 
 RETURN "400" + StrZero( Val( cNum ), 7 )
+
+
+STATIC FUNCTION _PrvValidNif( cNif, lSilent )
+
+    LOCAL cLetra
+    LOCAL nNum
+    LOCAL cLetraCalc
+    LOCAL cTipo
+
+    DEFAULT lSilent TO .F.
+
+    cLetra := "TRWAGMYFPDXBNJZSQVHLCKE"
+    cNif   := Upper( AllTrim( cNif ) )
+
+    IF Empty( cNif )
+        RETURN .T.
+    ENDIF
+
+    IF Len( cNif ) < 7
+        IF !lSilent
+            MsgStop( "NIF demasiado corto.", "Validacion NIF" )
+        ENDIF
+        RETURN .F.
+    ENDIF
+
+    cTipo := Left( cNif, 1 )
+
+    IF cTipo $ "XYZ"
+        cNif  := If( cTipo == "X", "0", If( cTipo == "Y", "1", "2" ) ) + SubStr( cNif, 2 )
+        cTipo := "0"
+    ENDIF
+
+    IF IsDigit( cTipo ) .AND. Len( cNif ) == 9
+        nNum       := Val( Left( cNif, 8 ) )
+        cLetraCalc := SubStr( cLetra, ( nNum % 23 ) + 1, 1 )
+        IF Right( cNif, 1 ) != cLetraCalc
+            IF !lSilent
+                MsgStop( "La letra del NIF no es correcta.", "Validacion NIF" )
+            ENDIF
+            RETURN .F.
+        ENDIF
+        RETURN .T.
+    ENDIF
+
+    IF cTipo $ "ABCDEFGHJKLMNPQRSUVW"
+        RETURN .T.
+    ENDIF
+
+    IF !lSilent
+        MsgStop( "Formato de NIF/CIF no reconocido.", "Validacion NIF" )
+    ENDIF
+
+RETURN .F.
 
 
 // ============================================================================
