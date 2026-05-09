@@ -300,22 +300,21 @@ STATIC FUNCTION _RecCargar()
 
     aData := {}
 
-    DbSelectArea( "REC" )
-    OrdSetFocus( "REC_FEC" )
-    DbGoTop()
+    REC->( OrdSetFocus( "REC_FEC" ) )
+    REC->( DbGoTop() )
 
-    DO WHILE !Eof()
-        IF !Deleted()
+    DO WHILE !REC->( Eof() )
+        IF !REC->( Deleted() )
             cFacs := _RecListarFacs( AllTrim( REC->NUMERO ) )
             AAdd( aData, { ;
                 AllTrim( REC->NUMERO   ), ;
                 DToC(    REC->FECHA    ), ;
                 _RecNomCli( AllTrim( REC->CLIENTE_ ) ), ;
-                _RecDescFP( AllTrim( DbFieldValue( "FORMA_PA", "" ) ) ), ;
+                _RecDescFP( AllTrim( REC->FORMA_PA ) ), ;
                 REC->TOTAL, ;
                 cFacs } )
         ENDIF
-        DbSkip()
+        REC->( DbSkip() )
     ENDDO
 
 RETURN aData
@@ -359,18 +358,17 @@ STATIC FUNCTION _RecListarFacs( cNumRec )
         RETURN cLista
     ENDIF
 
-    DbSelectArea( "RCD_RC" )
-    OrdSetFocus( "RCD_NUM" )
-    DbSeek( PadR( cNumRec, 10 ) + "  1" )
+    RCD_RC->( OrdSetFocus( "RCD_NUM" ) )
+    RCD_RC->( DbSeek( PadR( cNumRec, 10 ) + "  1" ) )
 
-    DO WHILE !Eof() .AND. AllTrim( RCD_RC->NUMERO ) == cNumRec
-        IF !Deleted()
+    DO WHILE !RCD_RC->( Eof() ) .AND. AllTrim( RCD_RC->NUMERO ) == cNumRec
+        IF !RCD_RC->( Deleted() )
             IF !Empty( cLista )
                 cLista += ", "
             ENDIF
             cLista += AllTrim( RCD_RC->NUM_FAC )
         ENDIF
-        DbSkip()
+        RCD_RC->( DbSkip() )
     ENDDO
 
     RCD_RC->( DbCloseArea() )
