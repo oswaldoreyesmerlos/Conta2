@@ -255,7 +255,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
                                @nDias, @nPorcRet, ;
                                oLCliNom, oGFP, oGDias, oGRet ) } )
 
-        oBtFP := TButton():New( 8, 19, 8, 28, oWin, "BUSCAR", ;
+        oBtFP := TButton():New( 8, 25, 8, 34, oWin, "BUSCAR", ;
             {|| _FacLookupFP( oGFP ) } )
     ENDIF
 

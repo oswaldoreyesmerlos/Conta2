@@ -292,7 +292,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
                                @nDias, @nPorcRet, oLCliNom, oLCliInfo, ;
                                oGFP, oGDias, oGRet ) } )
 
-        oBtFP := TButton():New( 6, 49, 6, 58, oWin, "BUSCAR", ;
+        oBtFP := TButton():New( 7, 44, 7, 53, oWin, "BUSCAR", ;
             {|| _PreLookupFP( oGFP ) } )
     ENDIF
 
