@@ -7,7 +7,6 @@
 
 -oSeedTestData
 -w0
--main=SEEDMAIN
 
 hbct.hbc
 gtwvg.hbc

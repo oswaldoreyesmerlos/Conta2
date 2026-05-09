@@ -215,7 +215,6 @@ STATIC FUNCTION _EmpGuardar( oGNif, oGNom, oGDir, oGCiu, oGPro, ;
     REPLACE EMP->REG_FOL  WITH AllTrim( oGFol:uVar  )
     REPLACE EMP->REG_HOJA WITH AllTrim( oGHoja:uVar )
     REPLACE EMP->REG_SECC WITH AllTrim( oGSec:uVar  )
-    REPLACE EMP->FEC_CIER WITH Date()
 
     DbCommit()
     DbUnlock()

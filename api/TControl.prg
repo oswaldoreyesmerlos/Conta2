@@ -25,6 +25,8 @@ CLASS TControl
     METHOD KillFocus()
 
     METHOD HandleKey()
+    METHOD GetValue()
+    METHOD SetValue()
 
     METHOD Show()
     METHOD Hide()
@@ -125,6 +127,15 @@ RETURN Self
 METHOD HandleKey( nKey ) CLASS TControl
     HB_SYMBOL_UNUSED( nKey )
 RETURN .F.
+
+
+METHOD GetValue() CLASS TControl
+RETURN NIL
+
+
+METHOD SetValue( uValue ) CLASS TControl
+    HB_SYMBOL_UNUSED( uValue )
+RETURN Self
 
 
 METHOD Show() CLASS TControl

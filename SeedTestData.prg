@@ -14,10 +14,11 @@ REQUEST DBFCDX
 
 MEMVAR cUserID, cUserNom, cUserRol, cEmpNom
 
-INIT PROCEDURE SeedBootTrace()
+FUNCTION Main()
+
    SeedMain()
-   QUIT
-RETURN
+
+RETURN NIL
 
 PROCEDURE SeedMain()
 
@@ -51,17 +52,24 @@ PROCEDURE SeedMain()
 
    hb_MemoWrit( "..\seed_testdata.log", "Inicio seed " + DToC( Date() ) + " " + Time() + Chr(13) + Chr(10) )
 
-   nBefore := _CountTST()
+   nBefore := 0
 
+   _SeedLog( "Sembrando empresa" )
    _SeedEmpresa()
+   _SeedLog( "Sembrando auxiliares" )
    _SeedAuxiliares()
+   _SeedLog( "Sembrando maestros" )
    _SeedMaestros()
-   _SeedContabilidad()
+   _SeedLog( "Sembrando ventas" )
    _SeedVentas()
+   _SeedLog( "Sembrando compras/tesoreria" )
    _SeedComprasTesoreria()
+   _SeedLog( "Sembrando contabilidad" )
+   _SeedContabilidad()
+   _SeedLog( "Sembrando seguridad" )
    _SeedSeguridad()
 
-   nAfter := _CountTST()
+   nAfter := 0
    _SeedLog( "Registros TST antes: " + AllTrim( Str( nBefore ) ) )
    _SeedLog( "Registros TST despues: " + AllTrim( Str( nAfter ) ) )
 
@@ -150,6 +158,32 @@ STATIC FUNCTION _CountTSTTabla( cTabla )
    (cAlias)->( DbCloseArea() )
 
 RETURN nCount
+
+
+STATIC FUNCTION _AnularMarcaCierrePrueba()
+
+   LOCAL nEjer := Year( Date() )
+   LOCAL dCie
+
+   IF ABRIR_TABLA( "EMPRESA", "EMP_CIE", "" )
+      EMP_CIE->( DbGoTop() )
+      IF !EMP_CIE->( Eof() )
+         dCie := EMP_CIE->FEC_CIER
+         IF ValType( dCie ) == "D" .AND. !Empty( dCie ) .AND. Year( dCie ) >= nEjer
+            IF NetRLock()
+               REPLACE EMP_CIE->FEC_CIER WITH CToD( "" )
+               DbCommit()
+               DbUnlock()
+               _SeedLog( "Anulado FEC_CIER de prueba: " + DToC( dCie ) )
+            ENDIF
+         ENDIF
+      ENDIF
+      EMP_CIE->( DbCloseArea() )
+   ENDIF
+
+   _SeedLog( "Revision de marca de cierre terminada." )
+
+RETURN NIL
 
 
 STATIC FUNCTION _SeedEmpresa()
@@ -245,13 +279,32 @@ RETURN NIL
 
 STATIC FUNCTION _SeedContabilidad()
 
+   _SeedCuenta( "100TST001", "Capital social test", "P" )
    _SeedCuenta( "430TST001", "Cliente test 1", "A" )
    _SeedCuenta( "430TST002", "Cliente test 2", "A" )
+   _SeedCuenta( "400TST001", "Proveedor materiales test", "P" )
+   _SeedCuenta( "400TST002", "Proveedor servicios test", "P" )
+   _SeedCuenta( "472TST001", "IVA soportado test", "A" )
+   _SeedCuenta( "477TST001", "IVA repercutido test", "P" )
+   _SeedCuenta( "600TST001", "Compras materiales test", "G" )
+   _SeedCuenta( "621TST001", "Arrendamientos test", "G" )
+   _SeedCuenta( "626TST001", "Servicios bancarios test", "G" )
+   _SeedCuenta( "640TST001", "Sueldos y salarios test", "G" )
    _SeedCuenta( "700TST001", "Ventas test", "I" )
+   _SeedCuenta( "705TST001", "Prestacion servicios test", "I" )
    _SeedCuenta( "572TST001", "Banco test", "A" )
 
    _SeedAsiento( "TSTASI001", Date() - 5, "430TST001", 1000, 0, "Asiento test debe" )
    _SeedAsiento( "TSTASI002", Date() - 4, "700TST001", 0, 1000, "Asiento test haber" )
+   _SeedAsientoApertura()
+   _SeedAsientoFactura( "TSTVTA001", Date() - 14, "TSTFAC001", "430TST001", "700TST001", "477TST001", 3000.00 )
+   _SeedAsientoFactura( "TSTVTA002", Date() - 10, "TSTFAC002", "430TST001", "700TST001", "477TST001", 4500.00 )
+   _SeedAsientoCompra( "TSTCOMA01", Date() - 8, "TSTCOM001", "600TST001", "472TST001", "400TST001", 1210.00 )
+   _SeedAsientoCompra( "TSTCOMA02", Date() - 6, "TSTCOM002", "621TST001", "472TST001", "400TST002", 605.00 )
+   _SeedAsientoCobro( "TSTCOB001", Date() - 3, "TSTREC001", "572TST001", "430TST001", 3000.00 )
+   _SeedAsientoCobro( "TSTCOB002", Date() - 2, "TSTREC002", "572TST001", "430TST001", 1500.00 )
+   _SeedAsientoGastoBanco( "TSTGAS001", Date() - 1, "626TST001", "572TST001", 85.00 )
+   _SeedAsientoGastoBanco( "TSTNOM001", Date() - 1, "640TST001", "572TST001", 1200.00 )
 
 RETURN NIL
 
@@ -393,11 +446,126 @@ RETURN NIL
 
 STATIC FUNCTION _SeedAsiento( cAsi, dFec, cCuenta, nDebe, nHaber, cDesc )
 
-   _Upsert( "LDIARIO", "DIA_TST", "DIA_ASI", cAsi + Str( 1, 4 ), {|| ;
+   _Upsert( "LDIARIO", "DIA_TST", "DIA_ASI", _KeyDiario( cAsi, 1 ), {|| ;
       DIA_TST->D_ASIENT := cAsi, DIA_TST->D_LINEA := 1, DIA_TST->D_FECHA := dFec, ;
       DIA_TST->D_CUENTA := cCuenta, DIA_TST->D_DEBE := nDebe, DIA_TST->D_HABER := nHaber, ;
       DIA_TST->D_DESCRI := cDesc, DIA_TST->USUARIO_ := "SEED", DIA_TST->FECHA_AL := Date(), ;
       DIA_TST->TIP_ORIG := "TST", DIA_TST->DOC_ORIG := cAsi } )
+
+RETURN NIL
+
+
+STATIC FUNCTION _SeedAsientoApertura()
+
+   _SeedDiarioLinea( "TSTAPE001", 1, Date() - 30, "572TST001", 12000.00, 0.00, ;
+      "Aportacion inicial banco test", "TST", "TSTAPE001" )
+   _SeedDiarioLinea( "TSTAPE001", 2, Date() - 30, "100TST001", 0.00, 12000.00, ;
+      "Capital inicial test", "TST", "TSTAPE001" )
+
+RETURN NIL
+
+
+STATIC FUNCTION _SeedAsientoFactura( cAsi, dFec, cFac, cCtaCli, cCtaVta, cCtaIva, nTotal )
+
+   LOCAL nBase := Round( nTotal / 1.21, 2 )
+   LOCAL nIva  := Round( nTotal - nBase, 2 )
+
+   _SeedDiarioLinea( cAsi, 1, dFec, cCtaCli, nTotal, 0.00, ;
+      "Factura emitida " + cFac, "FAC", cFac )
+   _SeedDiarioLinea( cAsi, 2, dFec, cCtaVta, 0.00, nBase, ;
+      "Base factura " + cFac, "FAC", cFac )
+   _SeedDiarioLinea( cAsi, 3, dFec, cCtaIva, 0.00, nIva, ;
+      "IVA factura " + cFac, "FAC", cFac )
+   _MarcaFacturaAsiento( cFac, cAsi )
+
+RETURN NIL
+
+
+STATIC FUNCTION _SeedAsientoCompra( cAsi, dFec, cCompra, cCtaGasto, cCtaIva, cCtaProv, nTotal )
+
+   LOCAL nBase := Round( nTotal / 1.21, 2 )
+   LOCAL nIva  := Round( nTotal - nBase, 2 )
+
+   _SeedDiarioLinea( cAsi, 1, dFec, cCtaGasto, nBase, 0.00, ;
+      "Compra recibida " + cCompra, "COM", cCompra )
+   _SeedDiarioLinea( cAsi, 2, dFec, cCtaIva, nIva, 0.00, ;
+      "IVA compra " + cCompra, "COM", cCompra )
+   _SeedDiarioLinea( cAsi, 3, dFec, cCtaProv, 0.00, nTotal, ;
+      "Proveedor compra " + cCompra, "COM", cCompra )
+   _MarcaCompraAsiento( cCompra, cAsi )
+
+RETURN NIL
+
+
+STATIC FUNCTION _SeedAsientoCobro( cAsi, dFec, cRecibo, cCtaBanco, cCtaCli, nTotal )
+
+   _SeedDiarioLinea( cAsi, 1, dFec, cCtaBanco, nTotal, 0.00, ;
+      "Cobro recibo " + cRecibo, "REC", cRecibo )
+   _SeedDiarioLinea( cAsi, 2, dFec, cCtaCli, 0.00, nTotal, ;
+      "Cliente cobro " + cRecibo, "REC", cRecibo )
+   _MarcaReciboAsiento( cRecibo, cAsi )
+
+RETURN NIL
+
+
+STATIC FUNCTION _SeedAsientoGastoBanco( cAsi, dFec, cCtaGasto, cCtaBanco, nTotal )
+
+   _SeedDiarioLinea( cAsi, 1, dFec, cCtaGasto, nTotal, 0.00, ;
+      "Gasto test " + cAsi, "TST", cAsi )
+   _SeedDiarioLinea( cAsi, 2, dFec, cCtaBanco, 0.00, nTotal, ;
+      "Pago gasto test " + cAsi, "TST", cAsi )
+
+RETURN NIL
+
+
+STATIC FUNCTION _SeedDiarioLinea( cAsi, nLin, dFec, cCuenta, nDebe, nHaber, cDesc, cOrig, cDoc )
+
+   _Upsert( "LDIARIO", "DIA_TST", "DIA_ASI", _KeyDiario( cAsi, nLin ), {|| ;
+      DIA_TST->D_ASIENT := cAsi, DIA_TST->D_LINEA := nLin, DIA_TST->D_FECHA := dFec, ;
+      DIA_TST->D_CUENTA := cCuenta, DIA_TST->D_DEBE := nDebe, DIA_TST->D_HABER := nHaber, ;
+      DIA_TST->D_DESCRI := cDesc, DIA_TST->USUARIO_ := "SEED", DIA_TST->FECHA_AL := Date(), ;
+      DIA_TST->TIP_ORIG := cOrig, DIA_TST->DOC_ORIG := cDoc } )
+
+RETURN NIL
+
+
+STATIC FUNCTION _KeyDiario( cAsi, nLin )
+
+RETURN PadR( cAsi, 10 ) + Str( nLin, 4 )
+
+
+STATIC FUNCTION _MarcaFacturaAsiento( cFac, cAsi )
+
+   IF _SeekForUpdate( "FACTURA", "FAC_TST", "FAC_NUM", PadR( "A", 4 ) + PadR( cFac, 10 ) )
+      REPLACE FAC_TST->ASIENTO WITH cAsi
+      DbCommit()
+      DbUnlock()
+      FAC_TST->( DbCloseArea() )
+   ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _MarcaCompraAsiento( cCompra, cAsi )
+
+   IF _SeekForUpdate( "COMPRAS", "COM_TST", "COM_INT", cCompra )
+      REPLACE COM_TST->ASIENTO WITH cAsi
+      DbCommit()
+      DbUnlock()
+      COM_TST->( DbCloseArea() )
+   ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _MarcaReciboAsiento( cRecibo, cAsi )
+
+   IF _SeekForUpdate( "RECIBOS", "REC_TST", "REC_NUM", cRecibo )
+      REPLACE REC_TST->ASIENTO WITH cAsi
+      DbCommit()
+      DbUnlock()
+      REC_TST->( DbCloseArea() )
+   ENDIF
 
 RETURN NIL
 
@@ -642,5 +810,32 @@ STATIC FUNCTION _Upsert( cTabla, cAlias, cIndex, cKey, bFill )
    DbUnlock()
    _SeedLog( If( lFound, "Actualizado ", "Creado " ) + cTabla + " " + cKey )
    (cAlias)->( DbCloseArea() )
+
+RETURN .T.
+
+
+STATIC FUNCTION _SeekForUpdate( cTabla, cAlias, cIndex, cKey )
+
+   IF !ABRIR_TABLA( cTabla, cAlias, cIndex )
+      _SeedLog( "No se pudo abrir " + cTabla + " para actualizar " + cKey )
+      RETURN .F.
+   ENDIF
+
+   DbSelectArea( cAlias )
+   IF !Empty( cIndex )
+      OrdSetFocus( cIndex )
+   ENDIF
+
+   IF !DbSeek( cKey )
+      _SeedLog( "No existe " + cTabla + " " + cKey + " para marcar asiento" )
+      (cAlias)->( DbCloseArea() )
+      RETURN .F.
+   ENDIF
+
+   IF !NetRLock()
+      _SeedLog( "No se pudo bloquear " + cTabla + " " + cKey )
+      (cAlias)->( DbCloseArea() )
+      RETURN .F.
+   ENDIF
 
 RETURN .T.

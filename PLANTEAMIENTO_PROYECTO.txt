@@ -1,0 +1,198 @@
+PLANTEAMIENTO DEL PROYECTO APPGESTION
+=====================================
+
+Necesito desarrollar una aplicacion de gestion administrativa, comercial,
+tesoreria y contabilidad para una pequena empresa, pensada para trabajar con
+tablas DBF y una interfaz de escritorio clasica, rapida y muy directa.
+
+La aplicacion debe funcionar como una herramienta diaria de trabajo, no como
+una demo. Por eso necesito que los formularios sean estables, que los datos se
+guarden de forma segura, que los listados sean claros y que cualquier error se
+registre correctamente para poder revisarlo despues.
+
+
+OBJETIVO GENERAL
+----------------
+
+Quiero una aplicacion capaz de gestionar el ciclo completo:
+
+1. Clientes, proveedores, articulos, usuarios y datos maestros.
+2. Presupuestos.
+3. Obras vinculadas a presupuestos.
+4. Facturas emitidas.
+5. Cobros, recibos, vencimientos, bancos y movimientos de tesoreria.
+6. Contabilidad basica: libro diario, libro mayor, sumas y saldos, balance
+   general y estado de perdidas y ganancias.
+7. Seguridad de acceso por usuarios, roles y permisos.
+8. Herramientas de recuperacion y mantenimiento.
+
+El sistema debe ayudarme a saber que esta pasando en la empresa: que se ha
+presupuestado, que se ha facturado, que esta cobrado, que esta pendiente y como
+queda reflejado todo en contabilidad.
+
+
+ENFOQUE TECNICO
+---------------
+
+La aplicacion trabaja con DBF/CDX. Cada tabla debe abrirse con control de alias,
+evitando abrir dos veces la misma base de datos con el mismo alias. Si una tabla
+ya esta abierta, se debe seleccionar y usar, no volver a abrirla.
+
+La interfaz debe ser tipo escritorio clasico, usando ventanas, grids, gets,
+labels, botones y menus. Como no siempre se dispone de raton o de teclas de
+funcion comodas en un portatil, la navegacion por teclado debe ser prioritaria.
+
+Los formularios deben cuidar mucho el foco inicial, el orden de tabulacion, la
+salida con ESC, la limpieza de ventanas y el cursor. Si una ventana se cierra,
+no deben quedar restos visuales ni cursores pintados.
+
+
+SEGURIDAD Y ACCESO
+------------------
+
+El sistema debe pedir usuario y clave. Si se falla la clave varias veces, el
+bloqueo debe ser temporal, no permanente. Debe permitirse volver a usar la clave
+correcta despues del tiempo de bloqueo.
+
+Tambien necesito una herramienta auxiliar de recuperacion para el administrador,
+por si el usuario principal queda bloqueado o no se puede entrar al sistema.
+
+Debe evitarse que la aplicacion se abra mas de una vez en la misma terminal.
+
+
+GESTION COMERCIAL Y OBRAS
+-------------------------
+
+El flujo principal debe ser:
+
+PRESUPUESTO -> OBRA -> FACTURA -> COBRO
+
+Los presupuestos deben poder crearse, editarse, aceptarse o rechazarse. Cuando
+un presupuesto se acepta, debe poder generar una obra.
+
+En la ficha o resumen de una obra quiero ver claramente:
+
+- Datos principales de la obra.
+- Presupuesto relacionado.
+- Facturas generadas.
+- Cobros realizados.
+- Importe total, facturado, cobrado y pendiente.
+
+Visualmente es importante que los movimientos de cobro de una obra se puedan
+ver en un grid, porque resulta mas claro que un resumen de texto.
+
+
+FACTURACION Y TESORERIA
+-----------------------
+
+Las facturas deben poder relacionarse con presupuestos y obras. Una factura
+contabilizada debe quedar marcada con su numero de asiento para evitar que se
+contabilice dos veces.
+
+Los recibos y cobros deben permitir controlar importes pendientes y cobrados.
+Tambien deben poder generar o relacionarse con movimientos contables.
+
+
+CONTABILIDAD
+------------
+
+Necesito una contabilidad funcional, basada principalmente en el libro diario.
+Los informes contables no deben depender de saldos acumulados dudosos si pueden
+calcularse directamente desde los asientos de LDIARIO.
+
+Los informes minimos necesarios son:
+
+- Libro diario.
+- Libro mayor por cuenta.
+- Balance de sumas y saldos.
+- Balance general.
+- Estado de perdidas y ganancias.
+
+Los informes deben poder visualizarse dentro de la propia aplicacion en formato
+texto antes de imprimirlos o guardarlos en archivo. Para esto conviene usar una
+ventana de previsualizacion con grid o control especifico, sin romper el uso de
+TLabel, que debe seguir siendo un sustituto de @ SAY para textos cortos.
+
+
+CIERRE CONTABLE
+---------------
+
+El cierre de ejercicio debe pedir confirmacion clara antes de ejecutarse. No
+debe ser una accion accidental.
+
+Antes de cerrar, el sistema debe validar que el diario esta cuadrado. Si no lo
+esta, debe avisar y cancelar el proceso.
+
+El cierre debe marcar la fecha de cierre solo cuando realmente se ejecute el
+proceso contable. Guardar los datos de empresa no debe marcar FEC_CIER.
+
+Tambien necesito una forma controlada de anular un cierre de prueba, al menos
+durante la fase de desarrollo, para poder corregir datos y repetir pruebas.
+
+
+DATOS DE PRUEBA
+---------------
+
+Necesito un script de carga de datos de prueba que permita llenar el sistema con
+informacion suficiente para probar todos los modulos.
+
+Ese script debe crear o actualizar:
+
+- Clientes.
+- Proveedores.
+- Articulos.
+- Presupuestos.
+- Obras.
+- Facturas.
+- Recibos y vencimientos.
+- Bancos y movimientos de tesoreria.
+- Cuentas contables.
+- Asientos en libro diario.
+
+Los datos de prueba deben incluir facturas ya contabilizadas, compras, cobros,
+gastos, ingresos, IVA soportado, IVA repercutido, banco, clientes, proveedores,
+cuentas de gasto e ingreso. El objetivo es poder generar balances y estados de
+perdidas y ganancias con informacion realista.
+
+Debe evitarse duplicar datos cada vez que se ejecute el script. Si un registro
+ya existe, se actualiza; si no existe, se crea.
+
+
+MANEJO DE ERRORES
+-----------------
+
+Los errores deben registrarse siempre en error.log, acumulando los mensajes y no
+sobrescribiendo el archivo anterior.
+
+Cuando ocurra un error desde una opcion de menu, se puede mostrar un aviso al
+usuario, pero tambien debe quedar el detalle tecnico en el log: fecha, hora,
+operacion, descripcion, subsistema, linea y pila de llamadas si es posible.
+
+El objetivo es que un error no deje la aplicacion en un estado visual roto y que
+se pueda diagnosticar despues.
+
+
+CRITERIO DE CALIDAD
+-------------------
+
+La prioridad es que el sistema sea estable y practico. Prefiero una interfaz
+sencilla y robusta antes que una pantalla bonita pero fragil.
+
+Cada cambio debe compilar. Si se toca una parte critica, debe probarse con datos
+reales o datos de prueba suficientes.
+
+La aplicacion debe permitir trabajar con teclado, proteger los datos, evitar
+duplicidades, registrar errores y dar informes fiables.
+
+
+RESUMEN
+-------
+
+Lo que necesito es una aplicacion de gestion integral para controlar clientes,
+presupuestos, obras, facturas, cobros y contabilidad, con una base DBF estable,
+una interfaz clasica de teclado, seguridad de usuarios, informes financieros y
+herramientas de mantenimiento.
+
+El proyecto debe avanzar con un enfoque practico: primero estabilidad de datos,
+luego flujo comercial completo, despues contabilidad fiable y finalmente mejoras
+visuales y operativas.

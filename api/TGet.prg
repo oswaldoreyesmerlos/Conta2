@@ -26,6 +26,8 @@ CLASS TGet FROM TControl
 
     METHOD Validate()
     METHOD HandleKey()
+    METHOD GetValue()
+    METHOD SetValue()
 
 ENDCLASS
 
@@ -323,3 +325,38 @@ METHOD HandleKey( nKey ) CLASS TGet
     ENDIF
 
 RETURN .F.
+
+
+METHOD GetValue() CLASS TGet
+
+    ::Validate()
+
+RETURN ::uVar
+
+
+METHOD SetValue( uValue ) CLASS TGet
+
+    ::uVar  := uValue
+    ::cType := ValType( uValue )
+
+    DO CASE
+    CASE ::cType == "C"
+        ::cBuffer := PadR( hb_CStr( uValue ), ::nLen )
+
+    CASE ::cType == "N"
+        ::cBuffer := PadL( LTrim( Str( uValue ) ), ::nLen )
+
+    CASE ::cType == "D"
+        ::cBuffer := DToC( uValue )
+
+    CASE ::cType == "L"
+        ::cBuffer := If( uValue, "Si ", "No " )
+
+    OTHERWISE
+        ::cBuffer := Space( ::nLen )
+    ENDCASE
+
+    ::nPos := Min( ::nPos, ::nLen )
+    ::Paint()
+
+RETURN Self

@@ -33,6 +33,8 @@ CLASS TCombo FROM TControl
     METHOD Label()          // texto a mostrar para un indice dado
     METHOD SetIndex()       // cambia el indice y actualiza xValue
     METHOD FindByPrefix()   // busqueda incremental por letra inicial
+    METHOD GetValue()
+    METHOD SetValue()
 
 ENDCLASS
 
@@ -120,6 +122,31 @@ METHOD SetIndex( nIdx ) CLASS TCombo
     IF ::bChange != NIL
         Eval( ::bChange, Self )
     ENDIF
+
+RETURN Self
+
+
+METHOD GetValue() CLASS TCombo
+RETURN ::xValue
+
+
+METHOD SetValue( xValue ) CLASS TCombo
+
+    LOCAL i
+
+    FOR i := 1 TO Len( ::aOptions )
+        IF ::lAssoc
+            IF ::aOptions[ i, 1 ] == xValue
+                ::SetIndex( i )
+                ::Paint()
+                RETURN Self
+            ENDIF
+        ELSEIF ::aOptions[ i ] == xValue
+            ::SetIndex( i )
+            ::Paint()
+            RETURN Self
+        ENDIF
+    NEXT
 
 RETURN Self
 

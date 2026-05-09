@@ -1,0 +1,534 @@
+NUEVO ENFOQUE DEL PROYECTO APPGESTION
+====================================
+
+VISION GENERAL
+--------------
+
+El proyecto no debe evolucionar hacia un ERP generico orientado a comercio,
+almacen o TPV. El objetivo correcto es desarrollar una aplicacion integral de
+gestion administrativa, comercial, tesoreria y contabilidad especializada en
+empresas de reformas y tabiqueria seca (Pladur y sistemas de yeso laminado).
+
+La aplicacion debe servir como herramienta diaria de trabajo para controlar:
+
+- Clientes.
+- Presupuestos.
+- Obras.
+- Certificaciones.
+- Facturacion.
+- Cobros.
+- Tesoreria.
+- Contabilidad.
+
+El enfoque debe priorizar rapidez, estabilidad, simplicidad operativa y flujo
+real de trabajo antes que complejidad innecesaria o modulos poco utiles para la
+actividad principal.
+
+
+MODELO REAL DEL NEGOCIO
+-----------------------
+
+La actividad principal no es la venta de articulos ni la gestion de almacen.
+
+La empresa trabaja principalmente mediante:
+
+- Presupuestos de obra.
+- Partidas tecnicas.
+- Reformas.
+- Tabiqueria seca.
+- Falsos techos.
+- Trasdosados.
+- Certificaciones parciales.
+- Facturacion de trabajos realizados.
+- Cobro por avance de obra.
+
+Por tanto, el flujo principal del sistema debe ser:
+
+PRESUPUESTO -> OBRA -> CERTIFICACION -> FACTURA -> COBRO
+
+Toda la arquitectura del programa debe construirse alrededor de este flujo.
+
+
+IMPLICACION PARA EL DESARROLLO
+------------------------------
+
+Cada modulo nuevo o mejora debe responder a una pregunta simple:
+
+- Ayuda a presupuestar mejor?
+- Ayuda a controlar una obra?
+- Ayuda a certificar avances?
+- Ayuda a facturar correctamente?
+- Ayuda a cobrar y saber lo pendiente?
+- Ayuda a reflejarlo en contabilidad?
+
+Si una funcion no ayuda a ese flujo, debe quedar como secundaria o descartarse.
+
+
+LO QUE EL PROGRAMA SI DEBE HACER
+--------------------------------
+
+1. GESTION DE CLIENTES
+----------------------
+
+- Alta y mantenimiento de clientes.
+- Datos fiscales.
+- Direcciones de obra.
+- Telefonos y contactos.
+- Historial de presupuestos y obras.
+
+
+2. GESTION DE PRESUPUESTOS
+--------------------------
+
+- Crear presupuestos de forma rapida.
+- Uso de plantillas reutilizables.
+- Partidas tecnicas editables.
+- Descripciones libres amplias.
+- Subtotales y totales automaticos.
+- IVA normal o inversion del sujeto pasivo.
+- Condiciones generales.
+- Firma y aceptacion.
+- Impresion y PDF profesional.
+
+El sistema debe permitir presupuestar rapidamente obras similares reutilizando
+partidas y textos habituales.
+
+
+3. GESTION DE PARTIDAS TECNICAS
+-------------------------------
+
+Las partidas deben ser mas importantes que los articulos.
+
+Los articulos pueden seguir existiendo como apoyo, pero el maestro principal
+para presupuestar reformas debe ser el de partidas tecnicas. Una partida puede
+representar trabajo, material, servicio o una combinacion de ellos.
+
+Ejemplos:
+
+- Tabique Pladur.
+- Trasdosado autoportante.
+- Falso techo continuo.
+- Falso techo registrable.
+- Aislamiento acustico.
+- Encintado y repaso.
+- Demolicion.
+- Alicatado.
+- Fontaneria.
+- Electricidad.
+- Desplazamiento.
+
+Cada partida puede incluir:
+
+- Codigo.
+- Familia.
+- Descripcion corta.
+- Descripcion larga.
+- Unidad.
+- Precio base.
+- Observaciones tecnicas.
+
+
+4. PLANTILLAS DE OBRA
+---------------------
+
+El sistema debe permitir reutilizar estructuras completas de presupuestos.
+
+Ejemplos:
+
+- Bano completo.
+- Oficina.
+- Local comercial.
+- Vivienda.
+- Techo desmontable.
+- Trasdosado completo.
+
+Esto debe permitir generar presupuestos rapidamente.
+
+
+5. GESTION DE OBRAS
+-------------------
+
+Cada obra debe poder relacionarse con:
+
+- Cliente.
+- Presupuesto origen.
+- Facturas.
+- Cobros.
+- Certificaciones.
+- Observaciones.
+- Estado economico.
+
+La ficha de obra debe mostrar claramente:
+
+- Importe presupuestado.
+- Importe facturado.
+- Importe cobrado.
+- Importe pendiente.
+
+
+6. CERTIFICACIONES
+------------------
+
+El sistema debe permitir generar certificaciones parciales segun avance de obra.
+
+Las certificaciones deben poder:
+
+- Facturarse.
+- Consultarse historicamente.
+- Relacionarse con cobros.
+- Reflejarse en contabilidad.
+
+
+7. FACTURACION
+--------------
+
+Las facturas deben poder:
+
+- Generarse desde presupuestos u obras.
+- Relacionarse con certificaciones.
+- Marcarse como contabilizadas.
+- Evitar doble contabilizacion.
+- Generar PDF profesional.
+
+
+8. COBROS Y TESORERIA
+---------------------
+
+La tesoreria es uno de los puntos mas importantes del sistema.
+
+Debe permitir:
+
+- Control de cobros pendientes.
+- Vencimientos.
+- Recibos.
+- Bancos.
+- Movimientos bancarios.
+- Relacion con contabilidad.
+
+El objetivo principal es saber:
+
+- Que esta cobrado.
+- Que falta por cobrar.
+- Que obra debe dinero.
+- Que facturas estan pendientes.
+
+
+9. CONTABILIDAD
+---------------
+
+La contabilidad debe existir, pero subordinada al flujo real de negocio.
+
+El sistema debe trabajar principalmente desde:
+
+LDIARIO
+
+Los informes deben calcularse desde movimientos reales del diario.
+
+Informes necesarios:
+
+- Libro diario.
+- Libro mayor.
+- Balance de sumas y saldos.
+- Balance general.
+- Perdidas y ganancias.
+
+La contabilidad debe ser:
+
+- Simple.
+- Clara.
+- Auditable.
+- Fiable.
+
+El sistema no debe obligar a trabajar como un programa contable puro. Lo ideal
+es que el usuario cree presupuestos, obras, certificaciones, facturas y cobros,
+y que el sistema genere o facilite los asientos correspondientes.
+
+
+10. INTERFAZ DE ESCRITORIO CLASICA
+----------------------------------
+
+La interfaz debe priorizar:
+
+- Teclado.
+- Rapidez.
+- Estabilidad.
+- Simplicidad.
+- Navegacion clara.
+
+Debe evitarse depender del raton.
+
+La filosofia correcta es similar a los ERP clasicos de escritorio:
+
+- Ventanas modales.
+- Menus.
+- Gets.
+- Grids.
+- Labels.
+- Botones.
+- Navegacion rapida.
+
+La prioridad es productividad diaria.
+
+
+11. ESTABILIDAD DEL SISTEMA
+---------------------------
+
+El sistema debe:
+
+- Registrar errores.
+- Evitar corrupcion visual.
+- Controlar correctamente el foco.
+- Restaurar ventanas correctamente.
+- Evitar alias duplicados.
+- Mantener estabilidad con DBF/CDX.
+
+Cada cambio debe compilar y probarse.
+
+
+ORDEN RECOMENDADO DE DESARROLLO
+-------------------------------
+
+PRIORIDAD 1 - CONSOLIDAR EL FRAMEWORK
+
+Antes de crear controles nuevos o crecer en modulos, hay que estabilizar la
+base tecnica que ya existe. El framework actual ya tiene suficiente estructura
+para avanzar, pero necesita unificacion y disciplina interna.
+
+Puntos a consolidar:
+
+- API comun de controles.
+- GetValue() y SetValue() normalizados.
+- Foco de entrada y salida.
+- KillFocus limpio.
+- Repaint/Refresh coherente.
+- Ciclo de eventos.
+- Validaciones pasivas y bloqueantes.
+- Apertura segura de tablas y alias.
+- Limpieza visual al cerrar ventanas.
+- Comportamiento consistente con ESC, ENTER, TAB y flechas.
+
+No conviene seguir agregando controles hasta que esta base sea estable. Cada
+control debe comportarse de forma predecible y compatible con los demas.
+
+Reglas concretas para formularios:
+
+- No acceder directamente a variables internas de controles desde los forms.
+- Evitar mezclar oGGet:uVar, oCheck:lValue, oCombo:xValue, etc.
+- Todos los controles editables deben exponer GetValue() y SetValue().
+- TGet, TCheck y TCombo deben poder leerse igual desde un formulario.
+- Las validaciones deben poder ejecutarse sin depender del tipo exacto de
+  control.
+- El guardado debe recibir datos normalizados, no controles visuales.
+
+Ejemplo de objetivo:
+
+    oGId:GetValue()
+    oChkRe:GetValue()
+    oCombo:GetValue()
+
+En lugar de:
+
+    oGId:uVar
+    oChkRe:lValue
+    oCombo:xValue
+
+Esto hara posible que TForm trabaje con cualquier control sin conocer sus
+detalles internos.
+
+
+MANEJO DE TABLAS EN FORMULARIOS
+-------------------------------
+
+Debe definirse una regla clara para abrir y cerrar tablas:
+
+- Si el formulario abre una tabla que no estaba abierta, el formulario puede
+  cerrarla al terminar.
+- Si la tabla ya estaba abierta por otro modulo, el formulario no debe cerrarla.
+  Solo debe restaurar el area de trabajo previa.
+- ABRIR_TABLA() deberia permitir saber si reutilizo un alias existente o si
+  hizo una apertura nueva.
+
+Esto evita que un formulario cierre accidentalmente una tabla que otro proceso
+o ventana todavia esta usando.
+
+
+USO DE HASH EN FORMULARIOS
+--------------------------
+
+Como paso previo a TForm, conviene mover los datos de pantalla a hashes.
+
+En lugar de que una funcion de guardado reciba muchos controles:
+
+    _CliGuardar( oGId, oGNif, oGNom, oGApe, ... )
+
+El formulario deberia construir un hash:
+
+    hCliente := {=>}
+    hCliente[ "ID" ]       := oGId:GetValue()
+    hCliente[ "NIF" ]      := oGNif:GetValue()
+    hCliente[ "NOMBRE" ]   := oGNom:GetValue()
+    hCliente[ "APELLIDO" ] := oGApe:GetValue()
+
+Y luego delegar:
+
+    ClienteGuardar( hCliente, lNuevo )
+
+Ventajas:
+
+- Separar interfaz visual de reglas de negocio.
+- Facilitar pruebas sin abrir ventanas.
+- Reducir listas enormes de parametros.
+- Preparar el camino para TForm.
+- Permitir que un mismo guardado se use desde formulario, importacion o script.
+
+
+CAMPOS COMERCIALES SECUNDARIOS EN CLIENTES
+------------------------------------------
+
+Con el nuevo enfoque de reformas y obras, algunos campos de cliente pueden
+quedar como secundarios:
+
+- TARIFA.
+- DESC_COM.
+- TIP_CLI.
+- APL_RE.
+- ENV_MAIL.
+
+No deben eliminarse sin revisar impacto, pero no deben dirigir el modelo. La
+prioridad en clientes debe ser:
+
+- Datos fiscales.
+- Contacto.
+- Direcciones.
+- Relacion con presupuestos.
+- Relacion con obras.
+- Historial economico.
+
+
+PRIORIDAD 2 - FORMULARIOS MANUALES NORMALIZADOS
+
+Por ahora no es necesario crear TForm como clase obligatoria. La forma actual
+de construir formularios con TWindow, TGet, TGrid, TCheck, TCombo, TLabel y
+TButton es flexible y encaja bien con el tipo de aplicacion.
+
+La mejora correcta no es encapsular demasiado pronto, sino ordenar el patron
+actual:
+
+- Formularios manuales.
+- Controles con API uniforme.
+- Datos recogidos en hashes.
+- Guardado separado de la pantalla.
+- Reglas de negocio fuera del formulario visual.
+
+TForm queda como posibilidad futura, no como prioridad inmediata. Solo debe
+crearse si el propio codigo empieza a pedirlo por repeticion clara y estable
+entre presupuestos, facturas y certificaciones.
+
+La meta inmediata es que un formulario pueda hacer:
+
+    hDoc := FormToHash( aCtrls )
+    DocumentoGuardar( hDoc, lNuevo )
+
+sin pasar listas enormes de controles a funciones de guardado.
+
+
+PRIORIDAD 3 - ESPECIALIZACION EN OBRAS
+
+Cuando TForm este formalizado, debe aparecer la identidad real del proyecto:
+
+- TFormPresupuesto.
+- TFormObra.
+- TFormCertificacion.
+
+Estas clases deben trabajar con:
+
+- Partidas tecnicas.
+- Mediciones.
+- Subtotales.
+- Certificaciones parciales.
+- Seguimiento economico.
+- Facturacion por avance.
+- Relacion con cobros.
+- Reflejo contable.
+
+La especializacion en obras es lo que diferencia este proyecto de un ERP
+generico. El sistema debe pensar en obra, avance, certificacion, factura y
+cobro.
+
+
+SECUENCIA PRACTICA
+------------------
+
+1. Estabilizar framework: controles, foco, eventos, validaciones y repaint.
+2. Normalizar acceso a valores de controles con GetValue()/SetValue().
+3. Usar hashes para mover datos entre pantalla y reglas de negocio.
+4. Separar funciones de guardado: ClienteGuardar( hCliente, lNuevo ), etc.
+5. Mantener formularios manuales mientras sigan siendo mas flexibles.
+6. Crear partidas tecnicas como base documental.
+7. Reforzar obra como centro economico del sistema.
+8. Crear certificaciones parciales.
+9. Conectar certificaciones con facturas.
+10. Conectar facturas y cobros con tesoreria.
+11. Generar asientos contables desde documentos reales.
+12. Validar informes financieros desde LDIARIO.
+13. Evaluar TForm solo si la repeticion ya es evidente.
+14. Mejorar impresion, PDF y presentacion final.
+
+Este orden evita construir informes bonitos sobre datos debiles. Primero debe
+quedar firme el flujo operativo; despues se pulen informes y presentacion.
+
+
+LO QUE EL PROGRAMA NO DEBE HACER
+--------------------------------
+
+El proyecto NO debe convertirse en:
+
+- Un TPV.
+- Un ERP comercial generico.
+- Un sistema de multi-almacen complejo.
+- Un software de logistica.
+- Un software de inventario avanzado.
+- Un sistema de trazabilidad industrial.
+- Un ecommerce.
+- Un SaaS web complejo.
+
+Tampoco debe complicarse con:
+
+- Stock avanzado.
+- Reservas de almacen.
+- Multiubicaciones.
+- Codigos de barras.
+- Compras automatizadas complejas.
+- Procesos industriales.
+- Produccion.
+- Gestion de rutas.
+- Funciones innecesarias para reformas.
+
+
+VISION FINAL
+------------
+
+El objetivo correcto es crear una herramienta profesional, robusta y rapida para
+una empresa de reformas y tabiqueria seca.
+
+El sistema debe permitir controlar:
+
+- Presupuestos.
+- Obras.
+- Certificaciones.
+- Facturas.
+- Cobros.
+- Tesoreria.
+- Contabilidad.
+
+La prioridad principal debe ser:
+
+1. Estabilidad.
+2. Flujo real de trabajo.
+3. Productividad.
+4. Fiabilidad de datos.
+5. Rapidez operativa.
+6. Simplicidad de uso.
+
+La aplicacion debe sentirse como una herramienta tecnica profesional de trabajo
+diario y no como una demo visual o un ERP generico lleno de modulos inutiles.

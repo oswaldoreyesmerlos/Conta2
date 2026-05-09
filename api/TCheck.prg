@@ -21,6 +21,8 @@ CLASS TCheck FROM TControl
     METHOD Paint()
     METHOD HandleKey()
     METHOD Toggle()
+    METHOD GetValue()
+    METHOD SetValue()
 
 ENDCLASS
 
@@ -114,3 +116,15 @@ METHOD HandleKey( nKey ) CLASS TCheck
     ENDIF
 
 RETURN .F.
+
+
+METHOD GetValue() CLASS TCheck
+RETURN ::lValue
+
+
+METHOD SetValue( lValue ) CLASS TCheck
+
+    ::lValue := ( ValType( lValue ) == "L" .AND. lValue )
+    ::Paint()
+
+RETURN Self

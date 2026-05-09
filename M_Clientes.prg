@@ -151,6 +151,7 @@ FUNCTION ClientesForm( lNuevo, cId )
     LOCAL oGLim
     LOCAL oGTar
     LOCAL oGDesc
+    LOCAL oGTipCli
     LOCAL oGCtaCon
     LOCAL oGCtaAnt
     LOCAL oChkRe
@@ -265,7 +266,6 @@ FUNCTION ClientesForm( lNuevo, cId )
     ENDIF
 
     oGNif := TGet():New(  4, 20, cNif,    "@!",    oWin )
-    oGNif:bValid := {| o | _ValidNif( AllTrim( o:cBuffer ) ) }
 
     oGNom  := TGet():New(  6, 20, cNombre, "@!", oWin )
     oGNom:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
@@ -287,11 +287,9 @@ FUNCTION ClientesForm( lNuevo, cId )
     oGLim    := TGet():New(  6, 90, nLimite, "999,999,999.99", oWin )
     oGTar    := TGet():New(  8, 90, nTarifa, "9",              oWin )
     oGDesc   := TGet():New( 10, 90, nDesc,   "99.99",          oWin )
+    oGTipCli := TGet():New( 12, 90, cTipCli, "@!",             oWin )
     oGCtaCon := TGet():New( 14, 90, cCtaCon, "@!",             oWin )
     oGCtaAnt := TGet():New( 16, 90, cCtaAnt, "@!",             oWin )
-
-    // Tipo cliente en col 90 fila 12 (1 caracter)
-    oWin:AddCtrl( TGet():New( 12, 90, cTipCli, "@!", oWin ) )
 
     oChkRe   := TCheck():New( 18, 72, "Aplica recargo equivalencia", lAplRe,  oWin )
     oChkIrf  := TCheck():New( 20, 72, "Aplica retencion IRPF",       lAplIrf, oWin )
@@ -300,13 +298,14 @@ FUNCTION ClientesForm( lNuevo, cId )
     oChkBaja := TCheck():New( 26, 72, "Baja",                         lBaja,   oWin )
 
     oBtGua := TButton():New( 33, 40, 34, 59, oWin, "GUARDAR", ;
-        {|| _CliGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
-                         oGCiu, oGPro, oGPais, oGCP, oGTel, ;
-                         oGMov, oGMail, oGWeb, oGIban, oGFP, ;
-                         oGDias, oGLim, oGTar, oGDesc, ;
-                         oGCtaCon, oGCtaAnt, ;
-                         oChkRe, oChkIrf, oChkLopd, oChkMail, oChkBaja, ;
-                         lNuevo, oWin ) } )
+        {|| If( ClienteGuardar( _CliFormHash( oGId, oGNif, oGNom, oGApe, oGDir, ;
+                                             oGCiu, oGPro, oGPais, oGCP, oGTel, ;
+                                             oGMov, oGMail, oGWeb, oGIban, oGFP, ;
+                                             oGDias, oGLim, oGTar, oGDesc, ;
+                                             oGTipCli, oGCtaCon, oGCtaAnt, ;
+                                             oChkRe, oChkIrf, oChkLopd, oChkMail, ;
+                                             oChkBaja ), lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 33, 63, 34, 82, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -330,6 +329,7 @@ FUNCTION ClientesForm( lNuevo, cId )
     oWin:AddCtrl( oGLim    )
     oWin:AddCtrl( oGTar    )
     oWin:AddCtrl( oGDesc   )
+    oWin:AddCtrl( oGTipCli )
     oWin:AddCtrl( oGCtaCon )
     oWin:AddCtrl( oGCtaAnt )
     oWin:AddCtrl( oChkRe   )
@@ -348,21 +348,61 @@ FUNCTION ClientesForm( lNuevo, cId )
 RETURN NIL
 
 
-STATIC FUNCTION _CliGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
-                               oGCiu, oGPro, oGPais, oGCP, oGTel, ;
-                               oGMov, oGMail, oGWeb, oGIban, oGFP, ;
-                               oGDias, oGLim, oGTar, oGDesc, ;
-                               oGCtaCon, oGCtaAnt, ;
-                               oChkRe, oChkIrf, oChkLopd, oChkMail, oChkBaja, ;
-                               lNuevo, oWin )
+STATIC FUNCTION _CliFormHash( oGId, oGNif, oGNom, oGApe, oGDir, ;
+                                oGCiu, oGPro, oGPais, oGCP, oGTel, ;
+                                oGMov, oGMail, oGWeb, oGIban, oGFP, ;
+                                oGDias, oGLim, oGTar, oGDesc, ;
+                                oGTipCli, oGCtaCon, oGCtaAnt, ;
+                                oChkRe, oChkIrf, oChkLopd, oChkMail, oChkBaja )
+
+    LOCAL hCliente := {=>}
+
+    hCliente[ "ID"       ] := AllTrim( oGId:GetValue() )
+    hCliente[ "NIF"      ] := AllTrim( oGNif:GetValue() )
+    hCliente[ "NOMBRE"   ] := AllTrim( oGNom:GetValue() )
+    hCliente[ "APELLIDO" ] := AllTrim( oGApe:GetValue() )
+    hCliente[ "DIRECCIO" ] := AllTrim( oGDir:GetValue() )
+    hCliente[ "CIUDAD"   ] := AllTrim( oGCiu:GetValue() )
+    hCliente[ "PROVINCI" ] := AllTrim( oGPro:GetValue() )
+    hCliente[ "PAIS"     ] := AllTrim( oGPais:GetValue() )
+    hCliente[ "CP"       ] := AllTrim( oGCP:GetValue() )
+    hCliente[ "TELEFONO" ] := AllTrim( oGTel:GetValue() )
+    hCliente[ "MOVIL"    ] := AllTrim( oGMov:GetValue() )
+    hCliente[ "EMAIL"    ] := AllTrim( oGMail:GetValue() )
+    hCliente[ "WEB"      ] := AllTrim( oGWeb:GetValue() )
+    hCliente[ "CTA_BANC" ] := AllTrim( oGIban:GetValue() )
+    hCliente[ "FORPAGO"  ] := AllTrim( oGFP:GetValue() )
+    hCliente[ "DIAS_PAG" ] := oGDias:GetValue()
+    hCliente[ "LIMITE_C" ] := oGLim:GetValue()
+    hCliente[ "TARIFA"   ] := oGTar:GetValue()
+    hCliente[ "DESC_COM" ] := oGDesc:GetValue()
+    hCliente[ "TIP_CLI"  ] := AllTrim( oGTipCli:GetValue() )
+    hCliente[ "CTA_CONT" ] := AllTrim( oGCtaCon:GetValue() )
+    hCliente[ "CTA_ANTI" ] := AllTrim( oGCtaAnt:GetValue() )
+    hCliente[ "APL_RE"   ] := oChkRe:GetValue()
+    hCliente[ "APL_IRPF" ] := oChkIrf:GetValue()
+    hCliente[ "LOPD_OK"  ] := oChkLopd:GetValue()
+    hCliente[ "ENV_MAIL" ] := oChkMail:GetValue()
+    hCliente[ "BAJA"     ] := oChkBaja:GetValue()
+
+RETURN hCliente
+
+
+STATIC FUNCTION ClienteGuardar( hCliente, lNuevo )
 
     LOCAL cId
     LOCAL cNif
     LOCAL cCtaCon
 
-    cId     := AllTrim( oGId:uVar    )
-    cNif    := AllTrim( oGNif:uVar   )
-    cCtaCon := AllTrim( oGCtaCon:uVar )
+    cId     := hCliente[ "ID" ]
+    cNif    := hCliente[ "NIF" ]
+    cCtaCon := hCliente[ "CTA_CONT" ]
+
+    IF !_ValidNif( cNif, .T. )
+        MsgInfo( "El NIF/CIF no tiene formato fiscal reconocido." + Chr(13) + ;
+                 "Se guardara igualmente para permitir datos provisionales.", ;
+                 "Aviso NIF" )
+    ENDIF
 
     DbSelectArea( "CLI" )
     OrdSetFocus( "CLI_ID" )
@@ -370,19 +410,19 @@ STATIC FUNCTION _CliGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
     IF lNuevo
         IF DbSeek( cId )
             MsgStop( "El codigo " + cId + " ya existe.", "Alta cliente" )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !Empty( cNif )
             OrdSetFocus( "CLI_NIF" )
             IF DbSeek( Upper( cNif ) )
                 MsgStop( "El NIF " + cNif + " ya esta registrado.", "Alta cliente" )
                 OrdSetFocus( "CLI_ID" )
-                RETURN NIL
+                RETURN .F.
             ENDIF
             OrdSetFocus( "CLI_ID" )
         ENDIF
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
         IF Empty( cCtaCon )
@@ -390,10 +430,10 @@ STATIC FUNCTION _CliGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
         ENDIF
     ELSE
         IF !DbSeek( cId )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF Empty( cCtaCon )
             cCtaCon := _CliSubcuenta( cId )
@@ -401,31 +441,32 @@ STATIC FUNCTION _CliGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
     ENDIF
 
     REPLACE CLI->ID       WITH cId
-    REPLACE CLI->NIF      WITH AllTrim( oGNif:uVar  )
-    REPLACE CLI->NOMBRE   WITH AllTrim( oGNom:uVar  )
-    REPLACE CLI->APELLIDO WITH AllTrim( oGApe:uVar  )
-    REPLACE CLI->DIRECCIO WITH AllTrim( oGDir:uVar  )
-    REPLACE CLI->CIUDAD   WITH AllTrim( oGCiu:uVar  )
-    REPLACE CLI->PROVINCI WITH AllTrim( oGPro:uVar  )
-    REPLACE CLI->PAIS     WITH AllTrim( oGPais:uVar )
-    REPLACE CLI->CP       WITH AllTrim( oGCP:uVar   )
-    REPLACE CLI->TELEFONO WITH AllTrim( oGTel:uVar  )
-    REPLACE CLI->MOVIL    WITH AllTrim( oGMov:uVar  )
-    REPLACE CLI->EMAIL    WITH AllTrim( oGMail:uVar )
-    REPLACE CLI->WEB      WITH AllTrim( oGWeb:uVar  )
-    REPLACE CLI->CTA_BANC WITH AllTrim( oGIban:uVar )
-    REPLACE CLI->FORPAGO  WITH AllTrim( oGFP:uVar   )
-    REPLACE CLI->DIAS_PAG WITH oGDias:uVar
-    REPLACE CLI->LIMITE_C WITH oGLim:uVar
-    REPLACE CLI->TARIFA   WITH oGTar:uVar
-    REPLACE CLI->DESC_COM WITH oGDesc:uVar
-    REPLACE CLI->APL_RE   WITH oChkRe:lValue
-    REPLACE CLI->APL_IRPF WITH oChkIrf:lValue
-    REPLACE CLI->LOPD_OK  WITH oChkLopd:lValue
-    REPLACE CLI->ENV_MAIL WITH oChkMail:lValue
+    REPLACE CLI->NIF      WITH hCliente[ "NIF"      ]
+    REPLACE CLI->NOMBRE   WITH hCliente[ "NOMBRE"   ]
+    REPLACE CLI->APELLIDO WITH hCliente[ "APELLIDO" ]
+    REPLACE CLI->DIRECCIO WITH hCliente[ "DIRECCIO" ]
+    REPLACE CLI->CIUDAD   WITH hCliente[ "CIUDAD"   ]
+    REPLACE CLI->PROVINCI WITH hCliente[ "PROVINCI" ]
+    REPLACE CLI->PAIS     WITH hCliente[ "PAIS"     ]
+    REPLACE CLI->CP       WITH hCliente[ "CP"       ]
+    REPLACE CLI->TELEFONO WITH hCliente[ "TELEFONO" ]
+    REPLACE CLI->MOVIL    WITH hCliente[ "MOVIL"    ]
+    REPLACE CLI->EMAIL    WITH hCliente[ "EMAIL"    ]
+    REPLACE CLI->WEB      WITH hCliente[ "WEB"      ]
+    REPLACE CLI->CTA_BANC WITH hCliente[ "CTA_BANC" ]
+    REPLACE CLI->FORPAGO  WITH hCliente[ "FORPAGO"  ]
+    REPLACE CLI->DIAS_PAG WITH hCliente[ "DIAS_PAG" ]
+    REPLACE CLI->LIMITE_C WITH hCliente[ "LIMITE_C" ]
+    REPLACE CLI->TARIFA   WITH hCliente[ "TARIFA"   ]
+    REPLACE CLI->DESC_COM WITH hCliente[ "DESC_COM" ]
+    REPLACE CLI->TIP_CLI  WITH hCliente[ "TIP_CLI"  ]
+    REPLACE CLI->APL_RE   WITH hCliente[ "APL_RE"   ]
+    REPLACE CLI->APL_IRPF WITH hCliente[ "APL_IRPF" ]
+    REPLACE CLI->LOPD_OK  WITH hCliente[ "LOPD_OK"  ]
+    REPLACE CLI->ENV_MAIL WITH hCliente[ "ENV_MAIL" ]
     REPLACE CLI->CTA_CONT WITH cCtaCon
-    REPLACE CLI->CTA_ANTI WITH AllTrim( oGCtaAnt:uVar )
-    REPLACE CLI->BAJA     WITH oChkBaja:lValue
+    REPLACE CLI->CTA_ANTI WITH hCliente[ "CTA_ANTI" ]
+    REPLACE CLI->BAJA     WITH hCliente[ "BAJA"     ]
 
     IF lNuevo
         REPLACE CLI->FECHA_AL WITH Date()
@@ -434,9 +475,7 @@ STATIC FUNCTION _CliGuardar( oGId, oGNif, oGNom, oGApe, oGDir, ;
     DbCommit()
     DbUnlock()
 
-    oWin:Close()
-
-RETURN NIL
+RETURN .T.
 
 
 STATIC FUNCTION _CliSubcuenta( cId )
@@ -461,12 +500,14 @@ STATIC FUNCTION _CliSubcuenta( cId )
 RETURN "430" + StrZero( Val( cNum ), 7 )
 
 
-STATIC FUNCTION _ValidNif( cNif )
+STATIC FUNCTION _ValidNif( cNif, lSilent )
 
     LOCAL cLetra
     LOCAL nNum
     LOCAL cLetraCalc
     LOCAL cTipo
+
+    DEFAULT lSilent TO .F.
 
     cLetra := "TRWAGMYFPDXBNJZSQVHLCKE"
     cNif   := Upper( AllTrim( cNif ) )
@@ -476,7 +517,9 @@ STATIC FUNCTION _ValidNif( cNif )
     ENDIF
 
     IF Len( cNif ) < 7
-        MsgStop( "NIF demasiado corto.", "Validacion NIF" )
+        IF !lSilent
+            MsgStop( "NIF demasiado corto.", "Validacion NIF" )
+        ENDIF
         RETURN .F.
     ENDIF
 
@@ -491,7 +534,9 @@ STATIC FUNCTION _ValidNif( cNif )
         nNum       := Val( Left( cNif, 8 ) )
         cLetraCalc := SubStr( cLetra, ( nNum % 23 ) + 1, 1 )
         IF Right( cNif, 1 ) != cLetraCalc
-            MsgStop( "La letra del NIF no es correcta.", "Validacion NIF" )
+            IF !lSilent
+                MsgStop( "La letra del NIF no es correcta.", "Validacion NIF" )
+            ENDIF
             RETURN .F.
         ENDIF
         RETURN .T.
@@ -501,7 +546,9 @@ STATIC FUNCTION _ValidNif( cNif )
         RETURN .T.
     ENDIF
 
-    MsgStop( "Formato de NIF/CIF no reconocido.", "Validacion NIF" )
+    IF !lSilent
+        MsgStop( "Formato de NIF/CIF no reconocido.", "Validacion NIF" )
+    ENDIF
 
 RETURN .F.
 
