@@ -378,7 +378,7 @@ STATIC FUNCTION _FacCargarCab( cNum, cCli, cNom, dFec, cFP, nDias, ;
     DbSelectArea( "FAC" )
     OrdSetFocus( "FAC_NUM" )
 
-    IF !DbSeek( cNum )
+    IF !DbSeek( _FacKey( cNum ) )
         MsgStop( "Factura " + cNum + " no encontrada.", "Error" )
         RETURN .F.
     ENDIF
@@ -864,7 +864,7 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
         ENDIF
         DbAppend()
     ELSE
-        IF !DbSeek( cNum ) .OR. !NetRLock()
+        IF !DbSeek( _FacKey( cNum ) ) .OR. !NetRLock()
             RETURN NIL
         ENDIF
     ENDIF
@@ -945,6 +945,11 @@ STATIC FUNCTION _FacSiguiente()
     cCod  := "FAC" + cAnio
 
 RETURN GetNextNum( cCod, "Facturas " + cAnio )
+
+
+STATIC FUNCTION _FacKey( cNum )
+
+RETURN PadR( "A", 4 ) + PadR( AllTrim( cNum ), 10 )
 
 
 STATIC FUNCTION _FacGenVencim( cNum, cCli, dVto, nTotal )

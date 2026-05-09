@@ -14,6 +14,7 @@ CLASS TGet FROM TControl
 
     DATA nLen
     DATA nPos
+    DATA lNumFresh
 
     DATA bWhen
     DATA bValid
@@ -67,6 +68,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
     ::TControl:New( nRow, nCol, nRow, nCol + ::nLen - 1, oPar )
 
     ::nPos := 1
+    ::lNumFresh := .F.
 
     ::bWhen  := NIL
     ::bValid := NIL
@@ -143,6 +145,11 @@ METHOD SetFocus() CLASS TGet
         ENDIF
     ENDIF
 
+    IF ::cType == "N"
+        ::nPos      := ::nLen
+        ::lNumFresh := .T.
+    ENDIF
+
 RETURN ::TControl:SetFocus()
 
 
@@ -156,6 +163,7 @@ METHOD KillFocus() CLASS TGet
     ENDIF
 
     GfxCursor( SC_NONE )
+    ::lNumFresh := .F.
 
 RETURN ::TControl:KillFocus()
 
@@ -196,6 +204,7 @@ RETURN lOk
 METHOD HandleKey( nKey ) CLASS TGet
 
     LOCAL cChr
+    LOCAL cNum
 
     // Navegación externa
     IF nKey == K_TAB
@@ -277,7 +286,16 @@ METHOD HandleKey( nKey ) CLASS TGet
     ENDIF
 
     IF nKey == K_BS
-        IF ::nPos > 1
+        IF ::cType == "N"
+            cNum := _TGetNumBuffer( ::cBuffer )
+            IF Len( cNum ) > 0
+                cNum := Left( cNum, Len( cNum ) - 1 )
+            ENDIF
+            ::cBuffer   := PadL( cNum, ::nLen )
+            ::nPos      := ::nLen
+            ::lNumFresh := .F.
+            ::Paint()
+        ELSEIF ::nPos > 1
             ::nPos--
             ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
             ::Paint()
@@ -286,7 +304,13 @@ METHOD HandleKey( nKey ) CLASS TGet
     ENDIF
 
     IF nKey == K_DEL
-        ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
+        IF ::cType == "N"
+            ::cBuffer   := Space( ::nLen )
+            ::nPos      := ::nLen
+            ::lNumFresh := .F.
+        ELSE
+            ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
+        ENDIF
         ::Paint()
         RETURN .T.
     ENDIF
@@ -301,10 +325,30 @@ METHOD HandleKey( nKey ) CLASS TGet
             cChr := Upper( cChr )
         ENDIF
 
-        IF ::cType == "N" .OR. "9" $ ::cPicture
+        IF ::cType == "N" .OR. ( "9" $ ::cPicture .AND. ::cPicture != "99/99/9999" )
             IF ! ( cChr $ "0123456789.-" )
                 RETURN .T.
             ENDIF
+        ENDIF
+
+        IF ::cType == "N"
+            cNum := If( ::lNumFresh, "", _TGetNumBuffer( ::cBuffer ) )
+            DO CASE
+            CASE cChr == "-"
+                cNum := If( Left( cNum, 1 ) == "-", SubStr( cNum, 2 ), "-" + cNum )
+            CASE cChr == "."
+                IF "." $ cNum
+                    RETURN .T.
+                ENDIF
+                cNum += "."
+            OTHERWISE
+                cNum += cChr
+            ENDCASE
+            ::cBuffer   := PadL( cNum, ::nLen )
+            ::nPos      := ::nLen
+            ::lNumFresh := .F.
+            ::Paint()
+            RETURN .T.
         ENDIF
 
         IF ::cPicture == "99/99/9999"
@@ -357,6 +401,20 @@ METHOD SetValue( uValue ) CLASS TGet
     ENDCASE
 
     ::nPos := Min( ::nPos, ::nLen )
+    ::lNumFresh := .F.
     ::Paint()
 
 RETURN Self
+
+
+STATIC FUNCTION _TGetNumBuffer( cBuffer )
+
+    LOCAL cNum := AllTrim( cBuffer )
+
+    cNum := StrTran( cNum, ",", "" )
+
+    IF cNum == "0"
+        cNum := ""
+    ENDIF
+
+RETURN cNum

@@ -114,7 +114,7 @@ STATIC FUNCTION _ImpCargarCab( cTipo, cNum )
         ENDIF
         DbSelectArea( cAlias )
         OrdSetFocus( "FAC_NUM" )
-        IF !DbSeek( cNum )
+        IF !DbSeek( PadR( "A", 4 ) + PadR( AllTrim( cNum ), 10 ) )
             DbCloseArea()
             RETURN NIL
         ENDIF
