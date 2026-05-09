@@ -931,6 +931,8 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
         ImprimirFactura( cNum )
     ENDIF
 
+    oWin:Close()
+
 RETURN NIL
 
 
