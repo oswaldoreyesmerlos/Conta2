@@ -297,7 +297,11 @@ METHOD HandleKey( nKey ) CLASS TGet
             ::Paint()
         ELSEIF ::nPos > 1
             ::nPos--
-            ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
+            IF ::cType == "C"
+                ::cBuffer := _TGetDeleteAt( ::cBuffer, ::nPos, ::nLen )
+            ELSE
+                ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
+            ENDIF
             ::Paint()
         ENDIF
         RETURN .T.
@@ -308,6 +312,8 @@ METHOD HandleKey( nKey ) CLASS TGet
             ::cBuffer   := Space( ::nLen )
             ::nPos      := ::nLen
             ::lNumFresh := .F.
+        ELSEIF ::cType == "C"
+            ::cBuffer := _TGetDeleteAt( ::cBuffer, ::nPos, ::nLen )
         ELSE
             ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
         ENDIF
@@ -405,6 +411,15 @@ METHOD SetValue( uValue ) CLASS TGet
     ::Paint()
 
 RETURN Self
+
+
+STATIC FUNCTION _TGetDeleteAt( cBuffer, nPos, nLen )
+
+    LOCAL cNew
+
+    cNew := Left( cBuffer, nPos - 1 ) + SubStr( cBuffer, nPos + 1 ) + " "
+
+RETURN PadR( Left( cNew, nLen ), nLen )
 
 
 STATIC FUNCTION _TGetNumBuffer( cBuffer )
