@@ -1,7 +1,7 @@
 # Test del control TGrid V0.1
 #
-# Compilar:  hbmk2 testgrid.hbp
-# Ejecutar:  TestGrid.exe
+# Compilar desde la raiz: hbmk2 Test\testgrid.hbp
+# Ejecutar:              TestGrid.exe
 
 -oTestGrid
 
@@ -11,26 +11,29 @@
 gtwvg.hbc
 hbct.hbc
 
--i.
+-i..\api
+-i..
 
 # Capa grafica
-Gfx.prg
+..\api\Gfx.prg
 
 # Clases de controles
-TControl.prg
-TLabel.prg
-TGet.prg
-TButton.prg
-TCheck.prg
-TCombo.prg
-TGrid.prg
-TWindow.prg
+..\api\TControl.prg
+..\api\TLabel.prg
+..\api\TGet.prg
+..\api\TButton.prg
+..\api\TCheck.prg
+..\api\TCombo.prg
+..\api\TGrid.prg
+..\api\TWindow.prg
+..\api\MsgBox.prg
+..\api\MsgYesNo.prg
 
 # Capa de datos
-TTable.prg
+..\api\TTable.prg
 
 # Utilidades
-Util.prg
+..\api\Util2.prg
 
 # Programa de prueba
 TestGrid.prg

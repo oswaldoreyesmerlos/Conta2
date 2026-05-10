@@ -1,22 +1,28 @@
+# Compilar desde la raiz: hbmk2 Test\testpedido.hbp
+# Ejecutar:              TestPedido.exe
+
 gtwvg.hbc
 hbct.hbc
 
--i.
+-i..\api
+-i..
 
-Gfx.prg
-TControl.prg
-TLabel.prg
-TGet.prg
-TButton.prg
-TCheck.prg
-TCombo.prg
-TGrid.prg
-TWindow.prg
-TTable.prg
-Util.prg
+..\api\Gfx.prg
+..\api\TControl.prg
+..\api\TLabel.prg
+..\api\TGet.prg
+..\api\TButton.prg
+..\api\TCheck.prg
+..\api\TCombo.prg
+..\api\TGrid.prg
+..\api\TWindow.prg
+..\api\MsgBox.prg
+..\api\MsgYesNo.prg
+..\api\TTable.prg
+..\api\Util2.prg
 
 # Recursos (icono incrustado en el exe)
-appicon.rc
+# appicon.rc
 
 # Programa de prueba
 TestPedido.prg

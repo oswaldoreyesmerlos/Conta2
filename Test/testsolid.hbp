@@ -1,4 +1,5 @@
 # Mini-test para verificar wvg_BoxSolid y WVG_ColorHB2RGB
+# Compilar desde la raiz: hbmk2 Test\testsolid.hbp
 -otestsolid
 
 -w0
