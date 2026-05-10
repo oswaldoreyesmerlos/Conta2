@@ -48,6 +48,10 @@ EXTERNAL CajaView
 EXTERNAL BancosView
 EXTERNAL CobrosView
 EXTERNAL PagosView
+EXTERNAL BancoNuevo
+EXTERNAL ReciboNuevo
+EXTERNAL CobroNuevo
+EXTERNAL PagoNuevo
 EXTERNAL InformeClientes
 EXTERNAL InformeFacturas
 EXTERNAL InformePresupuestos
@@ -78,6 +82,10 @@ FUNCTION Menu_Init()
     LOCAL aSubFac
     LOCAL aSubObr
     LOCAL aSubPre
+    LOCAL aSubCaja
+    LOCAL aSubCob
+    LOCAL aSubPag
+    LOCAL aSubBan
     LOCAL lEsAdm
     LOCAL lEsCont
     LOCAL lEsCaja
@@ -97,6 +105,10 @@ FUNCTION Menu_Init()
     aSubFac  := {}
     aSubObr  := {}
     aSubPre  := {}
+    aSubCaja := {}
+    aSubCob  := {}
+    aSubPag  := {}
+    aSubBan  := {}
 
     lEsAdm  := Upper( AllTrim( cUserRol ) ) == "ADM" .OR. ;
                HasPerm( "SEG_USR" ) .OR. HasPerm( "SEG_ROL" )
@@ -130,6 +142,19 @@ FUNCTION Menu_Init()
     AAdd( aSubFac, { "Historial", {|| FacturasView() }, NIL, "Facturas emitidas" } )
     AAdd( aSubFac, { "Nueva directa", {|| AltaFact() }, NIL, "Factura sin presupuesto ni obra" } )
 
+    // Tesoreria
+    AAdd( aSubCaja, { "Listado", {|| CajaView()    }, NIL, "Recibos de caja" } )
+    AAdd( aSubCaja, { "Nuevo",   {|| ReciboNuevo() }, NIL, "Nuevo recibo de caja" } )
+
+    AAdd( aSubCob, { "Pendientes", {|| CobrosView() }, NIL, "Facturas pendientes de cobro" } )
+    AAdd( aSubCob, { "Nuevo",      {|| CobroNuevo() }, NIL, "Nuevo cobro manual" } )
+
+    AAdd( aSubPag, { "Pendientes compras", {|| PagosView() }, NIL, "Compras pendientes de pago" } )
+    AAdd( aSubPag, { "Nuevo pago libre",   {|| PagoNuevo() }, NIL, "Cheque, transferencia u otro pago" } )
+
+    AAdd( aSubBan, { "Listado", {|| BancosView() }, NIL, "Cuentas bancarias" } )
+    AAdd( aSubBan, { "Nuevo",   {|| BancoNuevo() }, NIL, "Nueva cuenta bancaria" } )
+
     // -------------------------------------------------------------------------
     // MAESTROS
     // -------------------------------------------------------------------------
@@ -154,10 +179,10 @@ FUNCTION Menu_Init()
     // TESORERIA
     // -------------------------------------------------------------------------
     IF lEsCaja
-        AAdd( aTeso, { "Caja",    {|| CajaView()    }, NIL, "Recibos de caja y cobros" } )
-        AAdd( aTeso, { "Cobros",  {|| CobrosView()  }, NIL, "Vencimientos pendientes de cobro" } )
-        AAdd( aTeso, { "Pagos",   {|| PagosView()   }, NIL, "Pagos pendientes a proveedores" } )
-        AAdd( aTeso, { "Bancos",  {|| BancosView()  }, NIL, "Cuentas bancarias y movimientos" } )
+        AAdd( aTeso, { "Caja",    NIL, aSubCaja, "Recibos de caja y cobros" } )
+        AAdd( aTeso, { "Cobros",  NIL, aSubCob,  "Vencimientos pendientes de cobro" } )
+        AAdd( aTeso, { "Pagos",   NIL, aSubPag,  "Pagos pendientes a proveedores" } )
+        AAdd( aTeso, { "Bancos",  NIL, aSubBan,  "Cuentas bancarias y movimientos" } )
     ENDIF
 
     // -------------------------------------------------------------------------

@@ -13,7 +13,9 @@ CLASS TGet FROM TControl
     DATA lPassword
 
     DATA nLen
+    DATA nBufLen
     DATA nPos
+    DATA nOffset
     DATA lNumFresh
 
     DATA bWhen
@@ -38,10 +40,15 @@ ENDCLASS
 // ----------------------------------------------------------------------------
 METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 
+    LOCAL nScroll
+
+    DEFAULT cPic TO ""
+
     ::uVar     := uValue
     ::cPicture := cPic
     ::cType    := ValType( uValue )
     ::lPassword := ( "@K" $ Upper( cPic ) )
+    nScroll := _TGetScrollLen( cPic )
 
     DO CASE
 
@@ -50,6 +57,9 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 
 	CASE ::cType == "C"
 		::nLen := Max( Len( uValue ), 10 )
+        IF nScroll > 0
+            ::nLen := Min( nScroll, ::nLen )
+        ENDIF
 
 	CASE ::cType == "N"
 		::nLen := 8
@@ -65,9 +75,16 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 
 	ENDCASE
 
+    IF ::cType == "C"
+        ::nBufLen := Max( Len( uValue ), ::nLen )
+    ELSE
+        ::nBufLen := ::nLen
+    ENDIF
+
     ::TControl:New( nRow, nCol, nRow, nCol + ::nLen - 1, oPar )
 
     ::nPos := 1
+    ::nOffset := 0
     ::lNumFresh := .F.
 
     ::bWhen  := NIL
@@ -110,9 +127,15 @@ METHOD Paint() CLASS TGet
     cCol := If( ::lFocused, CLR_GET_FOC, CLR_GET )
 
     IF ::lPassword
-        cShow := PadR( Replicate( "*", Len( RTrim( ::cBuffer ) ) ), ::nLen )
+        _TGetFixOffset( Self )
+        cShow := PadR( SubStr( PadR( Replicate( "*", Len( RTrim( ::cBuffer ) ) ), ;
+                                      ::nBufLen ), ::nOffset + 1, ::nLen ), ::nLen )
     ELSEIF ::cType == "N"
         cShow := PadL( AllTrim( ::cBuffer ), ::nLen )
+    ELSEIF ::cType == "C"
+        _TGetFixOffset( Self )
+        cShow := PadR( SubStr( PadR( ::cBuffer, ::nBufLen ), ;
+                               ::nOffset + 1, ::nLen ), ::nLen )
     ELSE
         cShow := PadR( ::cBuffer, ::nLen )
     ENDIF
@@ -124,7 +147,7 @@ METHOD Paint() CLASS TGet
 
     IF ::lFocused
         GfxCursor( SC_NORMAL )
-        GfxSetPos( ::nTop, ::nLeft + ::nPos - 1 )
+        GfxSetPos( ::nTop, ::nLeft + ::nPos - ::nOffset - 1 )
     ELSE
         GfxCursor( SC_NONE )
     ENDIF
@@ -238,7 +261,7 @@ METHOD HandleKey( nKey ) CLASS TGet
     ENDIF
 
     IF nKey == K_RIGHT
-        IF ::nPos < ::nLen
+        IF ::nPos < ::nBufLen
             ::nPos++
             ::Paint()
         ENDIF
@@ -252,7 +275,7 @@ METHOD HandleKey( nKey ) CLASS TGet
     ENDIF
 
     IF nKey == K_END
-        ::nPos := ::nLen
+        ::nPos := ::nBufLen
         ::Paint()
         RETURN .T.
     ENDIF
@@ -270,7 +293,7 @@ METHOD HandleKey( nKey ) CLASS TGet
         ELSEIF ::nPos > 1
             ::nPos--
             IF ::cType == "C"
-                ::cBuffer := _TGetDeleteAt( ::cBuffer, ::nPos, ::nLen )
+                ::cBuffer := _TGetDeleteAt( ::cBuffer, ::nPos, ::nBufLen )
             ELSE
                 ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
             ENDIF
@@ -285,7 +308,7 @@ METHOD HandleKey( nKey ) CLASS TGet
             ::nPos      := ::nLen
             ::lNumFresh := .F.
         ELSEIF ::cType == "C"
-            ::cBuffer := _TGetDeleteAt( ::cBuffer, ::nPos, ::nLen )
+            ::cBuffer := _TGetDeleteAt( ::cBuffer, ::nPos, ::nBufLen )
         ELSE
             ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, " " )
         ENDIF
@@ -299,7 +322,7 @@ METHOD HandleKey( nKey ) CLASS TGet
 
         cChr := Chr( nKey )
 
-        IF ::cPicture == "@!"
+        IF "!" $ Upper( ::cPicture )
             cChr := Upper( cChr )
         ENDIF
 
@@ -338,7 +361,7 @@ METHOD HandleKey( nKey ) CLASS TGet
 
         ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, cChr )
 
-        IF ::nPos < ::nLen
+        IF ::nPos < ::nBufLen
             ::nPos++
         ENDIF
 
@@ -364,7 +387,7 @@ METHOD SetValue( uValue ) CLASS TGet
 
     DO CASE
     CASE ::cType == "C"
-        ::cBuffer := PadR( hb_CStr( uValue ), ::nLen )
+        ::cBuffer := PadR( hb_CStr( uValue ), ::nBufLen )
 
     CASE ::cType == "N"
         ::cBuffer := _TGetFormatNum( uValue, ::cPicture, ::nLen )
@@ -379,7 +402,8 @@ METHOD SetValue( uValue ) CLASS TGet
         ::cBuffer := Space( ::nLen )
     ENDCASE
 
-    ::nPos := Min( ::nPos, ::nLen )
+    ::nPos := Min( ::nPos, ::nBufLen )
+    ::nOffset := Min( ::nOffset, Max( 0, ::nBufLen - ::nLen ) )
     ::lNumFresh := .F.
     ::Paint()
 
@@ -411,6 +435,56 @@ STATIC FUNCTION _TGetDeleteAt( cBuffer, nPos, nLen )
     cNew := Left( cBuffer, nPos - 1 ) + SubStr( cBuffer, nPos + 1 ) + " "
 
 RETURN PadR( Left( cNew, nLen ), nLen )
+
+
+STATIC FUNCTION _TGetScrollLen( cPicture )
+
+    LOCAL cPic
+    LOCAL nAt
+    LOCAL nPos
+    LOCAL cNum
+    LOCAL cChr
+
+    IF ValType( cPicture ) != "C" .OR. Empty( cPicture ) .OR. Left( cPicture, 1 ) != "@"
+        RETURN 0
+    ENDIF
+
+    cPic := Upper( cPicture )
+    nAt  := At( "S", cPic )
+    IF nAt == 0
+        RETURN 0
+    ENDIF
+
+    cNum := ""
+    FOR nPos := nAt + 1 TO Len( cPic )
+        cChr := SubStr( cPic, nPos, 1 )
+        IF !( cChr $ "0123456789" )
+            EXIT
+        ENDIF
+        cNum += cChr
+    NEXT
+
+RETURN Val( cNum )
+
+
+STATIC FUNCTION _TGetFixOffset( oGet )
+
+    IF oGet:cType != "C"
+        oGet:nOffset := 0
+        RETURN NIL
+    ENDIF
+
+    oGet:nPos := Max( 1, Min( oGet:nPos, oGet:nBufLen ) )
+
+    IF oGet:nPos <= oGet:nOffset
+        oGet:nOffset := oGet:nPos - 1
+    ELSEIF oGet:nPos > oGet:nOffset + oGet:nLen
+        oGet:nOffset := oGet:nPos - oGet:nLen
+    ENDIF
+
+    oGet:nOffset := Max( 0, Min( oGet:nOffset, oGet:nBufLen - oGet:nLen ) )
+
+RETURN NIL
 
 
 STATIC FUNCTION _TGetNumBuffer( cBuffer )

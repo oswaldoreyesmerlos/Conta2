@@ -512,6 +512,41 @@ FUNCTION InicioDBF()
     AAdd( aIndices, { "COM_VTO", "DtoS(FECHA_VT)" } )
     AAdd( aTablas, { "COMPRAS", aCampos, aIndices } )
 
+    // -- 19B. PAGOS (documentos de pago emitidos) --
+    // FORMA_PA: EFE=Efectivo TRF=Transferencia CHQ=Cheque TAR=Tarjeta OTR=Otro
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "NUMERO",   "C", 10, 0 } )
+    AAdd( aCampos, { "FECHA",    "D",  8, 0 } )
+    AAdd( aCampos, { "PROV_ID",  "C", 10, 0 } )
+    AAdd( aCampos, { "BENEFIC",  "C", 60, 0 } )
+    AAdd( aCampos, { "CONCEPTO", "C",100, 0 } )
+    AAdd( aCampos, { "FORMA_PA", "C",  3, 0 } )
+    AAdd( aCampos, { "REFERENC", "C", 20, 0 } )
+    AAdd( aCampos, { "BANCO",    "C", 10, 0 } )
+    AAdd( aCampos, { "CTA_DEBE", "C", 10, 0 } )
+    AAdd( aCampos, { "CTA_HABER","C", 10, 0 } )
+    AAdd( aCampos, { "TOTAL",    "N", 12, 2 } )
+    AAdd( aCampos, { "ASIENTO",  "C", 10, 0 } )
+    AAdd( aCampos, { "DOC_ORIG", "C", 10, 0 } )
+    AAdd( aCampos, { "USUARIO_", "C", 10, 0 } )
+    AAdd( aIndices, { "PAG_NUM", "NUMERO" } )
+    AAdd( aIndices, { "PAG_FEC", "DtoS(FECHA)" } )
+    AAdd( aIndices, { "PAG_PRV", "PROV_ID+DtoS(FECHA)" } )
+    AAdd( aTablas, { "PAGOS", aCampos, aIndices } )
+
+    // -- 19C. PAGO_DET (imputacion contable del pago) --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "NUMERO",   "C", 10, 0 } )
+    AAdd( aCampos, { "LINEA",    "N",  3, 0 } )
+    AAdd( aCampos, { "REF_DOC",  "C", 15, 0 } )
+    AAdd( aCampos, { "CONCEPTO", "C", 60, 0 } )
+    AAdd( aCampos, { "IMPORTE",  "N", 12, 2 } )
+    AAdd( aCampos, { "CTA_CONT", "C", 10, 0 } )
+    AAdd( aIndices, { "PGD_LIN", "NUMERO+Str(LINEA,3)" } )
+    AAdd( aTablas, { "PAGO_DET", aCampos, aIndices } )
+
     // -- 20. COMP_DET --
     aCampos  := {}
     aIndices := {}
@@ -1343,6 +1378,10 @@ STATIC FUNCTION _GetTablasList()
                                      { "COM_PRO",  "PROV_ID"                    }, ;
                                      { "COM_FEC",  "DtoS(FECHA)"                }, ;
                                      { "COM_VTO",  "DtoS(FECHA_VT)"             } } } )
+    AAdd( aTablas, { "PAGOS",      { { "PAG_NUM",  "NUMERO"                     }, ;
+                                     { "PAG_FEC",  "DtoS(FECHA)"                }, ;
+                                     { "PAG_PRV",  "PROV_ID+DtoS(FECHA)"        } } } )
+    AAdd( aTablas, { "PAGO_DET",   { { "PGD_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
     AAdd( aTablas, { "COMP_DET",   { { "CPD_LIN",  "NUMERO+Str(LINEA,3)"       } } } )
     AAdd( aTablas, { "RECIBOS",    { { "REC_NUM",  "NUMERO"                     }, ;
                                      { "REC_CLI",  "CLIENTE_"                   }, ;
