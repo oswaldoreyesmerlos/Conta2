@@ -1332,138 +1332,17 @@ RETURN .T.
 // ============================================================================
 FUNCTION CierreEjercicio()
 
-    LOCAL nEjer
-    LOCAL nEjerNvo
-    LOCAL nDebe
-    LOCAL nHaber
-    LOCAL nDif
-    LOCAL cAsi
-    LOCAL dFecCie
-    LOCAL dFecApe
-    LOCAL dUltCie
+    MsgInfo( "El cierre de ejercicio aun no esta implementado." + Chr(13) + ;
+             Chr(13) + ;
+             "Pendiente:" + Chr(13) + ;
+             "- Regularizar cuentas 6/7 contra resultado." + Chr(13) + ;
+             "- Generar asiento de cierre." + Chr(13) + ;
+             "- Generar asiento de apertura del ejercicio siguiente." + Chr(13) + ;
+             "- Bloquear o marcar correctamente el ejercicio cerrado." + Chr(13) + ;
+             Chr(13) + ;
+             "No se ha modificado ningun dato.", "Cierre de ejercicio" )
 
-    MEMVAR cUserRol
-
-    IF AllTrim( cUserRol ) != "ADM"
-        MsgStop( "Solo el Administrador puede ejecutar el cierre.", "Cierre" )
-        RETURN .F.
-    ENDIF
-
-    nEjer   := Year( Date() )
-    nEjerNvo := nEjer + 1
-    dFecCie := CToD( "31/12/" + AllTrim( Str( nEjer ) ) )
-    dFecApe := CToD( "01/01/" + AllTrim( Str( nEjerNvo ) ) )
-
-    IF ABRIR_TABLA( "EMPRESA", "EMP_CV", "" )
-        EMP_CV->( DbGoTop() )
-        IF !EMP_CV->( Eof() )
-            dUltCie := DbFieldValue( "FEC_CIER", CToD( "" ) )
-        ENDIF
-        EMP_CV->( DbCloseArea() )
-    ENDIF
-
-    IF ValType( dUltCie ) == "D" .AND. !Empty( dUltCie ) .AND. Year( dUltCie ) >= nEjer
-        MsgStop( "El ejercicio " + AllTrim( Str( nEjer ) ) + ;
-                 " ya figura cerrado." + Chr(13) + ;
-                 "Fecha de cierre registrada: " + DToC( dUltCie ), ;
-                 "Cierre de ejercicio" )
-        RETURN .F.
-    ENDIF
-
-    IF !MsgYesNo( "CIERRE DEL EJERCICIO " + AllTrim( Str( nEjer ) ) + Chr(13) + ;
-                  "Esta operacion requiere copia de seguridad previa." + Chr(13) + ;
-                  "Todos los usuarios deben estar desconectados." + Chr(13) + ;
-                  Chr(13) + ;
-                  "Desea continuar?", "Cierre de ejercicio" )
-        RETURN .F.
-    ENDIF
-
-    // Verificar cuadre
-    IF !ABRIR_TABLA( "LDIARIO", "DIA_CI", "DIA_FEC" )
-        RETURN .F.
-    ENDIF
-
-    nDebe  := 0
-    nHaber := 0
-
-    DbSelectArea( "DIA_CI" )
-    DbGoTop()
-
-    DO WHILE !DIA_CI->( Eof() )
-        IF !DIA_CI->( Deleted() ) .AND. Year( DIA_CI->D_FECHA ) == nEjer
-            nDebe  += DIA_CI->D_DEBE
-            nHaber += DIA_CI->D_HABER
-        ENDIF
-        DIA_CI->( DbSkip() )
-    ENDDO
-
-    DIA_CI->( DbCloseArea() )
-
-    nDif := Abs( nDebe - nHaber )
-
-    IF nDif > 0.01
-        MsgStop( "El diario NO esta cuadrado." + Chr(13) + ;
-                 "Diferencia: " + Transform( nDif, "999,999.99" ) + " EUR" + Chr(13) + ;
-                 "Corrija los asientos antes de cerrar.", "Cierre" )
-        RETURN .F.
-    ENDIF
-
-    IF !MsgYesNo( "VALIDACION CORRECTA DEL EJERCICIO " + AllTrim( Str( nEjer ) ) + Chr(13) + ;
-                  "Debe : " + Transform( nDebe,  "999,999,999.99" ) + Chr(13) + ;
-                  "Haber: " + Transform( nHaber, "999,999,999.99" ) + Chr(13) + ;
-                  Chr(13) + ;
-                  "Se generara el asiento de cierre y se marcara la empresa " + ;
-                  "con fecha " + DToC( dFecCie ) + "." + Chr(13) + ;
-                  "Confirma DEFINITIVAMENTE el cierre?", ;
-                  "Confirmar cierre" )
-        RETURN .F.
-    ENDIF
-
-    // Asiento de cierre
-    cAsi := GetNextNum( "ASI" + AllTrim( Str( nEjer ) ), "Asientos" )
-
-    IF !ABRIR_TABLA( "LDIARIO", "DIA_CG", "DIA_ASI" )
-        RETURN .F.
-    ENDIF
-
-    DbSelectArea( "DIA_CG" )
-
-    IF NetFLock()
-
-        // Asiento simbolico de cierre de ejercicio
-        DbAppend()
-        REPLACE DIA_CG->D_ASIENT WITH cAsi
-        REPLACE DIA_CG->D_LINEA  WITH 1
-        REPLACE DIA_CG->D_FECHA  WITH dFecCie
-        REPLACE DIA_CG->D_CUENTA WITH "129"
-        REPLACE DIA_CG->D_DEBE   WITH 0
-        REPLACE DIA_CG->D_HABER  WITH 0
-        REPLACE DIA_CG->D_DESCRI WITH "CIERRE EJERCICIO " + AllTrim( Str( nEjer ) )
-        REPLACE DIA_CG->TIP_ORIG WITH "CIE"
-        REPLACE DIA_CG->DOC_ORIG WITH AllTrim( Str( nEjer ) )
-
-        DbUnlock()
-
-    ENDIF
-
-    DIA_CG->( DbCloseArea() )
-
-    // Marcar cierre en EMPRESA
-    IF ABRIR_TABLA( "EMPRESA", "EMP_CI", "" )
-        EMP_CI->( DbGoTop() )
-        IF !EMP_CI->( Eof() ) .AND. NetRLock()
-            REPLACE EMP_CI->FEC_CIER WITH dFecCie
-            DbUnlock()
-        ENDIF
-        EMP_CI->( DbCloseArea() )
-    ENDIF
-
-    MsgInfo( "Ejercicio " + AllTrim( Str( nEjer ) ) + " cerrado correctamente." + Chr(13) + ;
-             "Fecha de cierre: " + DToC( dFecCie ) + Chr(13) + ;
-             "Puede comenzar a operar en el ejercicio " + AllTrim( Str( nEjerNvo ) ), ;
-             "Cierre de ejercicio" )
-
-RETURN .T.
+RETURN .F.
 
 
 // ============================================================================

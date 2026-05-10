@@ -5,6 +5,7 @@
  * FUNCIONES PUBLICAS
  * ------------------
  *   PresupuestosView()    - grid listado de presupuestos
+ *   PresupuestoNuevo()    - alias semantico para alta directa
  *   AltaPresupuesto()     - alta directa de presupuesto nuevo
  *
  * NUMERACION
@@ -167,6 +168,9 @@ RETURN "PENDIENTE"
 FUNCTION AltaPresupuesto()
 RETURN _PreForm( "", NIL )
 
+FUNCTION PresupuestoNuevo()
+RETURN AltaPresupuesto()
+
 STATIC FUNCTION _PreEditar( cNumero )
 RETURN _PreForm( cNumero, NIL )
 
@@ -284,7 +288,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oGFP   := TGet():New(  6, 44, cFormPag, "@!",         oWin )
     oGDias := TGet():New(  6, 74, nDias,    "999",        oWin )
     oGRet  := TGet():New(  6, 98, nPorcRet, "99.99",      oWin )
-    oGObs  := TGet():New(  8, 14, cObserva, "@!",         oWin )
+    oGObs  := TGet():New(  8, 14, cObserva, "@S60!",      oWin )
 
     IF lNuevo
         oBtCli := TButton():New( 3, 14, 3, 25, oWin, "BUSCAR CLI", ;
@@ -329,28 +333,29 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oWin:AddCtrl( oLRet   )
     oWin:AddCtrl( oLTotal )
 
-    oBtNLin := TButton():New( 25, 60, 25, 78, oWin, "NUEVA LINEA (F5)", ;
+    oBtNLin := TButton():New( 28, 60, 28, 78, oWin, "NUEVA LINEA (F5)", ;
         {|| _PreNuevaLin( oGrid, @aLineas, nPorcRet, ;
                           @nBase, @nIva, @nRet, @nTotal, ;
                           oLBase, oLIva, oLRet, oLTotal ) } )
 
-    oBtELin := TButton():New( 25, 80, 25, 98, oWin, "EDITAR LINEA", ;
+    oBtELin := TButton():New( 28, 80, 28, 98, oWin, "EDITAR LINEA", ;
         {|| _PreEditLin( oGrid, @aLineas, nPorcRet, ;
                          @nBase, @nIva, @nRet, @nTotal, ;
                          oLBase, oLIva, oLRet, oLTotal ) } )
 
-    oBtDLin := TButton():New( 25,100, 25,118, oWin, "BORRAR LINEA", ;
+    oBtDLin := TButton():New( 28,100, 28,118, oWin, "BORRAR LINEA", ;
         {|| _PreBorrarLin( oGrid, @aLineas, nPorcRet, ;
                            @nBase, @nIva, @nRet, @nTotal, ;
                            oLBase, oLIva, oLRet, oLTotal ) } )
 
     oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
-        {|| PreGuardar( _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs ), ;
+        {|| If( PreGuardar( _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs ), ;
                            aLineas, cPieDoc, cNumero, lNuevo, ;
-                           nBase, nIva, nRet, nTotal, @cNumero, oLNumero ) } )
+                           nBase, nIva, nRet, nTotal, @cNumero, oLNumero ), ;
+                oWin:Close(), NIL ) } )
 
     oBtImp := TButton():New( 33, 20, 34, 36, oWin, "IMPRIMIR", ;
-        {|| ImprimirPresupuesto( cNumero ) } )
+        {|| _PreImprimirActual( cNumero ) } )
 
     oBtCan := TButton():New( 33,108, 34,124, oWin, "CERRAR", ;
         {|| oWin:Close() } )
@@ -418,6 +423,7 @@ STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, 
     dFec  := PRE_C->FECHA
     dVal  := DbFieldValue( "VALIDEZ", PRE_C->FECHA )
     cFP   := AllTrim( DbFieldValue( "FORMA_PA", "" ) )
+    nDias := DbFieldValue( "DIAS_PAG", 0 )
     nRet  := DbFieldValue( "PORC_RET", 0 )
     cObs  := AllTrim( DbFieldValue( "OBSERVA", "" ) )
     lAnu  := ( DbFieldValue( "ESTADO", "P" ) == "A" .OR. ;
@@ -498,7 +504,7 @@ STATIC FUNCTION _PreBuscarCli( oGet, cNom, cInfo, cFP, nDias, nRet, ;
 
     LOCAL cId
 
-    cId := AllTrim( oGet:GetValue() )
+    cId := AllTrim( oGet:cBuffer )
 
     IF Empty( cId )
         RETURN .T.
@@ -743,7 +749,8 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     oWin:AddCtrl( oLImp )
 
     bRecalc := {|| ;
-        nImp := ( oGCant:GetValue() * oGPre:GetValue() ) * ( 1 - oGDto:GetValue() / 100 ), ;
+        nImp := ( _PreGetNum( oGCant ) * _PreGetNum( oGPre ) ) * ;
+                ( 1 - _PreGetNum( oGDto ) / 100 ), ;
         oLImp:SetText( _FmtNP( nImp ) ), ;
         .T. }
 
@@ -769,14 +776,24 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
 
     IF lOK
         aLin[LIN_DESC] := AllTrim( oGDesc:GetValue() )
-        aLin[LIN_CANT] := oGCant:GetValue()
-        aLin[LIN_PRE]  := oGPre:GetValue()
-        aLin[LIN_DTO]  := oGDto:GetValue()
-        aLin[LIN_IVA]  := oGIva:GetValue()
-        aLin[LIN_IMP]  := ( oGCant:GetValue() * oGPre:GetValue() ) * ( 1 - oGDto:GetValue() / 100 )
+        aLin[LIN_CANT] := _PreGetNum( oGCant )
+        aLin[LIN_PRE]  := _PreGetNum( oGPre )
+        aLin[LIN_DTO]  := _PreGetNum( oGDto )
+        aLin[LIN_IVA]  := _PreGetNum( oGIva )
+        aLin[LIN_IMP]  := ( aLin[LIN_CANT] * aLin[LIN_PRE] ) * ;
+                          ( 1 - aLin[LIN_DTO] / 100 )
     ENDIF
 
 RETURN lOK
+
+
+STATIC FUNCTION _PreGetNum( oGet )
+
+    IF oGet == NIL
+        RETURN 0
+    ENDIF
+
+RETURN Val( StrTran( AllTrim( oGet:cBuffer ), ",", "" ) )
 
 
 // ============================================================================
@@ -824,6 +841,11 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
 
     IF Empty( cCli )
         MsgStop( "Debe indicar el cliente.", "Guardar" )
+        RETURN .F.
+    ENDIF
+
+    IF !_PreClienteExiste( cCli )
+        MsgStop( "Cliente " + AllTrim( cCli ) + " no encontrado.", "Guardar" )
         RETURN .F.
     ENDIF
 
@@ -880,6 +902,9 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
     REPLACE PRE_G->TOTAL    WITH nTotal
     DbFieldPutIf( "OBSERVA",  cObs )
     DbFieldPutIf( "PIE_DOC",  cPieDoc )
+    DbFieldPutIf( "FORMA_PA", PadR( cFP, 3 ) )
+    DbFieldPutIf( "DIAS_PAG", nDias )
+    DbFieldPutIf( "RETENCIO", nRet )
     DbFieldPutIf( "PORC_RET", nPRet )
 
     IF lNuevo
@@ -936,12 +961,71 @@ RETURN .T.
 STATIC FUNCTION _PreSiguiente()
 
     LOCAL cAnio
-    LOCAL cCod
+    LOCAL cPref
+    LOCAL cNum
+    LOCAL nMax
+    LOCAL nSeq
 
-    cAnio := AllTrim( Str( Year( Date() ) ) )
-    cCod  := "PRE" + cAnio
+    cAnio := StrZero( Year( Date() ), 4 )
+    cPref := "P" + cAnio
+    nMax  := 0
 
-RETURN GetNextNum( cCod, "Presupuestos " + cAnio )
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_N", "PRE_NUM" )
+        RETURN ""
+    ENDIF
+
+    DbSelectArea( "PRE_N" )
+    DbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted()
+            cNum := AllTrim( PRE_N->NUMERO )
+            IF Left( cNum, Len( cPref ) ) == cPref
+                nSeq := Val( SubStr( cNum, Len( cPref ) + 1, 4 ) )
+                IF nSeq > nMax
+                    nMax := nSeq
+                ENDIF
+            ENDIF
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    PRE_N->( DbCloseArea() )
+
+RETURN cPref + StrZero( nMax + 1, 4 )
+
+
+STATIC FUNCTION _PreClienteExiste( cCli )
+
+    LOCAL lExiste
+
+    lExiste := .F.
+
+    IF Empty( AllTrim( cCli ) )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "CLIENTES", "CLI_PV", "CLI_ID" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "CLI_PV" )
+    OrdSetFocus( "CLI_ID" )
+    lExiste := DbSeek( PadR( AllTrim( cCli ), 10 ) ) .OR. DbSeek( AllTrim( cCli ) )
+
+    CLI_PV->( DbCloseArea() )
+
+RETURN lExiste
+
+
+STATIC FUNCTION _PreImprimirActual( cNumero )
+
+    IF Empty( AllTrim( cNumero ) )
+        MsgStop( "Guarde el presupuesto antes de imprimir.", "Imprimir" )
+        RETURN .F.
+    ENDIF
+
+RETURN ImprimirPresupuesto( cNumero )
 
 
 STATIC FUNCTION _PreBorrarLinsDB( cNum )
@@ -973,17 +1057,26 @@ RETURN NIL
 // ============================================================================
 FUNCTION ImprimirPresupuesto( cNumero )
 
-    IF !File( ".\\DATA\\PRESUP_G.DBF" )
-        MsgStop( "No existe la tabla de presupuestos", "Error" )
-        RETURN .F.
-    ENDIF
-
     IF ValType( cNumero ) != "C" .OR. Empty( cNumero )
         MsgStop( "Numero de presupuesto invalido", "Error" )
         RETURN .F.
     ENDIF
 
-    // Llama a la funcion en V_Imprimir.prg
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_IP", "PRE_NUM" )
+        MsgStop( "No existe la tabla de presupuestos", "Error" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "PRE_IP" )
+    OrdSetFocus( "PRE_NUM" )
+    IF !( DbSeek( PadR( AllTrim( cNumero ), 10 ) ) .OR. DbSeek( AllTrim( cNumero ) ) )
+        PRE_IP->( DbCloseArea() )
+        MsgStop( "Presupuesto " + AllTrim( cNumero ) + " no encontrado.", "Error" )
+        RETURN .F.
+    ENDIF
+
+    PRE_IP->( DbCloseArea() )
+
     ImprimirPresup( cNumero )
 
 RETURN .T.

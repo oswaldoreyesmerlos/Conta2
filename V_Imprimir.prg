@@ -146,7 +146,7 @@ STATIC FUNCTION _ImpCargarCab( cTipo, cNum )
         ENDIF
         DbSelectArea( cAlias )
         OrdSetFocus( "PRE_NUM" )
-        IF !DbSeek( cNum )
+        IF !( DbSeek( PadR( AllTrim( cNum ), 10 ) ) .OR. DbSeek( AllTrim( cNum ) ) )
             DbCloseArea()
             RETURN NIL
         ENDIF
@@ -165,7 +165,7 @@ STATIC FUNCTION _ImpCargarCab( cTipo, cNum )
         AAdd( aC, PRE_I->RETENCIO )
         AAdd( aC, PRE_I->PORC_RET )
         AAdd( aC, PRE_I->TOTAL    )
-        AAdd( aC, ""  )
+        AAdd( aC, AllTrim( DbFieldValue( "FORMA_PA", "" ) ) )
         AAdd( aC, AllTrim( PRE_I->OBSERVA  ) )
         AAdd( aC, DToC( PRE_I->VALIDEZ ) )
         cCli := aC[3]
@@ -264,6 +264,9 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
     LOCAL nIva4
     LOCAL nPorcIva
     LOCAL cPie
+    LOCAL cConcepto
+    LOCAL cMetaTotal
+    LOCAL cTipoDesc
 
     cH     := ""
     cLogo  := ""
@@ -284,65 +287,89 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
         cLogo := '<img src="' + aEmp[12] + '" style="max-height:80px;max-width:200px;">'
     ENDIF
 
-    cPie := aEmp[13]
-    IF Empty( cPie )
-        cPie := ""
+    cPie := AllTrim( aEmp[13] )
+    IF Empty( cPie ) .AND. cTitDoc == "PRESUPUESTO"
+        cPie := _ImpCondicionesPresup()
     ENDIF
-    cPie := StrTran( cPie, Chr(13)+Chr(10), "<br>" )
-    cPie := StrTran( cPie, Chr(10), "<br>" )
+    cPie := _HtmlLines( cPie )
+
+    cConcepto := AllTrim( aCab[17] )
+    IF Empty( cConcepto )
+        cConcepto := If( cTitDoc == "PRESUPUESTO", "Servicio de construccion", ;
+                         "Servicio facturado" )
+    ENDIF
+
+    cMetaTotal := If( cTitDoc == "PRESUPUESTO", "Precio total:", "Total:" )
+    cTipoDesc  := If( cTitDoc == "PRESUPUESTO", ;
+                      "DESCRIPCI&Oacute;N DE LA REFORMA Y PRESUPUESTO:", ;
+                      "DESCRIPCI&Oacute;N DEL SERVICIO FACTURADO:" )
 
     cH += '<!DOCTYPE html>' + Chr(10)
     cH += '<html lang="es"><head><meta charset="UTF-8">' + Chr(10)
     cH += '<title>' + cTitDoc + ' ' + aCab[1] + '</title>' + Chr(10)
     cH += '<style>' + Chr(10)
-    cH += '* { box-sizing:border-box; margin:0; padding:0; font-family:Arial,sans-serif; font-size:11px; }' + Chr(10)
-    cH += 'body { padding:15mm; background:#fff; color:#222; }' + Chr(10)
-    cH += '@page { size:A4; margin:15mm; }' + Chr(10)
-    cH += '@media print { body { padding:0; } .noprint { display:none; } }' + Chr(10)
-    cH += '.titulo { font-size:28px; font-weight:bold; color:#c00; text-align:center; letter-spacing:2px; margin-bottom:8px; }' + Chr(10)
-    cH += '.cab-info { text-align:right; font-size:12px; margin-bottom:10px; }' + Chr(10)
-    cH += '.cab-info span { font-weight:bold; }' + Chr(10)
-    cH += '.dos-col { display:flex; gap:20px; border:1px solid #000; padding:8px; margin-bottom:10px; }' + Chr(10)
-    cH += '.dos-col .col { flex:1; }' + Chr(10)
-    cH += '.dos-col .col h3 { background:#222; color:#fff; padding:3px 6px; margin-bottom:6px; }' + Chr(10)
-    cH += '.dos-col .col p { margin:2px 0; }' + Chr(10)
-    cH += '.concepto { font-weight:bold; border:1px solid #888; padding:4px 6px; margin-bottom:6px; }' + Chr(10)
-    cH += 'table { width:100%; border-collapse:collapse; margin-bottom:8px; }' + Chr(10)
+    cH += '* { box-sizing:border-box; margin:0; padding:0; font-family:Arial,sans-serif; font-size:10px; }' + Chr(10)
+    cH += 'body { padding:10mm; background:#fff; color:#111; }' + Chr(10)
+    cH += '@page { size:A4; margin:10mm; }' + Chr(10)
+    cH += '@media print { body { padding:0; } .noprint { display:none; } .hoja { border:1px solid #000; } }' + Chr(10)
+    cH += '.hoja { min-height:277mm; border:1px solid #000; padding:8px 10px 12px; }' + Chr(10)
+    cH += '.top { display:grid; grid-template-columns:150px 1fr 170px; align-items:start; min-height:100px; }' + Chr(10)
+    cH += '.logo { padding:6px 0 0 10px; min-height:90px; }' + Chr(10)
+    cH += '.logo img { max-height:88px; max-width:135px; }' + Chr(10)
+    cH += '.titulo { font-family:Georgia,serif; font-style:italic; font-size:28px; font-weight:bold; color:#c00; text-align:center; letter-spacing:1px; padding-top:4px; }' + Chr(10)
+    cH += '.cab-info { margin-top:58px; text-align:right; line-height:1.35; }' + Chr(10)
+    cH += '.cab-info span { display:inline-block; min-width:72px; font-weight:bold; background:#cfe8ff; padding:1px 4px; }' + Chr(10)
+    cH += '.dos-col { display:grid; grid-template-columns:1fr 1fr; gap:46px; margin-bottom:18px; }' + Chr(10)
+    cH += '.col h3 { background:#000; color:#fff; text-align:center; font-size:13px; font-style:italic; padding:3px 6px; margin-bottom:12px; }' + Chr(10)
+    cH += '.col p { margin:2px 0; min-height:13px; }' + Chr(10)
+    cH += '.concepto { font-weight:bold; padding:0 0 2px 28px; }' + Chr(10)
+    cH += 'table { width:100%; border-collapse:collapse; }' + Chr(10)
     cH += 'thead tr { background:#222; color:#fff; }' + Chr(10)
-    cH += 'thead th { padding:4px 6px; text-align:left; }' + Chr(10)
+    cH += 'thead th { padding:2px 5px; text-align:left; border-right:1px solid #777; }' + Chr(10)
     cH += 'thead th.r { text-align:right; }' + Chr(10)
-    cH += 'tbody tr td { padding:4px 6px; border-bottom:1px solid #ddd; }' + Chr(10)
+    cH += 'tbody tr td { padding:3px 5px; border-right:1px solid #777; vertical-align:top; }' + Chr(10)
     cH += 'tbody tr td.r { text-align:right; }' + Chr(10)
     cH += 'tbody tr td.c { text-align:center; }' + Chr(10)
-    cH += 'tbody tr:nth-child(even) { background:#f9f9f9; }' + Chr(10)
-    cH += '.totales { width:300px; margin-left:auto; border:1px solid #000; }' + Chr(10)
+    cH += '.lineas { border:1px solid #777; border-bottom:0; }' + Chr(10)
+    cH += '.lineas tbody { height:145px; }' + Chr(10)
+    cH += '.firma-total { display:grid; grid-template-columns:1fr 215px; border:1px solid #777; border-top:0; min-height:70px; }' + Chr(10)
+    cH += '.firma-empresa { padding:10px 4px; border-right:1px solid #777; line-height:1.35; }' + Chr(10)
+    cH += '.totales { width:100%; }' + Chr(10)
     cH += '.totales tr td { padding:3px 8px; }' + Chr(10)
-    cH += '.totales tr td:last-child { text-align:right; font-weight:bold; }' + Chr(10)
-    cH += '.total-final { background:#222; color:#fff; font-size:13px; }' + Chr(10)
-    cH += '.firmas { display:flex; gap:30px; margin-top:20px; }' + Chr(10)
-    cH += '.firmas .firma { flex:1; border-top:1px solid #000; padding-top:5px; min-height:60px; }' + Chr(10)
-    cH += '.pie { margin-top:15px; border-top:2px solid #c00; padding-top:8px; font-size:10px; color:#c00; font-style:italic; line-height:1.5; }' + Chr(10)
+    cH += '.totales tr td:first-child { text-align:right; font-weight:bold; }' + Chr(10)
+    cH += '.totales tr td:last-child { text-align:right; border-left:1px solid #777; }' + Chr(10)
+    cH += '.total-final td { font-weight:bold; font-size:11px; }' + Chr(10)
+    cH += '.pie { margin-top:10px; padding:0 0 0 2px; line-height:1.25; }' + Chr(10)
+    cH += '.pie h3 { font-size:12px; margin-bottom:10px; }' + Chr(10)
+    cH += '.pie p { margin:0 0 10px 12px; }' + Chr(10)
     cH += '.btnprint { display:block; margin:10px auto; padding:8px 30px; background:#c00; color:#fff; border:none; font-size:14px; cursor:pointer; border-radius:4px; }' + Chr(10)
     cH += '</style></head><body>' + Chr(10)
 
     cH += '<button class="btnprint noprint" onclick="window.print()">&#128424; Imprimir / Guardar PDF</button>' + Chr(10)
 
+    cH += '<div class="hoja">' + Chr(10)
+    cH += '<div class="top">' + Chr(10)
+    cH += '<div class="logo">'
+    IF !Empty( cLogo )
+        cH += cLogo
+    ENDIF
+    cH += '</div>' + Chr(10)
     cH += '<div class="titulo">' + cTitDoc + '</div>' + Chr(10)
     cH += '<div class="cab-info">'
-    cH += 'Fecha: <span>' + aCab[2] + '</span>&nbsp;&nbsp;'
-    cH += 'N&ordm;: <span>' + aCab[1] + '</span>'
+    cH += '<b>Fecha:</b> <span>' + aCab[2] + '</span><br>'
+    cH += '<b>' + cMetaTotal + '</b> <span>' + _FmtH( aCab[15] ) + ' &euro;</span><br>'
+    cH += '<b>N&ordm;:</b> <span>' + aCab[1] + '</span>'
     IF !Empty( aCab[18] )
-        cH += '&nbsp;&nbsp;V&aacute;lido hasta: <span>' + aCab[18] + '</span>'
+        cH += '<br><b>Validez:</b> <span>' + aCab[18] + '</span>'
     ENDIF
+    cH += '</div>' + Chr(10)
     cH += '</div>' + Chr(10)
 
     cH += '<div class="dos-col">' + Chr(10)
 
     cH += '<div class="col"><h3>EMPRESA</h3>'
-    IF !Empty( cLogo )
-        cH += cLogo + '<br><br>'
-    ENDIF
-    cH += '<p><b>Denominaci&oacute;n:</b> ' + _Esc( aEmp[2] ) + '</p>'
+    cH += '<p><b>Denominaci&oacute;n social:</b> ' + _Esc( aEmp[2] ) + '</p>'
+    cH += '<p><b>Contacto:</b> </p>'
     cH += '<p><b>NIF/CIF:</b> '              + _Esc( aEmp[1] ) + '</p>'
     cH += '<p><b>Direcci&oacute;n:</b> '     + _Esc( aEmp[3] ) + '</p>'
     cH += '<p>' + _Esc( aEmp[5] ) + ' ' + _Esc( aEmp[4] ) + ' ' + _Esc( aEmp[6] ) + '</p>'
@@ -359,6 +386,7 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
 
     cH += '<div class="col"><h3>CLIENTE</h3>'
     cH += '<p><b>Nombre:</b> '           + _Esc( aCab[4] ) + '</p>'
+    cH += '<p><b>Denominaci&oacute;n social:</b> </p>'
     cH += '<p><b>NIF/CIF:</b> '          + _Esc( aCab[5] ) + '</p>'
     cH += '<p><b>Direcci&oacute;n:</b> ' + _Esc( aCab[6] ) + '</p>'
     cH += '<p>' + _Esc( aCab[8] ) + ' ' + _Esc( aCab[7] ) + '</p>'
@@ -372,11 +400,9 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
 
     cH += '</div>' + Chr(10)
 
-    IF !Empty( aCab[17] )
-        cH += '<div class="concepto">Descripci&oacute;n: ' + _Esc( aCab[17] ) + '</div>' + Chr(10)
-    ENDIF
+    cH += '<div class="concepto">' + cTipoDesc + ' ' + _Esc( cConcepto ) + '</div>' + Chr(10)
 
-    cH += '<table>' + Chr(10)
+    cH += '<table class="lineas">' + Chr(10)
     cH += '<thead><tr>'
     cH += '<th style="width:40px;" class="c">ID</th>'
     cH += '<th>DESCRIPCI&Oacute;N</th>'
@@ -395,11 +421,16 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
         cH += '</tr>' + Chr(10)
     NEXT
 
-    FOR i := Len( aLins ) + 1 TO 8
+    FOR i := Len( aLins ) + 1 TO 7
         cH += '<tr><td class="c">&nbsp;</td><td>&nbsp;</td><td></td><td></td><td></td></tr>' + Chr(10)
     NEXT
 
     cH += '</tbody></table>' + Chr(10)
+
+    cH += '<div class="firma-total">' + Chr(10)
+    cH += '<div class="firma-empresa"><b>FIRMA EMPRESA</b><br>'
+    cH += '<b>Firma y sello:</b><br>'
+    cH += '<b>Lugar y fecha:</b></div>' + Chr(10)
 
     cH += '<table class="totales">'
     cH += '<tr><td>SUBTOTAL</td><td>' + _FmtH( aCab[11] ) + ' &euro;</td></tr>'
@@ -420,16 +451,13 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
 
     cH += '<tr class="total-final"><td>TOTAL</td><td>' + _FmtH( aCab[15] ) + ' &euro;</td></tr>'
     cH += '</table>' + Chr(10)
-
-    cH += '<div class="firmas">'
-    cH += '<div class="firma"><p><b>FIRMA EMPRESA</b></p><p>Firma y sello:</p><p>Lugar y fecha:</p></div>'
-    cH += '<div class="firma"><p><b>FIRMA CLIENTE</b></p><p>Nombre:</p><p>Lugar y fecha:</p></div>'
     cH += '</div>' + Chr(10)
 
     IF !Empty( cPie )
-        cH += '<div class="pie">' + cPie + '</div>' + Chr(10)
+        cH += '<div class="pie"><h3>CONDICIONES GENERALES Y FORMA DE PAGO</h3>' + cPie + '</div>' + Chr(10)
     ENDIF
 
+    cH += '</div>' + Chr(10)
     cH += '</body></html>' + Chr(10)
 
 RETURN cH
@@ -449,6 +477,40 @@ STATIC FUNCTION _Esc( cTxt )
     cTxt := StrTran( cTxt, "<",  "&lt;"   )
     cTxt := StrTran( cTxt, ">",  "&gt;"   )
     cTxt := StrTran( cTxt, '"',  "&quot;" )
+
+RETURN cTxt
+
+
+STATIC FUNCTION _HtmlLines( cTxt )
+
+    IF ValType( cTxt ) != "C"
+        RETURN ""
+    ENDIF
+
+    cTxt := _Esc( cTxt )
+    cTxt := StrTran( cTxt, Chr(13)+Chr(10), "<br>" )
+    cTxt := StrTran( cTxt, Chr(10), "<br>" )
+    cTxt := StrTran( cTxt, "<br><br>", "</p><p>" )
+
+    IF !Empty( cTxt )
+        cTxt := "<p>" + cTxt + "</p>"
+    ENDIF
+
+RETURN cTxt
+
+
+STATIC FUNCTION _ImpCondicionesPresup()
+
+    LOCAL cTxt
+
+    cTxt := "1. Validez. La firma de este presupuesto supone la aceptacion de las condiciones descritas. "
+    cTxt += "Oferta valida durante 15 dias." + Chr(13) + Chr(10) + Chr(13) + Chr(10)
+    cTxt += "2. Forma de Pago: 50% a la firma/aceptacion para reserva de fecha y materiales. "
+    cTxt += "50% a la finalizacion de los trabajos o mediante certificaciones segun avance." + Chr(13) + Chr(10) + Chr(13) + Chr(10)
+    cTxt += "3. Extras: Cualquier trabajo no especificado en la descripcion anterior se facturara aparte como partida adicional." + Chr(13) + Chr(10) + Chr(13) + Chr(10)
+    cTxt += "4. Exclusiones: No se incluyen tasas municipales, licencias de obra, pintura ni limpieza final de obra salvo indicacion expresa." + Chr(13) + Chr(10) + Chr(13) + Chr(10)
+    cTxt += "5. Fiscalidad: Operacion con inversion del sujeto pasivo conforme al Art. 84.1.2.f de la Ley 37/1992 del IVA. "
+    cTxt += "El sujeto pasivo del impuesto es el destinatario de la operacion."
 
 RETURN cTxt
 

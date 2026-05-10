@@ -12,7 +12,7 @@
  *   M_Usuarios.prg    -> UsuariosView
  *   M_Conta.prg       -> PlanCuentasView, LibroDiarioView
  *   V_Facturas.prg    -> FacturasView
- *   V_Presupuesto.prg -> PresupuestosView, AltaPresupuesto
+ *   V_Presupuesto.prg -> PresupuestosView, PresupuestoNuevo, AltaPresupuesto
  *   Tesoreria.prg     -> TesoreriaView
  *   Informes.prg      -> InformeClientes, InformeFacturas, InformePresupuestos
  *   Seguridad.prg     -> RolesEdit
@@ -41,6 +41,7 @@ EXTERNAL FacturasView
 EXTERNAL ObrasView
 EXTERNAL NotaAbonoForm
 EXTERNAL PresupuestosView
+EXTERNAL PresupuestoNuevo
 EXTERNAL AltaPresupuesto
 EXTERNAL AceptarPresupuesto
 EXTERNAL RechazarPresupuesto
@@ -133,7 +134,7 @@ FUNCTION Menu_Init()
 
     // Presupuestos
     AAdd( aSubPre, { "Historial", {|| PresupuestosView()  }, NIL, "Presupuestos emitidos" } )
-    AAdd( aSubPre, { "Nuevo",     {|| AltaPresupuesto()   }, NIL, "Nuevo presupuesto" } )
+    AAdd( aSubPre, { "Nuevo",     {|| PresupuestoNuevo()  }, NIL, "Nuevo presupuesto" } )
 
     // Obras
     AAdd( aSubObr, { "Historial", {|| ObrasView() }, NIL, "Gestion y certificacion de obras" } )

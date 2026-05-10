@@ -650,6 +650,8 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "NUM_FAC",  "C", 10, 0 } )
     AAdd( aCampos, { "ID_OBRA",  "C", 12, 0 } )
     AAdd( aCampos, { "TIPO",     "C",  1, 0 } ) // C=Cerrado M=Medicion
+    AAdd( aCampos, { "FORMA_PA", "C",  3, 0 } )
+    AAdd( aCampos, { "DIAS_PAG", "N",  3, 0 } )
     AAdd( aCampos, { "RETENCIO", "N", 12, 2 } )
     AAdd( aCampos, { "PORC_RET", "N",  5, 2 } )
     AAdd( aIndices, { "PRE_NUM", "NUMERO" } )
