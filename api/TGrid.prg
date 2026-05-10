@@ -182,6 +182,10 @@ RETURN NIL
 // ----------------------------------------------------------------------------
 // Si el usuario definio bRowEmpty, lo usa.  Si no, asume que la primera
 // columna vacia/cero/falsa indica fila vacia.
+//
+// En grids editables de detalle suele convenir definir bRowEmpty propio.
+// La heuristica por defecto esta pensada para listados simples, no para
+// lineas con numero/autocodigo en la primera columna.
 // ----------------------------------------------------------------------------
 METHOD IsRowEmpty( nRow ) CLASS TGrid
 

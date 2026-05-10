@@ -357,26 +357,23 @@ METHOD Paint() CLASS TWindow
 
     ENDIF
 
-    // -- Limpiar toda la zona de caracteres de la ventana
+    // Cuerpo de ventana
     GfxClear( ::nTop, ::nLeft, ::nBottom, ::nRight, CLR_WIN_BODY )
 
-    // -- Barra de titulo estilo Windows clasico:
-    //    primera fila interior completa, solida y distinta al cuerpo
-    GfxClear( ::nTop, ::nLeft + 1, ::nTop, ::nRight - 1, CLR_WIN_TITLE_ACT )
+    // Barra de titulo: fila completa azul, siempre, haya texto o no
+    GfxClear( ::nTop, ::nLeft, ::nTop, ::nRight, CLR_WIN_TITLE_ACT )
 
-    // -- Titulo alineado a la izquierda, con aire lateral
+    // Texto del titulo (solo si hay)
     IF ! Empty( ::cTitle )
-        GfxText( ::nTop, ;
-         ::nLeft, ;
-         PadR( " " + AllTrim( ::cTitle ) + " ", ;
-               ::nRight - ::nLeft + 1  ), ;
-         CLR_WIN_TITLE_ACT )
+        GfxText( ::nTop, ::nLeft, ;
+            PadR( " " + AllTrim( ::cTitle ) + " ", ;
+                ::nRight - ::nLeft + 1 ), ;
+            CLR_WIN_TITLE_ACT )
     ENDIF
 
-    // -- Cuerpo de ventana separado visualmente del titulo
+    // Cuerpo separado del titulo
     GfxClear( ::nTop + 1, ::nLeft + 1, ;
-              ::nBottom - 1, ::nRight - 1, ;
-              CLR_WIN_BODY )
+            ::nBottom - 1, ::nRight - 1, CLR_WIN_BODY )
 
     // -- Pintar controles hijos
     AEval( ::aCtrls, ;

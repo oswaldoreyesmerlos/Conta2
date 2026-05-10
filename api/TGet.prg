@@ -209,38 +209,8 @@ METHOD HandleKey( nKey ) CLASS TGet
     LOCAL cNum
 
     // Navegación externa
-    IF nKey == K_TAB
-        IF ! ::Validate()
-            RETURN .T.
-        ENDIF
-        RETURN .F.
-    ENDIF
-
-    IF nKey == K_SH_TAB
-        IF ! ::Validate()
-            RETURN .T.
-        ENDIF
-        RETURN .F.
-    ENDIF
-
-    IF nKey == K_ENTER
-        IF ! ::Validate()
-            RETURN .T.
-        ENDIF
-        RETURN .F.
-    ENDIF
-
-    IF nKey == K_UP
-        IF ! ::Validate()
-            RETURN .T.
-        ENDIF
-        RETURN .F.
-    ENDIF
-
-    IF nKey == K_DOWN
-        IF ! ::Validate()
-            RETURN .T.
-        ENDIF
+    IF nKey == K_TAB .OR. nKey == K_SH_TAB .OR. ;
+       nKey == K_ENTER .OR. nKey == K_UP .OR. nKey == K_DOWN
         RETURN .F.
     ENDIF
 
@@ -333,11 +303,18 @@ METHOD HandleKey( nKey ) CLASS TGet
             cChr := Upper( cChr )
         ENDIF
 
-        IF ::cType == "N" .OR. ( "9" $ ::cPicture .AND. ::cPicture != "99/99/9999" )
+        DO CASE
+        CASE ::cType == "N"
             IF ! ( cChr $ "0123456789.-" )
                 RETURN .T.
             ENDIF
-        ENDIF
+
+        CASE ::cType == "D"
+            IF ! ( cChr $ "0123456789/-." )
+                RETURN .T.
+            ENDIF
+
+        ENDCASE
 
         IF ::cType == "N"
             cNum := If( ::lNumFresh, "", _TGetNumBuffer( ::cBuffer ) )
@@ -357,12 +334,6 @@ METHOD HandleKey( nKey ) CLASS TGet
             ::lNumFresh := .F.
             ::Paint()
             RETURN .T.
-        ENDIF
-
-        IF ::cPicture == "99/99/9999"
-            IF ! ( cChr $ "0123456789/" )
-                RETURN .T.
-            ENDIF
         ENDIF
 
         ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, cChr )

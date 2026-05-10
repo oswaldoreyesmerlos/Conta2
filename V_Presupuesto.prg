@@ -345,9 +345,9 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
                            oLBase, oLIva, oLRet, oLTotal ) } )
 
     oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
-        {|| _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
+        {|| PreGuardar( _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs ), ;
                            aLineas, cPieDoc, cNumero, lNuevo, ;
-                           nBase, nIva, nRet, nTotal, oLNumero, oWin ) } )
+                           nBase, nIva, nRet, nTotal, @cNumero, oLNumero ) } )
 
     oBtImp := TButton():New( 33, 20, 34, 36, oWin, "IMPRIMIR", ;
         {|| ImprimirPresupuesto( cNumero ) } )
@@ -498,7 +498,7 @@ STATIC FUNCTION _PreBuscarCli( oGet, cNom, cInfo, cFP, nDias, nRet, ;
 
     LOCAL cId
 
-    cId := AllTrim( oGet:uVar )
+    cId := AllTrim( oGet:GetValue() )
 
     IF Empty( cId )
         RETURN .T.
@@ -526,17 +526,9 @@ STATIC FUNCTION _PreBuscarCli( oGet, cNom, cInfo, cFP, nDias, nRet, ;
     oLCliNom:SetText( PadR( cNom, 70 ) )
     oLCliInfo:SetText( PadR( cInfo, 80 ) )
 
-    oGFP:uVar    := cFP
-    oGFP:cBuffer := PadR( cFP, oGFP:nLen )
-    oGFP:Paint()
-
-    oGDias:uVar    := nDias
-    oGDias:cBuffer := PadL( LTrim( Str( nDias ) ), oGDias:nLen )
-    oGDias:Paint()
-
-    oGRet:uVar    := nRet
-    oGRet:cBuffer := PadL( LTrim( Str( nRet ) ), oGRet:nLen )
-    oGRet:Paint()
+    oGFP:SetValue( cFP )
+    oGDias:SetValue( nDias )
+    oGRet:SetValue( nRet )
 
 RETURN .T.
 
@@ -751,7 +743,7 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     oWin:AddCtrl( oLImp )
 
     bRecalc := {|| ;
-        nImp := ( oGCant:uVar * oGPre:uVar ) * ( 1 - oGDto:uVar / 100 ), ;
+        nImp := ( oGCant:GetValue() * oGPre:GetValue() ) * ( 1 - oGDto:GetValue() / 100 ), ;
         oLImp:SetText( _FmtNP( nImp ) ), ;
         .T. }
 
@@ -776,23 +768,40 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     oWin:Run()
 
     IF lOK
-        aLin[LIN_DESC] := AllTrim( oGDesc:uVar )
-        aLin[LIN_CANT] := oGCant:uVar
-        aLin[LIN_PRE]  := oGPre:uVar
-        aLin[LIN_DTO]  := oGDto:uVar
-        aLin[LIN_IVA]  := oGIva:uVar
-        aLin[LIN_IMP]  := ( oGCant:uVar * oGPre:uVar ) * ( 1 - oGDto:uVar / 100 )
+        aLin[LIN_DESC] := AllTrim( oGDesc:GetValue() )
+        aLin[LIN_CANT] := oGCant:GetValue()
+        aLin[LIN_PRE]  := oGPre:GetValue()
+        aLin[LIN_DTO]  := oGDto:GetValue()
+        aLin[LIN_IVA]  := oGIva:GetValue()
+        aLin[LIN_IMP]  := ( oGCant:GetValue() * oGPre:GetValue() ) * ( 1 - oGDto:GetValue() / 100 )
     ENDIF
 
 RETURN lOK
 
 
 // ============================================================================
+// FORM HASH
+// ============================================================================
+STATIC FUNCTION _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs )
+
+    LOCAL hPre := {=>}
+
+    hPre[ "CLIENTE_" ] := AllTrim( oGCli:GetValue() )
+    hPre[ "FECHA"    ] := oGFec:GetValue()
+    hPre[ "VALIDEZ"  ] := oGVal:GetValue()
+    hPre[ "FORMA_PA" ] := AllTrim( oGFP:GetValue() )
+    hPre[ "DIAS_PAG" ] := oGDias:GetValue()
+    hPre[ "PORC_RET" ] := oGRet:GetValue()
+    hPre[ "OBSERVA"  ] := AllTrim( oGObs:GetValue() )
+
+RETURN hPre
+
+
+// ============================================================================
 // GUARDAR
 // ============================================================================
-STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
-                               aLins, cPieDoc, cNumero, lNuevo, ;
-                               nBase, nIva, nRet, nTotal, oLNumero, oWin )
+FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
+                       nBase, nIva, nRet, nTotal, cNumRef, oLNumero )
 
     LOCAL cCli
     LOCAL dFec
@@ -804,34 +813,34 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
     LOCAL cNum
     LOCAL i
 
-    cCli  := AllTrim( oGCli:uVar  )
-    dFec  := oGFec:uVar
-    dVal  := oGVal:uVar
-    cFP   := AllTrim( oGFP:uVar   )
-    nDias := oGDias:uVar
-    nPRet := oGRet:uVar
-    cObs  := AllTrim( oGObs:uVar  )
+    cCli  := hPre[ "CLIENTE_" ]
+    dFec  := hPre[ "FECHA"    ]
+    dVal  := hPre[ "VALIDEZ"  ]
+    cFP   := hPre[ "FORMA_PA" ]
+    nDias := hPre[ "DIAS_PAG" ]
+    nPRet := hPre[ "PORC_RET" ]
+    cObs  := hPre[ "OBSERVA"  ]
     cNum  := cNumero
 
     IF Empty( cCli )
         MsgStop( "Debe indicar el cliente.", "Guardar" )
-        RETURN NIL
+        RETURN .F.
     ENDIF
 
     IF Len( aLins ) == 0
         MsgStop( "Debe introducir al menos una linea.", "Guardar" )
-        RETURN NIL
+        RETURN .F.
     ENDIF
 
     IF lNuevo
         cNum := _PreSiguiente()
         IF Empty( cNum )
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
     IF !ABRIR_TABLA( "PRESUPUEST", "PRE_G", "PRE_NUM" )
-        RETURN NIL
+        RETURN .F.
     ENDIF
 
     DbSelectArea( "PRE_G" )
@@ -839,12 +848,12 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
 
     IF lNuevo
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         IF !DbSeek( cNum )
-            RETURN NIL
+            RETURN .F.
         ENDIF
 
         IF !Empty( AllTrim( DbFieldValue( "ID_OBRA", "" ) ) ) .OR. ;
@@ -853,11 +862,11 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
             MsgStop( "No se puede modificar un presupuesto aceptado, rechazado o con obra creada.", ;
                      "Guardar" )
             PRE_G->( DbCloseArea() )
-            RETURN NIL
+            RETURN .F.
         ENDIF
 
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
@@ -887,7 +896,7 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
     ENDIF
 
     IF !ABRIR_TABLA( "PRESUP_DE", "PRD_G", "PRD_LIN" )
-        RETURN NIL
+        RETURN .F.
     ENDIF
 
     DbSelectArea( "PRD_G" )
@@ -909,10 +918,11 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
 
     PRD_G->( DbCloseArea() )
 
-    IF lNuevo
+    IF lNuevo .AND. oLNumero != NIL
         oLNumero:SetText( PadR( cNum, 24 ) )
-        cNumero := cNum
     ENDIF
+
+    cNumRef := cNum
 
     MsgInfo( "Presupuesto " + cNum + " guardado.", "Guardado" )
 
@@ -920,7 +930,7 @@ STATIC FUNCTION _PreGuardar( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, ;
         ImprimirPresupuesto( cNum )
     ENDIF
 
-RETURN NIL
+RETURN .T.
 
 
 STATIC FUNCTION _PreSiguiente()
@@ -1188,7 +1198,7 @@ FUNCTION RechazarPresupuesto( cNumPre )
         RETURN .F.
     ENDIF
 
-    cMotivo := AllTrim( oGMot:uVar )
+    cMotivo := AllTrim( oGMot:GetValue() )
 
     IF Empty( cMotivo )
         RETURN .F.

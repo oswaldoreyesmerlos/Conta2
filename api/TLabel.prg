@@ -16,6 +16,8 @@ ENDCLASS
 METHOD New( nRow, nCol, cText, oPar ) CLASS TLabel
     LOCAL nLen
 
+    DEFAULT cText TO ""
+
     nLen := Max( Len( cText ), 1 )
 
     ::TControl:New( nRow, nCol, nRow, nCol + nLen - 1, oPar )
@@ -45,6 +47,8 @@ RETURN NIL
 
 
 METHOD SetText( cNew ) CLASS TLabel
+
+    DEFAULT cNew TO ""
 
     ::cCaption := cNew
 

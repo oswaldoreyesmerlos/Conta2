@@ -929,17 +929,17 @@ RETURN NIL
 STATIC FUNCTION _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oWin )
 
    LOCAL cId
-   LOCAL dFecIn  := CToD( AllTrim( oGFI:uVar ) )
-   LOCAL dFecFin := CToD( AllTrim( oGFF:uVar ) )
+   LOCAL dFecIn  := CToD( AllTrim( oGFI:GetValue() ) )
+   LOCAL dFecFin := CToD( AllTrim( oGFF:GetValue() ) )
 
    IF Empty( dFecIn )
       dFecIn := Date()
    ENDIF
 
-   cId := CrearObraManual( AllTrim( oGCli:uVar ), ;
-                            AllTrim( oGDes:uVar ), ;
-                            AllTrim( oGDir:uVar ), ;
-                            oGTot:uVar, dFecIn, dFecFin )
+   cId := CrearObraManual( AllTrim( oGCli:GetValue() ), ;
+                            AllTrim( oGDes:GetValue() ), ;
+                            AllTrim( oGDir:GetValue() ), ;
+                            oGTot:GetValue(), dFecIn, dFecFin )
 
    IF !Empty( cId )
       MsgInfo( "Obra creada: " + cId, "Obras" )
@@ -1005,16 +1005,16 @@ RETURN NIL
 STATIC FUNCTION _ObraDesdePreGuardar( oGPre, oGDes, oGDir, oGFI, oGFF, oWin )
 
    LOCAL cId
-   LOCAL dFecIn  := CToD( AllTrim( oGFI:uVar ) )
-   LOCAL dFecFin := CToD( AllTrim( oGFF:uVar ) )
+   LOCAL dFecIn  := CToD( AllTrim( oGFI:GetValue() ) )
+   LOCAL dFecFin := CToD( AllTrim( oGFF:GetValue() ) )
 
    IF Empty( dFecIn )
       dFecIn := Date()
    ENDIF
 
-   cId := CrearObraDesdePresupuesto( AllTrim( oGPre:uVar ), ;
-                                      AllTrim( oGDes:uVar ), ;
-                                      AllTrim( oGDir:uVar ), ;
+   cId := CrearObraDesdePresupuesto( AllTrim( oGPre:GetValue() ), ;
+                                      AllTrim( oGDes:GetValue() ), ;
+                                      AllTrim( oGDir:GetValue() ), ;
                                       dFecIn, dFecFin )
 
    IF !Empty( cId )
@@ -1081,8 +1081,8 @@ STATIC FUNCTION _ObraFacturaGuardar( cIdObra, cTipoFac, oGImp, oGIva, oGCon, oWi
       RETURN NIL
    ENDIF
 
-   cFactura := FacturarObra( cIdObra, oGImp:uVar, cTipoFac, oGIva:uVar, ;
-                              AllTrim( oGCon:uVar ), Date() )
+   cFactura := FacturarObra( cIdObra, oGImp:GetValue(), cTipoFac, oGIva:GetValue(), ;
+                              AllTrim( oGCon:GetValue() ), Date() )
 
    IF !Empty( cFactura )
       MsgInfo( "Factura emitida: " + cFactura, "Obras" )

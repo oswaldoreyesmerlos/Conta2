@@ -4,26 +4,23 @@
  *
  * MODULOS ACTIVOS
  * ---------------
- *   M_Auxiliar.prg    -> M_Familias, M_FormaPago, M_TiposIva, M_CCostes
+ *   M_Auxiliar.prg    -> M_FormaPago, M_TiposIva, M_CCostes
  *   M_Empresa.prg     -> Empresa
  *   M_Clientes.prg    -> ClientesView, ClientesForm
  *   M_Proveedo.prg    -> ProveedView, ProveedForm
- *   M_Articulos.prg   -> ArticulosView, ArticulosForm
  *   M_Vendedor.prg    -> VendedoresView, VendedoresForm
  *   M_Usuarios.prg    -> UsuariosView
  *   M_Conta.prg       -> PlanCuentasView, LibroDiarioView
  *   V_Facturas.prg    -> FacturasView
  *   V_Presupuesto.prg -> PresupuestosView, AltaPresupuesto
  *   Tesoreria.prg     -> TesoreriaView
- *   Informes.prg      -> InformeClientes, InformeFacturas,
- *                        InformeArticulos, InformePresupuestos
+ *   Informes.prg      -> InformeClientes, InformeFacturas, InformePresupuestos
  *   Seguridad.prg     -> RolesEdit
  *   Main.prg          -> App_Exit
  */
 
 #include "OOp.ch"
 
-EXTERNAL M_Familias
 EXTERNAL M_FormaPago
 EXTERNAL M_TiposIva
 EXTERNAL M_CCostes
@@ -32,8 +29,6 @@ EXTERNAL ClientesView
 EXTERNAL ClientesForm
 EXTERNAL ProveedView
 EXTERNAL ProveedForm
-EXTERNAL ArticulosView
-EXTERNAL ArticulosForm
 EXTERNAL VendedoresView
 EXTERNAL VendedoresForm
 EXTERNAL UsuariosView
@@ -41,6 +36,7 @@ EXTERNAL PlanCuentasView
 EXTERNAL AsientoAutomatico
 EXTERNAL CierreEjercicio
 EXTERNAL LibroDiarioView
+EXTERNAL LibroDiarioNuevo
 EXTERNAL FacturasView
 EXTERNAL ObrasView
 EXTERNAL NotaAbonoForm
@@ -54,7 +50,6 @@ EXTERNAL CobrosView
 EXTERNAL PagosView
 EXTERNAL InformeClientes
 EXTERNAL InformeFacturas
-EXTERNAL InformeArticulos
 EXTERNAL InformePresupuestos
 EXTERNAL InformeVencimientos
 EXTERNAL InformeProveedores
@@ -63,7 +58,6 @@ EXTERNAL InformeMayor
 EXTERNAL InformeBalanceSumasSaldos
 EXTERNAL InformeBalanceGeneral
 EXTERNAL InformePerdidasGanancias
-EXTERNAL InformeStockMinimo
 EXTERNAL RolesEdit
 EXTERNAL ReindexarTodo
 EXTERNAL App_Exit
@@ -80,7 +74,6 @@ FUNCTION Menu_Init()
     LOCAL aSistema
     LOCAL aSubCli
     LOCAL aSubPro
-    LOCAL aSubArt
     LOCAL aSubVen
     LOCAL aSubFac
     LOCAL aSubObr
@@ -100,15 +93,15 @@ FUNCTION Menu_Init()
     aSistema := {}
     aSubCli  := {}
     aSubPro  := {}
-    aSubArt  := {}
     aSubVen  := {}
     aSubFac  := {}
     aSubObr  := {}
     aSubPre  := {}
 
-    lEsAdm  := HasPerm( "SEG_USR" ) .OR. HasPerm( "SEG_ROL" )
-    lEsCont := HasPerm( "CONT" )
-    lEsCaja := HasPerm( "TESO" )
+    lEsAdm  := Upper( AllTrim( cUserRol ) ) == "ADM" .OR. ;
+               HasPerm( "SEG_USR" ) .OR. HasPerm( "SEG_ROL" )
+    lEsCont := lEsAdm .OR. HasPerm( "CONT" )
+    lEsCaja := lEsAdm .OR. HasPerm( "TESO" )
 
     // -------------------------------------------------------------------------
     // SUBMENUS
@@ -121,10 +114,6 @@ FUNCTION Menu_Init()
     // Proveedores
     AAdd( aSubPro, { "Listado", {|| ProveedView()           }, NIL, "Ver proveedores" } )
     AAdd( aSubPro, { "Alta",    {|| ProveedForm( .T., "" )  }, NIL, "Nuevo proveedor" } )
-
-    // Articulos
-    AAdd( aSubArt, { "Inventario", {|| ArticulosView()          }, NIL, "Catalogo" } )
-    AAdd( aSubArt, { "Alta",       {|| ArticulosForm( .T., "" ) }, NIL, "Nuevo articulo" } )
 
     // Vendedores
     AAdd( aSubVen, { "Listado", {|| VendedoresView()            }, NIL, "Ver vendedores" } )
@@ -146,9 +135,7 @@ FUNCTION Menu_Init()
     // -------------------------------------------------------------------------
     AAdd( aMaest, { "Clientes",    NIL, aSubCli, "Fichero de clientes" } )
     AAdd( aMaest, { "Proveedores", NIL, aSubPro, "Fichero de proveedores" } )
-    AAdd( aMaest, { "Articulos",   NIL, aSubArt, "Catalogo de articulos" } )
     AAdd( aMaest, { "Vendedores",  NIL, aSubVen, "Comerciales" } )
-    AAdd( aMaest, { "Familias",    {|| M_Familias()  }, NIL, "Familias de articulos" } )
     AAdd( aMaest, { "Formas Pago", {|| M_FormaPago() }, NIL, "Formas de pago" } )
     AAdd( aMaest, { "Tipos IVA",   {|| M_TiposIva()  }, NIL, "Tipos de IVA" } )
 
@@ -179,7 +166,13 @@ FUNCTION Menu_Init()
     IF lEsCont
         AAdd( aContab, { "Plan de Cuentas", {|| PlanCuentasView() }, NIL, "Plan contable PGC" } )
         AAdd( aContab, { "Libro Diario",    {|| LibroDiarioView() }, NIL, "Consulta asientos" } )
+        AAdd( aContab, { "Nuevo Asiento",   {|| LibroDiarioNuevo() }, NIL, "Crear asiento manual" } )
         AAdd( aContab, { "Centros Coste",   {|| M_CCostes()       }, NIL, "Analitica" } )
+        AAdd( aContab, { "Informe Diario",  {|| InformeDiario()   }, NIL, "Libro diario contable" } )
+        AAdd( aContab, { "Libro Mayor",     {|| InformeMayor()    }, NIL, "Mayor por cuenta" } )
+        AAdd( aContab, { "Sumas/Saldos",    {|| InformeBalanceSumasSaldos() }, NIL, "Balance de sumas y saldos" } )
+        AAdd( aContab, { "Balance Gral.",   {|| InformeBalanceGeneral() }, NIL, "Balance general" } )
+        AAdd( aContab, { "Perd./Gan.",      {|| InformePerdidasGanancias() }, NIL, "Estado de perdidas y ganancias" } )
         AAdd( aContab, { "Cierre Ejercicio", {|| CierreEjercicio() }, NIL, "Cierre contable anual (solo ADM)" } )
     ENDIF
 
@@ -188,16 +181,9 @@ FUNCTION Menu_Init()
     // -------------------------------------------------------------------------
     AAdd( aInform, { "Clientes",     {|| InformeClientes()     }, NIL, "Listado de clientes" } )
     AAdd( aInform, { "Facturas",     {|| InformeFacturas()     }, NIL, "Listado de facturas" } )
-    AAdd( aInform, { "Articulos",    {|| InformeArticulos()    }, NIL, "Listado de articulos" } )
     AAdd( aInform, { "Presupuestos",  {|| InformePresupuestos()  }, NIL, "Listado de presupuestos" } )
     AAdd( aInform, { "Vencimientos",  {|| InformeVencimientos()  }, NIL, "Cobros pendientes" } )
     AAdd( aInform, { "Proveedores",   {|| InformeProveedores()   }, NIL, "Listado de proveedores" } )
-    AAdd( aInform, { "Libro Diario",  {|| InformeDiario()        }, NIL, "Libro diario contable" } )
-    AAdd( aInform, { "Libro Mayor",   {|| InformeMayor()         }, NIL, "Mayor por cuenta" } )
-    AAdd( aInform, { "Sumas/Saldos",  {|| InformeBalanceSumasSaldos() }, NIL, "Balance de sumas y saldos" } )
-    AAdd( aInform, { "Balance Gral.", {|| InformeBalanceGeneral() }, NIL, "Balance general" } )
-    AAdd( aInform, { "Perd./Gan.",    {|| InformePerdidasGanancias() }, NIL, "Estado de perdidas y ganancias" } )
-    AAdd( aInform, { "Stock Minimo",  {|| InformeStockMinimo()   }, NIL, "Articulos bajo stock minimo" } )
 
     // -------------------------------------------------------------------------
     // SISTEMA

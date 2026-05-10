@@ -245,11 +245,12 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
     oChkBaj := TCheck():New( 18, 82, "Baja", lBaja, oWin )
 
     oBtGua := TButton():New( 33, 40, 34, 59, oWin, "GUARDAR", ;
-        {|| _ArtGuardar( oGCod, oGDes, oGFam, oGPrv, oGCB, oGUni, ;
-                           oGSto, oGMin, oGMax, oChkSer, ;
-                           oGCtaV, oGCtaC, oGCost, oGPre, ;
-                           oGIva, oGTip, oGDesc, oChkBaj, ;
-                           lNuevo, oWin ) } )
+        {|| If( ArticuloGuardar( _ArtFormHash( oGCod, oGDes, oGFam, oGPrv, oGCB, oGUni, ;
+                                                oGSto, oGMin, oGMax, oChkSer, ;
+                                                oGCtaV, oGCtaC, oGCost, oGPre, ;
+                                                oGIva, oGTip, oGDesc, oChkBaj ), ;
+                                  lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 33, 63, 34, 82, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -283,14 +284,39 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
 RETURN NIL
 
 
-STATIC FUNCTION _ArtGuardar( oGC, oGD, oGF, oGP, oGB, oGU, ;
-                            oGS, oGMi, oGMa, oChkS, ;
-                            oCV, oCC, oCo, oGPr, oGI, oGT, oGDs, oChkB, ;
-                            lNuevo, oWin )
+STATIC FUNCTION _ArtFormHash( oGC, oGD, oGF, oGP, oGB, oGU, ;
+                              oGS, oGMi, oGMa, oChkS, ;
+                              oCV, oCC, oCo, oGPr, oGI, oGT, oGDs, oChkB )
+
+    LOCAL hArticulo := {=>}
+
+    hArticulo[ "CODIGO"   ] := AllTrim( oGC:GetValue() )
+    hArticulo[ "DESCRIP"  ] := AllTrim( oGD:GetValue() )
+    hArticulo[ "FAMILIA"  ] := AllTrim( oGF:GetValue() )
+    hArticulo[ "PROVEEDO" ] := AllTrim( oGP:GetValue() )
+    hArticulo[ "COD_BARR" ] := AllTrim( oGB:GetValue() )
+    hArticulo[ "UNIDAD"   ] := AllTrim( oGU:GetValue() )
+    hArticulo[ "STOCK"    ] := oGS:GetValue()
+    hArticulo[ "STO_MIN"  ] := oGMi:GetValue()
+    hArticulo[ "STO_MAX"  ] := oGMa:GetValue()
+    hArticulo[ "ES_SERV"  ] := oChkS:GetValue()
+    hArticulo[ "CTA_VTA"  ] := AllTrim( oCV:GetValue() )
+    hArticulo[ "CTA_COM"  ] := AllTrim( oCC:GetValue() )
+    hArticulo[ "COSTO_PR" ] := oCo:GetValue()
+    hArticulo[ "PRECIO"   ] := oGPr:GetValue()
+    hArticulo[ "IVA"      ] := oGI:GetValue()
+    hArticulo[ "TIPO_IVA" ] := AllTrim( oGT:GetValue() )
+    hArticulo[ "DESCUENT" ] := oGDs:GetValue()
+    hArticulo[ "BAJA"     ] := oChkB:GetValue()
+
+RETURN hArticulo
+
+
+FUNCTION ArticuloGuardar( hArticulo, lNuevo )
 
     LOCAL cCodigo
 
-    cCodigo := AllTrim( oGC:uVar )
+    cCodigo := hArticulo[ "CODIGO" ]
 
     DbSelectArea( "ART" )
     OrdSetFocus( "ART_COD" )
@@ -298,39 +324,39 @@ STATIC FUNCTION _ArtGuardar( oGC, oGD, oGF, oGP, oGB, oGU, ;
     IF lNuevo
         IF DbSeek( cCodigo )
             MsgStop( "El codigo " + cCodigo + " ya existe.", "Alta articulo" )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         IF !DbSeek( cCodigo )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
     REPLACE ART->CODIGO   WITH cCodigo
-    REPLACE ART->DESCRIP  WITH AllTrim( oGD:uVar  )
-    REPLACE ART->FAMILIA  WITH AllTrim( oGF:uVar  )
-    REPLACE ART->PROVEEDO WITH AllTrim( oGP:uVar  )
-    REPLACE ART->COD_BARR WITH AllTrim( oGB:uVar  )
-    REPLACE ART->UNIDAD   WITH AllTrim( oGU:uVar  )
-    REPLACE ART->STOCK    WITH oGS:uVar
-    REPLACE ART->STO_MIN  WITH oGMi:uVar
-    REPLACE ART->STO_MAX  WITH oGMa:uVar
-    REPLACE ART->ES_SERV  WITH oChkS:lValue
-    REPLACE ART->CTA_VTA  WITH AllTrim( oCV:uVar  )
-    REPLACE ART->CTA_COM  WITH AllTrim( oCC:uVar  )
-    REPLACE ART->COSTO_PR WITH oCo:uVar
-    REPLACE ART->PRECIO   WITH oGPr:uVar
-    REPLACE ART->IVA      WITH oGI:uVar
-    REPLACE ART->TIPO_IVA WITH AllTrim( oGT:uVar  )
-    REPLACE ART->DESCUENT WITH oGDs:uVar
-    REPLACE ART->BAJA     WITH oChkB:lValue
+    REPLACE ART->DESCRIP  WITH hArticulo[ "DESCRIP"  ]
+    REPLACE ART->FAMILIA  WITH hArticulo[ "FAMILIA"  ]
+    REPLACE ART->PROVEEDO WITH hArticulo[ "PROVEEDO" ]
+    REPLACE ART->COD_BARR WITH hArticulo[ "COD_BARR" ]
+    REPLACE ART->UNIDAD   WITH hArticulo[ "UNIDAD"   ]
+    REPLACE ART->STOCK    WITH hArticulo[ "STOCK"    ]
+    REPLACE ART->STO_MIN  WITH hArticulo[ "STO_MIN"  ]
+    REPLACE ART->STO_MAX  WITH hArticulo[ "STO_MAX"  ]
+    REPLACE ART->ES_SERV  WITH hArticulo[ "ES_SERV"  ]
+    REPLACE ART->CTA_VTA  WITH hArticulo[ "CTA_VTA"  ]
+    REPLACE ART->CTA_COM  WITH hArticulo[ "CTA_COM"  ]
+    REPLACE ART->COSTO_PR WITH hArticulo[ "COSTO_PR" ]
+    REPLACE ART->PRECIO   WITH hArticulo[ "PRECIO"   ]
+    REPLACE ART->IVA      WITH hArticulo[ "IVA"      ]
+    REPLACE ART->TIPO_IVA WITH hArticulo[ "TIPO_IVA" ]
+    REPLACE ART->DESCUENT WITH hArticulo[ "DESCUENT" ]
+    REPLACE ART->BAJA     WITH hArticulo[ "BAJA"     ]
 
     IF lNuevo
         REPLACE ART->FECHA_AL WITH Date()
@@ -339,9 +365,7 @@ STATIC FUNCTION _ArtGuardar( oGC, oGD, oGF, oGP, oGB, oGU, ;
     DbCommit()
     DbUnlock()
 
-    oWin:Close()
-
-RETURN NIL
+RETURN .T.
 
 
 // ============================================================================

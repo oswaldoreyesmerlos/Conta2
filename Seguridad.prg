@@ -146,7 +146,7 @@ FUNCTION HasPerm( cPerm )
 
     DEFAULT cPerm TO ""
 
-    cRol := AllTrim( cUserRol )
+    cRol := Upper( AllTrim( cUserRol ) )
 
     IF cRol == "ADM"
         RETURN .T.

@@ -338,10 +338,6 @@ FUNCTION NetFLock()
 
     LOCAL nIntentos := 0
 
-    IF FLock()
-        RETURN .T.
-    ENDIF
-
     DO WHILE !FLock()
         nIntentos++
         Inkey( 0.5 )
@@ -361,10 +357,6 @@ FUNCTION NetRLock()
 
     LOCAL nIntentos := 0
 
-    IF RLock()
-        RETURN .T.
-    ENDIF
-
     DO WHILE !RLock()
         nIntentos++
         Inkey( 0.5 )
@@ -380,6 +372,11 @@ FUNCTION NetRLock()
 RETURN .T.
 
 
+// ----------------------------------------------------------------------------
+// NetUnLock()
+// Libera TODOS los locks del area activa (FLock + record locks).
+// Es un wrapper directo de DbUnlock(); el nombre singular es historico.
+// ----------------------------------------------------------------------------
 FUNCTION NetUnLock()
     DbUnlock()
 RETURN NIL
@@ -393,6 +390,7 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
 
     LOCAL cProxCod := ""
     LOCAL nAreaIni := Select()
+    LOCAL lFueAbierta := DBUSED( "CON" )
     LOCAL cPrefijo := ""
     LOCAL nUltNum  := 0
     LOCAL nDigitos := 7
@@ -419,10 +417,14 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
     IF DbSeek( cCodDoc )
 
         IF !NetRLock()
-            CON->( DbCloseArea() )
+            IF !lFueAbierta
+                CON->( DbCloseArea() )
+            ENDIF
             Select( nAreaIni )
             RETURN ""
         ENDIF
+
+        DbSkip( 0 )
 
         cPrefijo := AllTrim( CON->PREFIJO )
         nUltNum  := CON->ULT_NUM
@@ -433,16 +435,25 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
         cPrefijo := _PrefijoEmp()
 
         IF !NetFLock()
-            CON->( DbCloseArea() )
+            IF !lFueAbierta
+                CON->( DbCloseArea() )
+            ENDIF
             Select( nAreaIni )
             RETURN ""
         ENDIF
 
-        DbAppend()
-        REPLACE CON->COD_DOC WITH cCodDoc
-        REPLACE CON->DESCRIP WITH If( ValType( cDescrip ) == "C", cDescrip, "" )
-        REPLACE CON->PREFIJO WITH cPrefijo
-        REPLACE CON->DIGITOS WITH nDigitos
+        IF DbSeek( cCodDoc )
+            DbSkip( 0 )
+            cPrefijo := AllTrim( CON->PREFIJO )
+            nUltNum  := CON->ULT_NUM
+            nDigitos := If( CON->DIGITOS > 0, CON->DIGITOS, 7 )
+        ELSE
+            DbAppend()
+            REPLACE CON->COD_DOC WITH cCodDoc
+            REPLACE CON->DESCRIP WITH If( ValType( cDescrip ) == "C", cDescrip, "" )
+            REPLACE CON->PREFIJO WITH cPrefijo
+            REPLACE CON->DIGITOS WITH nDigitos
+        ENDIF
 
     ENDIF
 
@@ -460,7 +471,10 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
 
     DbCommit()
     DbUnlock()
-    CON->( DbCloseArea() )
+
+    IF !lFueAbierta
+        CON->( DbCloseArea() )
+    ENDIF
 
     Select( nAreaIni )
 
@@ -898,6 +912,20 @@ RETURN .F.
 
 
 FUNCTION ValidNif( cNif, lSilent )
+
+RETURN ValidNifFiscal( cNif, lSilent )
+
+
+FUNCTION ValidNifObligatorio( cNif, lSilent )
+
+    DEFAULT lSilent TO .F.
+
+    IF ValType( cNif ) != "C" .OR. Empty( AllTrim( cNif ) )
+        IF !lSilent
+            MsgStop( "El NIF/CIF es obligatorio.", "Validacion NIF" )
+        ENDIF
+        RETURN .F.
+    ENDIF
 
 RETURN ValidNifFiscal( cNif, lSilent )
 

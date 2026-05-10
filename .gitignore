@@ -19,6 +19,13 @@ hbmk_*/
 build/
 dist/
 
+# Herramientas locales / salidas generadas
+scripts/
+logs/
+INFORME/
+admin_recovery.hbp
+seed_*.hbp
+
 # Sistema / editor
 Thumbs.db
 desktop.ini

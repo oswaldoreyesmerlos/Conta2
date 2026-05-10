@@ -177,8 +177,10 @@ FUNCTION VendedoresForm( lNuevo, cId )
     oChkBaja := TCheck():New( 14, 16, "Baja", lBaja, oWin )
 
     oBtGua := TButton():New( 16,  8, 17, 24, oWin, "GUARDAR", ;
-        {|| _VendGuardar( oGId, oGNom, oGDni, oGTel, oGCom, oGCta, ;
-                          oChkBaja, lNuevo, oWin ) } )
+        {|| If( VendedorGuardar( _VendFormHash( oGId, oGNom, oGDni, oGTel, ;
+                                                 oGCom, oGCta, oChkBaja ), ;
+                                   lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 16, 28, 17, 44, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -201,12 +203,26 @@ FUNCTION VendedoresForm( lNuevo, cId )
 RETURN NIL
 
 
-STATIC FUNCTION _VendGuardar( oGC, oGN, oGD, oGT, oGCo, oGCt, ;
-                               oChk, lNuevo, oWin )
+STATIC FUNCTION _VendFormHash( oGC, oGN, oGD, oGT, oGCo, oGCt, oChk )
+
+    LOCAL hVendedor := {=>}
+
+    hVendedor[ "ID"       ] := AllTrim( oGC:GetValue() )
+    hVendedor[ "NOMBRE"   ] := AllTrim( oGN:GetValue() )
+    hVendedor[ "DNI"      ] := AllTrim( oGD:GetValue() )
+    hVendedor[ "TELEFONO" ] := AllTrim( oGT:GetValue() )
+    hVendedor[ "COMISION" ] := oGCo:GetValue()
+    hVendedor[ "CTA_CONT" ] := AllTrim( oGCt:GetValue() )
+    hVendedor[ "BAJA"     ] := oChk:GetValue()
+
+RETURN hVendedor
+
+
+FUNCTION VendedorGuardar( hVendedor, lNuevo )
 
     LOCAL cId
 
-    cId := AllTrim( oGC:uVar )
+    cId := hVendedor[ "ID" ]
 
     DbSelectArea( "VEN" )
     OrdSetFocus( "VEN_ID" )
@@ -214,25 +230,25 @@ STATIC FUNCTION _VendGuardar( oGC, oGN, oGD, oGT, oGCo, oGCt, ;
     IF lNuevo
         IF DbSeek( cId )
             MsgStop( "El codigo " + cId + " ya existe.", "Alta vendedor" )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         IF !DbSeek( cId ) .OR. !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
     REPLACE VEN->ID       WITH cId
-    REPLACE VEN->NOMBRE   WITH AllTrim( oGN:uVar  )
-    REPLACE VEN->DNI      WITH AllTrim( oGD:uVar  )
-    REPLACE VEN->TELEFONO WITH AllTrim( oGT:uVar  )
-    REPLACE VEN->COMISION WITH oGCo:uVar
-    REPLACE VEN->CTA_CONT WITH AllTrim( oGCt:uVar )
-    REPLACE VEN->BAJA     WITH oChk:lValue
+    REPLACE VEN->NOMBRE   WITH hVendedor[ "NOMBRE"   ]
+    REPLACE VEN->DNI      WITH hVendedor[ "DNI"      ]
+    REPLACE VEN->TELEFONO WITH hVendedor[ "TELEFONO" ]
+    REPLACE VEN->COMISION WITH hVendedor[ "COMISION" ]
+    REPLACE VEN->CTA_CONT WITH hVendedor[ "CTA_CONT" ]
+    REPLACE VEN->BAJA     WITH hVendedor[ "BAJA"     ]
 
     IF lNuevo
         REPLACE VEN->FECHA_AL WITH Date()
@@ -241,9 +257,7 @@ STATIC FUNCTION _VendGuardar( oGC, oGN, oGD, oGT, oGCo, oGCt, ;
     DbCommit()
     DbUnlock()
 
-    oWin:Close()
-
-RETURN NIL
+RETURN .T.
 
 
 // ============================================================================

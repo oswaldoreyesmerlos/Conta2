@@ -141,11 +141,12 @@ FUNCTION Empresa()
     oGSec  := TGet():New(  8, 93, cSeccion, "@!", oWin )
 
     oBtGua := TButton():New( 30, 35, 31, 54, oWin, "GUARDAR", ;
-        {|| _EmpGuardar( oGNif, oGNom, oGDir, oGCiu, oGPro, ;
-                         oGCP,  oGPais, oGTel, oGMov, oGMail, ;
-                         oGWeb, oGIban, oGPref, ;
-                         oGTomo, oGFol, oGHoja, oGSec, ;
-                         lNuevo, oWin ) } )
+        {|| If( EmpresaGuardar( _EmpFormHash( oGNif, oGNom, oGDir, oGCiu, oGPro, ;
+                                              oGCP,  oGPais, oGTel, oGMov, oGMail, ;
+                                              oGWeb, oGIban, oGPref, ;
+                                              oGTomo, oGFol, oGHoja, oGSec ), ;
+                                lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 30, 58, 31, 77, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -178,52 +179,76 @@ FUNCTION Empresa()
 RETURN NIL
 
 
-STATIC FUNCTION _EmpGuardar( oGNif, oGNom, oGDir, oGCiu, oGPro, ;
+STATIC FUNCTION _EmpFormHash( oGNif, oGNom, oGDir, oGCiu, oGPro, ;
                                oGCP,  oGPais, oGTel, oGMov, oGMail, ;
                                oGWeb, oGIban, oGPref, ;
-                               oGTomo, oGFol, oGHoja, oGSec, ;
-                               lNuevo, oWin )
+                               oGTomo, oGFol, oGHoja, oGSec )
+
+    LOCAL hEmpresa := {=>}
+
+    hEmpresa[ "NIF"      ] := AllTrim( oGNif:GetValue() )
+    hEmpresa[ "NOMBRE"   ] := AllTrim( oGNom:GetValue() )
+    hEmpresa[ "DIRECCIO" ] := AllTrim( oGDir:GetValue() )
+    hEmpresa[ "CIUDAD"   ] := AllTrim( oGCiu:GetValue() )
+    hEmpresa[ "PROVINCI" ] := AllTrim( oGPro:GetValue() )
+    hEmpresa[ "CP"       ] := AllTrim( oGCP:GetValue() )
+    hEmpresa[ "PAIS"     ] := AllTrim( oGPais:GetValue() )
+    hEmpresa[ "TELEFONO" ] := AllTrim( oGTel:GetValue() )
+    hEmpresa[ "MOVIL"    ] := AllTrim( oGMov:GetValue() )
+    hEmpresa[ "EMAIL"    ] := AllTrim( oGMail:GetValue() )
+    hEmpresa[ "WEB"      ] := AllTrim( oGWeb:GetValue() )
+    hEmpresa[ "IBANPPAL" ] := AllTrim( oGIban:GetValue() )
+    hEmpresa[ "PREFIJO"  ] := AllTrim( oGPref:GetValue() )
+    hEmpresa[ "REG_TOMO" ] := AllTrim( oGTomo:GetValue() )
+    hEmpresa[ "REG_FOL"  ] := AllTrim( oGFol:GetValue() )
+    hEmpresa[ "REG_HOJA" ] := AllTrim( oGHoja:GetValue() )
+    hEmpresa[ "REG_SECC" ] := AllTrim( oGSec:GetValue() )
+
+RETURN hEmpresa
+
+
+FUNCTION EmpresaGuardar( hEmpresa, lNuevo )
+
+    DEFAULT lNuevo TO .F.
 
     DbSelectArea( "EMP" )
 
     IF lNuevo
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         DbGoTop()
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
-    REPLACE EMP->NIF      WITH AllTrim( oGNif:uVar  )
-    REPLACE EMP->NOMBRE   WITH AllTrim( oGNom:uVar  )
-    REPLACE EMP->DIRECCIO WITH AllTrim( oGDir:uVar  )
-    REPLACE EMP->CIUDAD   WITH AllTrim( oGCiu:uVar  )
-    REPLACE EMP->PROVINCI WITH AllTrim( oGPro:uVar  )
-    REPLACE EMP->CP       WITH AllTrim( oGCP:uVar   )
-    REPLACE EMP->PAIS     WITH AllTrim( oGPais:uVar )
-    REPLACE EMP->TELEFONO WITH AllTrim( oGTel:uVar  )
-    REPLACE EMP->MOVIL    WITH AllTrim( oGMov:uVar  )
-    REPLACE EMP->EMAIL    WITH AllTrim( oGMail:uVar )
-    REPLACE EMP->WEB      WITH AllTrim( oGWeb:uVar  )
-    REPLACE EMP->IBANPPAL WITH AllTrim( oGIban:uVar )
-    REPLACE EMP->PREFIJO  WITH AllTrim( oGPref:uVar )
-    REPLACE EMP->REG_TOMO WITH AllTrim( oGTomo:uVar )
-    REPLACE EMP->REG_FOL  WITH AllTrim( oGFol:uVar  )
-    REPLACE EMP->REG_HOJA WITH AllTrim( oGHoja:uVar )
-    REPLACE EMP->REG_SECC WITH AllTrim( oGSec:uVar  )
+    REPLACE EMP->NIF      WITH hEmpresa[ "NIF"      ]
+    REPLACE EMP->NOMBRE   WITH hEmpresa[ "NOMBRE"   ]
+    REPLACE EMP->DIRECCIO WITH hEmpresa[ "DIRECCIO" ]
+    REPLACE EMP->CIUDAD   WITH hEmpresa[ "CIUDAD"   ]
+    REPLACE EMP->PROVINCI WITH hEmpresa[ "PROVINCI" ]
+    REPLACE EMP->CP       WITH hEmpresa[ "CP"       ]
+    REPLACE EMP->PAIS     WITH hEmpresa[ "PAIS"     ]
+    REPLACE EMP->TELEFONO WITH hEmpresa[ "TELEFONO" ]
+    REPLACE EMP->MOVIL    WITH hEmpresa[ "MOVIL"    ]
+    REPLACE EMP->EMAIL    WITH hEmpresa[ "EMAIL"    ]
+    REPLACE EMP->WEB      WITH hEmpresa[ "WEB"      ]
+    REPLACE EMP->IBANPPAL WITH hEmpresa[ "IBANPPAL" ]
+    REPLACE EMP->PREFIJO  WITH hEmpresa[ "PREFIJO"  ]
+    REPLACE EMP->REG_TOMO WITH hEmpresa[ "REG_TOMO" ]
+    REPLACE EMP->REG_FOL  WITH hEmpresa[ "REG_FOL"  ]
+    REPLACE EMP->REG_HOJA WITH hEmpresa[ "REG_HOJA" ]
+    REPLACE EMP->REG_SECC WITH hEmpresa[ "REG_SECC" ]
 
     DbCommit()
     DbUnlock()
 
     MsgInfo( "Datos de empresa guardados correctamente.", "Empresa" )
 
-    oWin:Close()
-
-RETURN NIL
+RETURN .T.
 
 // ============================================================================
 // FIN DE M_Empresa.prg

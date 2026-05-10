@@ -4,229 +4,12 @@
  *
  * FUNCIONES PUBLICAS
  * ------------------
- *   M_Familias()   - ABM de familias de articulos
  *   M_FormaPago()  - ABM de formas de pago
  *   M_TiposIva()   - ABM de tipos de IVA
  *   M_CCostes()    - ABM de centros de coste
  */
 
 #include "OOp.ch"
-
-
-// ============================================================================
-// M_Familias()
-// ============================================================================
-FUNCTION M_Familias()
-
-    LOCAL oWin
-    LOCAL oGrid
-    LOCAL oBtNvo
-    LOCAL oBtSal
-    LOCAL aData
-
-    IF !ABRIR_TABLA( "FAMILIAS", "FAM", "FAM_COD" )
-        RETURN NIL
-    ENDIF
-
-    aData := _FamCargar()
-
-    oWin  := TWindow():New( 3, 10, 34, 119, "FAMILIAS DE ARTICULOS" )
-    oGrid := TGrid():New( 2, 2, 26, 106, oWin )
-
-    oGrid:aData    := aData
-    oGrid:nSeekCol := 1
-
-    oGrid:AddColumn( "Codigo",      5, "@!",     { |a| a[1] } )
-    oGrid:AddColumn( "Descripcion",30, "@!",     { |a| a[2] } )
-    oGrid:AddColumn( "IVA Def",     7, "@!",     { |a| a[3] } )
-    oGrid:AddColumn( "Cta.Venta",  10, "@!",     { |a| a[4] } )
-    oGrid:AddColumn( "Cta.Compra", 10, "@!",     { |a| a[5] } )
-    oGrid:AddColumn( "Margen %",    8, "99.99",  { |a| a[6] } )
-    oGrid:AddColumn( "Baja",        4, "@!",     { |a| If( a[7], "SI", "NO" ) } )
-
-    oGrid:bEnter := {| g | ;
-        _FamForm( g:CurrentRow(), .F. ), ;
-        aData := _FamCargar(), ;
-        g:aData := aData, ;
-        g:Paint() }
-
-    oBtNvo := TButton():New( 28, 2, 29, 18, oWin, "NUEVO (F5)", ;
-        {|| _FamForm( NIL, .T. ), ;
-            aData := _FamCargar(), ;
-            oGrid:aData := aData, ;
-            oGrid:nCurRow := Len( aData ), ;
-            oGrid:Paint() } )
-
-    oBtSal := TButton():New( 28, 88, 29, 104, oWin, "CERRAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oGrid  )
-    oWin:AddCtrl( oBtNvo )
-    oWin:AddCtrl( oBtSal )
-
-    oWin:Run()
-
-    FAM->( DbCloseArea() )
-
-RETURN NIL
-
-
-STATIC FUNCTION _FamCargar()
-
-    LOCAL aData
-
-    aData := {}
-
-    DbSelectArea( "FAM" )
-    OrdSetFocus( "FAM_COD" )
-    DbGoTop()
-
-    DO WHILE !Eof()
-        IF !Deleted()
-            AAdd( aData, { ;
-                AllTrim( FAM->CODIGO  ), ;
-                AllTrim( FAM->DESCRIP ), ;
-                AllTrim( FAM->DEF_IVA ), ;
-                AllTrim( FAM->CTA_VTA ), ;
-                AllTrim( FAM->CTA_COM ), ;
-                FAM->MARGEN, ;
-                FAM->BAJA } )
-        ENDIF
-        DbSkip()
-    ENDDO
-
-RETURN aData
-
-
-STATIC FUNCTION _FamForm( aFila, lNuevo )
-
-    LOCAL oWin
-    LOCAL oGetCod
-    LOCAL oGetDes
-    LOCAL oGetIva
-    LOCAL oGetVta
-    LOCAL oGetCom
-    LOCAL oGetMar
-    LOCAL oChkBaj
-    LOCAL oBtGua
-    LOCAL oBtCan
-    LOCAL cCodigo
-    LOCAL cDescri
-    LOCAL cIva
-    LOCAL cCtaVta
-    LOCAL cCtaCom
-    LOCAL nMargen
-    LOCAL lBaja
-    LOCAL cTit
-
-    DEFAULT lNuevo TO .F.
-
-    cCodigo := Space(  3 )
-    cDescri := Space( 30 )
-    cIva    := Space(  1 )
-    cCtaVta := Space( 10 )
-    cCtaCom := Space( 10 )
-    nMargen := 0.00
-    lBaja   := .F.
-
-    IF !lNuevo .AND. aFila != NIL
-        cCodigo := PadR( aFila[1], 3  )
-        cDescri := PadR( aFila[2], 30 )
-        cIva    := PadR( aFila[3], 1  )
-        cCtaVta := PadR( aFila[4], 10 )
-        cCtaCom := PadR( aFila[5], 10 )
-        nMargen := aFila[6]
-        lBaja   := aFila[7]
-    ENDIF
-
-    cTit := If( lNuevo, "NUEVA FAMILIA", "EDITAR FAMILIA" )
-
-    oWin := TWindow():New( 8, 30, 28, 100, cTit )
-
-    oWin:AddCtrl( TLabel():New(  2, 3, "Codigo      :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  4, 3, "Descripcion :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  6, 3, "Tipo IVA    :", oWin ) )
-    oWin:AddCtrl( TLabel():New(  8, 3, "Cta. Venta  :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 10, 3, "Cta. Compra :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 12, 3, "Margen %    :", oWin ) )
-
-    oGetCod := TGet():New(  2, 17, cCodigo, "@!",    oWin )
-    oGetCod:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
-    IF !lNuevo
-        oGetCod:lEnabled := .F.
-    ENDIF
-
-    oGetDes := TGet():New(  4, 17, cDescri, "@!", oWin )
-    oGetDes:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
-
-    oGetIva := TGet():New(  6, 17, cIva,    "@!", oWin )
-    oGetVta := TGet():New(  8, 17, cCtaVta, "@!", oWin )
-    oGetCom := TGet():New( 10, 17, cCtaCom, "@!", oWin )
-    oGetMar := TGet():New( 12, 17, nMargen, "99.99", oWin )
-
-    oChkBaj := TCheck():New( 14, 17, "Baja", lBaja, oWin )
-
-    oBtGua := TButton():New( 16, 10, 17, 26, oWin, "GUARDAR", ;
-        {|| _FamGuardar( oGetCod, oGetDes, oGetIva, oGetVta, ;
-                         oGetCom, oGetMar, oChkBaj, lNuevo, oWin ) } )
-
-    oBtCan := TButton():New( 16, 30, 17, 46, oWin, "CANCELAR", ;
-        {|| oWin:Close() } )
-
-    oWin:AddCtrl( oGetCod )
-    oWin:AddCtrl( oGetDes )
-    oWin:AddCtrl( oGetIva )
-    oWin:AddCtrl( oGetVta )
-    oWin:AddCtrl( oGetCom )
-    oWin:AddCtrl( oGetMar )
-    oWin:AddCtrl( oChkBaj )
-    oWin:AddCtrl( oBtGua  )
-    oWin:AddCtrl( oBtCan  )
-
-    oWin:Run()
-
-RETURN NIL
-
-
-STATIC FUNCTION _FamGuardar( oGC, oGD, oGI, oGV, oGCo, oGM, oChk, lNuevo, oWin )
-
-    LOCAL cCod
-
-    cCod := AllTrim( oGC:uVar )
-
-    DbSelectArea( "FAM" )
-    OrdSetFocus( "FAM_COD" )
-
-    IF lNuevo
-        IF DbSeek( cCod )
-            MsgStop( "El codigo " + cCod + " ya existe.", "Alta" )
-            RETURN NIL
-        ENDIF
-        IF !NetFLock()
-            RETURN NIL
-        ENDIF
-        DbAppend()
-    ELSE
-        IF !DbSeek( cCod )
-            RETURN NIL
-        ENDIF
-        IF !NetRLock()
-            RETURN NIL
-        ENDIF
-    ENDIF
-
-    REPLACE FAM->CODIGO  WITH AllTrim( oGC:uVar  )
-    REPLACE FAM->DESCRIP WITH AllTrim( oGD:uVar  )
-    REPLACE FAM->DEF_IVA WITH AllTrim( oGI:uVar  )
-    REPLACE FAM->CTA_VTA WITH AllTrim( oGV:uVar  )
-    REPLACE FAM->CTA_COM WITH AllTrim( oGCo:uVar )
-    REPLACE FAM->MARGEN  WITH oGM:uVar
-    REPLACE FAM->BAJA    WITH oChk:lValue
-
-    DbUnlock()
-    oWin:Close()
-
-RETURN NIL
 
 
 // ============================================================================
@@ -375,8 +158,10 @@ STATIC FUNCTION _FPForm( aFila, lNuevo )
     oChkBaj := TCheck():New( 12, 17, "Baja", lBaja, oWin )
 
     oBtGua := TButton():New( 14, 8, 15, 24, oWin, "GUARDAR", ;
-        {|| _FPGuardar( oGetCod, oGetDes, oGetDia, oGetNPa, ;
-                        oGetCta, oChkBaj, lNuevo, oWin ) } )
+        {|| If( FormaPagoGuardar( _FPFormHash( oGetCod, oGetDes, oGetDia, oGetNPa, ;
+                                                oGetCta, oChkBaj ), ;
+                                  lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 14, 28, 15, 44, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -395,11 +180,25 @@ STATIC FUNCTION _FPForm( aFila, lNuevo )
 RETURN NIL
 
 
-STATIC FUNCTION _FPGuardar( oGC, oGD, oGDi, oGN, oGCt, oChk, lNuevo, oWin )
+STATIC FUNCTION _FPFormHash( oGC, oGD, oGDi, oGN, oGCt, oChk )
+
+    LOCAL hFP := {=>}
+
+    hFP[ "CODIGO"   ] := AllTrim( oGC:GetValue() )
+    hFP[ "DESCRIP"  ] := AllTrim( oGD:GetValue() )
+    hFP[ "DIAS"     ] := oGDi:GetValue()
+    hFP[ "NUM_PAGS" ] := oGN:GetValue()
+    hFP[ "CTA_COB"  ] := AllTrim( oGCt:GetValue() )
+    hFP[ "BAJA"     ] := oChk:GetValue()
+
+RETURN hFP
+
+
+FUNCTION FormaPagoGuardar( hFP, lNuevo )
 
     LOCAL cCod
 
-    cCod := AllTrim( oGC:uVar )
+    cCod := hFP[ "CODIGO" ]
 
     DbSelectArea( "FP" )
     OrdSetFocus( "FP_COD" )
@@ -407,32 +206,31 @@ STATIC FUNCTION _FPGuardar( oGC, oGD, oGDi, oGN, oGCt, oChk, lNuevo, oWin )
     IF lNuevo
         IF DbSeek( cCod )
             MsgStop( "El codigo " + cCod + " ya existe.", "Alta" )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         IF !DbSeek( cCod )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
-    REPLACE FP->CODIGO   WITH AllTrim( oGC:uVar  )
-    REPLACE FP->DESCRIP  WITH AllTrim( oGD:uVar  )
-    REPLACE FP->DIAS     WITH oGDi:uVar
-    REPLACE FP->NUM_PAGS WITH oGN:uVar
-    REPLACE FP->CTA_COB  WITH AllTrim( oGCt:uVar )
-    REPLACE FP->BAJA     WITH oChk:lValue
+    REPLACE FP->CODIGO   WITH hFP[ "CODIGO"   ]
+    REPLACE FP->DESCRIP  WITH hFP[ "DESCRIP"  ]
+    REPLACE FP->DIAS     WITH hFP[ "DIAS"     ]
+    REPLACE FP->NUM_PAGS WITH hFP[ "NUM_PAGS" ]
+    REPLACE FP->CTA_COB  WITH hFP[ "CTA_COB"  ]
+    REPLACE FP->BAJA     WITH hFP[ "BAJA"     ]
 
     DbUnlock()
-    oWin:Close()
 
-RETURN NIL
+RETURN .T.
 
 
 // ============================================================================
@@ -571,8 +369,10 @@ STATIC FUNCTION _IVAForm( aFila, lNuevo )
     oChkBaj := TCheck():New( 10, 22, "Baja", lBaja, oWin )
 
     oBtGua := TButton():New( 12, 6, 13, 22, oWin, "GUARDAR", ;
-        {|| _IVAGuardar( oGetCod, oGetDes, oGetIva, oGetRe, ;
-                         oChkBaj, lNuevo, oWin ) } )
+        {|| If( TipoIvaGuardar( _IVAFormHash( oGetCod, oGetDes, oGetIva, oGetRe, ;
+                                              oChkBaj ), ;
+                                lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 12, 26, 13, 42, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -590,15 +390,28 @@ STATIC FUNCTION _IVAForm( aFila, lNuevo )
 RETURN NIL
 
 
-STATIC FUNCTION _IVAGuardar( oGC, oGD, oGI, oGR, oChk, lNuevo, oWin )
+STATIC FUNCTION _IVAFormHash( oGC, oGD, oGI, oGR, oChk )
+
+    LOCAL hIVA := {=>}
+
+    hIVA[ "CODIGO"   ] := AllTrim( oGC:GetValue() )
+    hIVA[ "DESCRIP"  ] := AllTrim( oGD:GetValue() )
+    hIVA[ "PORC_IVA" ] := oGI:GetValue()
+    hIVA[ "PORC_RE"  ] := oGR:GetValue()
+    hIVA[ "BAJA"     ] := oChk:GetValue()
+
+RETURN hIVA
+
+
+FUNCTION TipoIvaGuardar( hIVA, lNuevo )
 
     LOCAL cCod
 
-    cCod := AllTrim( oGC:uVar )
+    cCod := hIVA[ "CODIGO" ]
 
     IF !( cCod $ "GRSE" )
         MsgStop( "Codigo invalido. Use G, R, S o E.", "IVA" )
-        RETURN NIL
+        RETURN .F.
     ENDIF
 
     DbSelectArea( "IVA" )
@@ -607,31 +420,30 @@ STATIC FUNCTION _IVAGuardar( oGC, oGD, oGI, oGR, oChk, lNuevo, oWin )
     IF lNuevo
         IF DbSeek( cCod )
             MsgStop( "El tipo " + cCod + " ya existe.", "Alta" )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         IF !DbSeek( cCod )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
     REPLACE IVA->CODIGO   WITH cCod
-    REPLACE IVA->DESCRIP  WITH AllTrim( oGD:uVar )
-    REPLACE IVA->PORC_IVA WITH oGI:uVar
-    REPLACE IVA->PORC_RE  WITH oGR:uVar
-    REPLACE IVA->BAJA     WITH oChk:lValue
+    REPLACE IVA->DESCRIP  WITH hIVA[ "DESCRIP"  ]
+    REPLACE IVA->PORC_IVA WITH hIVA[ "PORC_IVA" ]
+    REPLACE IVA->PORC_RE  WITH hIVA[ "PORC_RE"  ]
+    REPLACE IVA->BAJA     WITH hIVA[ "BAJA"     ]
 
     DbUnlock()
-    oWin:Close()
 
-RETURN NIL
+RETURN .T.
 
 
 // ============================================================================
@@ -772,8 +584,10 @@ STATIC FUNCTION _CCOForm( aFila, lNuevo )
     oChkBaj := TCheck():New( 10, 17, "Baja", lBaja, oWin )
 
     oBtGua := TButton():New( 12, 10, 13, 26, oWin, "GUARDAR", ;
-        {|| _CCOGuardar( oGetCod, oGetDes, oGetRes, oGetPre, ;
-                         oChkBaj, lNuevo, oWin ) } )
+        {|| If( CCosteGuardar( _CCOFormHash( oGetCod, oGetDes, oGetRes, oGetPre, ;
+                                             oChkBaj ), ;
+                               lNuevo ), ;
+                 oWin:Close(), NIL ) } )
 
     oBtCan := TButton():New( 12, 30, 13, 46, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
@@ -791,11 +605,24 @@ STATIC FUNCTION _CCOForm( aFila, lNuevo )
 RETURN NIL
 
 
-STATIC FUNCTION _CCOGuardar( oGC, oGD, oGR, oGP, oChk, lNuevo, oWin )
+STATIC FUNCTION _CCOFormHash( oGC, oGD, oGR, oGP, oChk )
+
+    LOCAL hCCO := {=>}
+
+    hCCO[ "CCO_COD"  ] := AllTrim( oGC:GetValue() )
+    hCCO[ "CCO_DESC" ] := AllTrim( oGD:GetValue() )
+    hCCO[ "CCO_RESP" ] := AllTrim( oGR:GetValue() )
+    hCCO[ "CCO_PRES" ] := oGP:GetValue()
+    hCCO[ "BAJA"      ] := oChk:GetValue()
+
+RETURN hCCO
+
+
+FUNCTION CCosteGuardar( hCCO, lNuevo )
 
     LOCAL cCod
 
-    cCod := AllTrim( oGC:uVar )
+    cCod := hCCO[ "CCO_COD" ]
 
     DbSelectArea( "CCO" )
     OrdSetFocus( "CCO_COD" )
@@ -803,31 +630,30 @@ STATIC FUNCTION _CCOGuardar( oGC, oGD, oGR, oGP, oChk, lNuevo, oWin )
     IF lNuevo
         IF DbSeek( cCod )
             MsgStop( "El codigo " + cCod + " ya existe.", "Alta" )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetFLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         IF !DbSeek( cCod )
-            RETURN NIL
+            RETURN .F.
         ENDIF
         IF !NetRLock()
-            RETURN NIL
+            RETURN .F.
         ENDIF
     ENDIF
 
     REPLACE CCO->CCO_COD  WITH cCod
-    REPLACE CCO->CCO_DESC WITH AllTrim( oGD:uVar )
-    REPLACE CCO->CCO_RESP WITH AllTrim( oGR:uVar )
-    REPLACE CCO->CCO_PRES WITH oGP:uVar
-    REPLACE CCO->BAJA     WITH oChk:lValue
+    REPLACE CCO->CCO_DESC WITH hCCO[ "CCO_DESC" ]
+    REPLACE CCO->CCO_RESP WITH hCCO[ "CCO_RESP" ]
+    REPLACE CCO->CCO_PRES WITH hCCO[ "CCO_PRES" ]
+    REPLACE CCO->BAJA     WITH hCCO[ "BAJA"     ]
 
     DbUnlock()
-    oWin:Close()
 
-RETURN NIL
+RETURN .T.
 
 
 // ============================================================================

@@ -408,6 +408,10 @@ STATIC FUNCTION _DiaNuevo()
 RETURN _DiaForm( "" )
 
 
+FUNCTION LibroDiarioNuevo()
+RETURN _DiaForm( "" )
+
+
 STATIC FUNCTION _DiaEditar( cAsiento )
 RETURN _DiaForm( cAsiento )
 

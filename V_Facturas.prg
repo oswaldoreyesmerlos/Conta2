@@ -311,9 +311,9 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
                                oLBase, oLIva, oLRet, oLTotal ) } )
 
         oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
-            {|| _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
-                             aLineas, cPieDoc, @cNumero, cNumPre, lNuevo, ;
-                             nBase, nIva, nRet, nTotal, oLNumero, oWin ) } )
+            {|| _FacGuardarForm( _FacFormHash( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
+                                                cNumPre, nBase, nIva, nRet, nTotal, cPieDoc ), ;
+                                  aLineas, lNuevo, @cNumero, oLNumero, oWin ) } )
     ENDIF
 
     oBtImp := TButton():New( 33, 20, 34, 36, oWin, "IMPRIMIR", ;
@@ -512,7 +512,7 @@ STATIC FUNCTION _FacBuscarCli( oGet, cNom, cFP, nDias, nRet, ;
 
     LOCAL cId
 
-    cId := AllTrim( oGet:uVar )
+    cId := AllTrim( oGet:GetValue() )
 
     IF Empty( cId )
         RETURN .T.
@@ -763,7 +763,7 @@ STATIC FUNCTION _FacFormLin( aLin, lNuevo )
     oWin:AddCtrl( oLImp )
 
     bRecalc := {|| ;
-        nImp := ( oGCant:uVar * oGPre:uVar ) * ( 1 - oGDto:uVar / 100 ), ;
+        nImp := ( oGCant:GetValue() * oGPre:GetValue() ) * ( 1 - oGDto:GetValue() / 100 ), ;
         oLImp:SetText( _FmtN( nImp ) ), ;
         .T. }
 
@@ -788,12 +788,12 @@ STATIC FUNCTION _FacFormLin( aLin, lNuevo )
     oWin:Run()
 
     IF lOK
-        aLin[LIN_DESC] := AllTrim( oGDesc:uVar )
-        aLin[LIN_CANT] := oGCant:uVar
-        aLin[LIN_PRE]  := oGPre:uVar
-        aLin[LIN_DTO]  := oGDto:uVar
-        aLin[LIN_IVA]  := oGIva:uVar
-        aLin[LIN_IMP]  := ( oGCant:uVar * oGPre:uVar ) * ( 1 - oGDto:uVar / 100 )
+        aLin[LIN_DESC] := AllTrim( oGDesc:GetValue() )
+        aLin[LIN_CANT] := oGCant:GetValue()
+        aLin[LIN_PRE]  := oGPre:GetValue()
+        aLin[LIN_DTO]  := oGDto:GetValue()
+        aLin[LIN_IVA]  := oGIva:GetValue()
+        aLin[LIN_IMP]  := ( oGCant:GetValue() * oGPre:GetValue() ) * ( 1 - oGDto:GetValue() / 100 )
     ENDIF
 
 RETURN lOK
@@ -802,9 +802,8 @@ RETURN lOK
 // ============================================================================
 // GUARDAR
 // ============================================================================
-STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
-                               aLins, cPieDoc, cNumero, cNumPre, lNuevo, ;
-                               nBase, nIva, nRet, nTotal, oLNumero, oWin )
+STATIC FUNCTION _FacFormHash( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
+                               cNumPre, nBase, nIva, nRet, nTotal, cPieDoc )
 
     LOCAL cCli
     LOCAL dFec
@@ -812,7 +811,6 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
     LOCAL nDias
     LOCAL nPRet
     LOCAL cObs
-    LOCAL cNum
     LOCAL dVto
     LOCAL hFac
 
@@ -822,38 +820,11 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
     nDias := oGDias:GetValue()
     nPRet := oGRet:GetValue()
     cObs  := AllTrim( oGObs:GetValue() )
-    cNum  := cNumero
     cNumPre := If( cNumPre == NIL, "", AllTrim( cNumPre ) )
-    dVto  := ctod( "" )
-
-    IF Empty( cCli )
-        MsgStop( "Debe indicar el cliente.", "Guardar" )
-        RETURN NIL
-    ENDIF
-
-    IF !lNuevo
-        MsgStop( "Una factura emitida no se modifica." + Chr(13) + ;
-                 "Use nota de abono o factura rectificativa para mantener trazabilidad.", ;
-                 "Factura fiscal" )
-        RETURN NIL
-    ENDIF
-
-    IF Len( aLins ) == 0
-        MsgStop( "Debe introducir al menos una linea.", "Guardar" )
-        RETURN NIL
-    ENDIF
-
-    dVto := dFec + nDias
-
-    IF lNuevo
-        cNum := _FacSiguiente()
-        IF Empty( cNum )
-            RETURN NIL
-        ENDIF
-    ENDIF
+    dVto  := dFec + nDias
 
     hFac := {=>}
-    hFac[ "NUMERO"   ] := cNum
+    hFac[ "NUMERO"   ] := ""  // se asigna en guardar
     hFac[ "SERIE"    ] := "A"
     hFac[ "CLIENTE_" ] := cCli
     hFac[ "FECHA"    ] := dFec
@@ -872,14 +843,43 @@ STATIC FUNCTION _FacGuardar( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
     hFac[ "TIPO_FAC" ] := ""
     hFac[ "TIPO_DOC" ] := "F"
 
+RETURN hFac
+
+
+STATIC FUNCTION _FacGuardarForm( hFac, aLins, lNuevo, cNumero, oLNumero, oWin )
+
+    LOCAL cNum
+
+    IF Empty( hFac[ "CLIENTE_" ] )
+        MsgStop( "Debe indicar el cliente.", "Guardar" )
+        RETURN NIL
+    ENDIF
+
+    IF !lNuevo
+        MsgStop( "Una factura emitida no se modifica." + Chr(13) + ;
+                 "Use nota de abono o factura rectificativa para mantener trazabilidad.", ;
+                 "Factura fiscal" )
+        RETURN NIL
+    ENDIF
+
+    IF Len( aLins ) == 0
+        MsgStop( "Debe introducir al menos una linea.", "Guardar" )
+        RETURN NIL
+    ENDIF
+
+    cNum := _FacSiguiente()
+    IF Empty( cNum )
+        RETURN NIL
+    ENDIF
+
+    hFac[ "NUMERO" ] := cNum
+
     IF !FacturaGuardar( hFac, aLins, lNuevo )
         RETURN NIL
     ENDIF
 
-    IF lNuevo
-        oLNumero:SetText( PadR( cNum, 24 ) )
-        cNumero := cNum
-    ENDIF
+    oLNumero:SetText( PadR( cNum, 24 ) )
+    cNumero := cNum
 
     MsgInfo( "Factura " + cNum + " guardada.", "Guardado" )
 
@@ -1246,8 +1246,8 @@ STATIC FUNCTION _NaGuardar( cNumFac, cCliID, cCtaCli, oGFec, oGMot, ;
     LOCAL cCtaDebe
     LOCAL i
 
-    dFec    := oGFec:uVar
-    cMotivo := AllTrim( oGMot:uVar )
+    dFec    := oGFec:GetValue()
+    cMotivo := AllTrim( oGMot:GetValue() )
 
     IF Empty( cMotivo )
         MsgStop( "El motivo del abono es obligatorio.", "Validacion" )
