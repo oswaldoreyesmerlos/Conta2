@@ -894,6 +894,15 @@ RETURN NIL
 
 FUNCTION FacturaGuardar( hFac, aLins, lNuevo )
 
+    DEFAULT lNuevo TO .T.
+
+    IF !lNuevo .AND. FacturaContabilizada( hFac[ "SERIE" ], hFac[ "NUMERO" ] )
+        MsgStop( "No se puede guardar una factura contabilizada." + Chr(13) + ;
+                 "Use nota de abono o documento corrector.", ;
+                 "Documento contabilizado" )
+        RETURN .F.
+    ENDIF
+
     IF !_FacGuardarCab( hFac, lNuevo )
         RETURN .F.
     ENDIF

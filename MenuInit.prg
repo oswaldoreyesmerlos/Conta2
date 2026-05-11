@@ -60,6 +60,8 @@ EXTERNAL InformeVencimientos
 EXTERNAL InformeProveedores
 EXTERNAL InformeDiario
 EXTERNAL InformeMayor
+EXTERNAL InformeAsientosDescuadrados
+EXTERNAL InformeIVA
 EXTERNAL InformeBalanceSumasSaldos
 EXTERNAL InformeBalanceGeneral
 EXTERNAL InformePerdidasGanancias
@@ -196,6 +198,8 @@ FUNCTION Menu_Init()
         AAdd( aContab, { "Centros Coste",   {|| M_CCostes()       }, NIL, "Analitica" } )
         AAdd( aContab, { "Informe Diario",  {|| InformeDiario()   }, NIL, "Libro diario contable" } )
         AAdd( aContab, { "Libro Mayor",     {|| InformeMayor()    }, NIL, "Mayor por cuenta" } )
+        AAdd( aContab, { "Descuadres",      {|| InformeAsientosDescuadrados() }, NIL, "Asientos con debe distinto de haber" } )
+        AAdd( aContab, { "Informe IVA",     {|| InformeIVA() }, NIL, "IVA repercutido y soportado" } )
         AAdd( aContab, { "Sumas/Saldos",    {|| InformeBalanceSumasSaldos() }, NIL, "Balance de sumas y saldos" } )
         AAdd( aContab, { "Balance Gral.",   {|| InformeBalanceGeneral() }, NIL, "Balance general" } )
         AAdd( aContab, { "Perd./Gan.",      {|| InformePerdidasGanancias() }, NIL, "Estado de perdidas y ganancias" } )

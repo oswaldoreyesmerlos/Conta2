@@ -435,6 +435,259 @@ RETURN _MostrarInformeTexto( "MAYOR " + cCuenta, cTexto, ;
 
 
 // ============================================================================
+// InformeAsientosDescuadrados()
+// Lista asientos con diferencia entre debe y haber en el ejercicio actual.
+// ============================================================================
+FUNCTION InformeAsientosDescuadrados()
+
+    LOCAL cTexto
+    LOCAL nArea
+    LOCAL nEjer
+    LOCAL cAsiAct
+    LOCAL cAsi
+    LOCAL dFecha
+    LOCAL cDesc
+    LOCAL nDebe
+    LOCAL nHaber
+    LOCAL nDif
+    LOCAL nCnt
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_DQ", "DIA_ASI" )
+        RETURN NIL
+    ENDIF
+
+    cTexto  := ""
+    nArea   := Select()
+    nEjer   := Year( Date() )
+    cAsiAct := ""
+    nDebe   := 0
+    nHaber  := 0
+    nCnt    := 0
+    dFecha  := CToD( "" )
+    cDesc   := ""
+
+    DbSelectArea( "DIA_DQ" )
+    OrdSetFocus( "DIA_ASI" )
+    DbGoTop()
+
+    cTexto += PadC( "ASIENTOS DESCUADRADOS - EJERCICIO " + ;
+                    AllTrim( Str( nEjer ) ), 100 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+    cTexto += PadR( "ASIENTO", 10 ) + " "
+    cTexto += PadR( "FECHA",   10 ) + " "
+    cTexto += PadL( "DEBE",    14 ) + " "
+    cTexto += PadL( "HABER",   14 ) + " "
+    cTexto += PadL( "DIF.",    14 ) + " "
+    cTexto += "DESCRIPCION" + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+
+    DO WHILE !Eof()
+        IF !Deleted() .AND. Year( DIA_DQ->D_FECHA ) == nEjer
+            cAsi := AllTrim( DIA_DQ->D_ASIENT )
+            IF Empty( cAsiAct )
+                cAsiAct := cAsi
+                dFecha  := DIA_DQ->D_FECHA
+                cDesc   := AllTrim( DIA_DQ->D_DESCRI )
+            ELSEIF cAsi != cAsiAct
+                nDif := Round( nDebe - nHaber, 2 )
+                IF Abs( nDif ) > 0.01
+                    nCnt++
+                    cTexto += _InformeDescuadreLinea( cAsiAct, dFecha, ;
+                        nDebe, nHaber, nDif, cDesc )
+                ENDIF
+                cAsiAct := cAsi
+                dFecha  := DIA_DQ->D_FECHA
+                cDesc   := AllTrim( DIA_DQ->D_DESCRI )
+                nDebe   := 0
+                nHaber  := 0
+            ENDIF
+            nDebe  += DIA_DQ->D_DEBE
+            nHaber += DIA_DQ->D_HABER
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    IF !Empty( cAsiAct )
+        nDif := Round( nDebe - nHaber, 2 )
+        IF Abs( nDif ) > 0.01
+            nCnt++
+            cTexto += _InformeDescuadreLinea( cAsiAct, dFecha, ;
+                nDebe, nHaber, nDif, cDesc )
+        ENDIF
+    ENDIF
+
+    IF nCnt == 0
+        cTexto += "No se han encontrado asientos descuadrados." + hb_Eol()
+    ENDIF
+
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += "TOTAL ASIENTOS DESCUADRADOS: " + AllTrim( Str( nCnt ) ) + hb_Eol()
+
+    DIA_DQ->( DbCloseArea() )
+    Select( nArea )
+
+RETURN _MostrarInformeTexto( "ASIENTOS DESCUADRADOS", cTexto, ;
+    "ASIENTOS_DESCUADRADOS_" + AllTrim( Str( nEjer ) ) + ".TXT" )
+
+
+STATIC FUNCTION _InformeDescuadreLinea( cAsi, dFecha, nDebe, nHaber, nDif, cDesc )
+
+    LOCAL cLinea
+
+    cLinea := PadR( cAsi, 10 ) + " "
+    cLinea += PadR( DToC( dFecha ), 10 ) + " "
+    cLinea += PadL( Transform( nDebe,  "999,999.99" ), 14 ) + " "
+    cLinea += PadL( Transform( nHaber, "999,999.99" ), 14 ) + " "
+    cLinea += PadL( Transform( nDif,   "999,999.99" ), 14 ) + " "
+    cLinea += AllTrim( cDesc ) + hb_Eol()
+
+RETURN cLinea
+
+
+// ============================================================================
+// InformeIVA()
+// IVA repercutido y soportado del ejercicio actual.
+// ============================================================================
+FUNCTION InformeIVA()
+
+    LOCAL cTexto
+    LOCAL nEjer
+    LOCAL nArea
+    LOCAL nBaseRep
+    LOCAL nIvaRep
+    LOCAL nRetRep
+    LOCAL nTotRep
+    LOCAL nBaseSop
+    LOCAL nIvaSop
+    LOCAL nTotSop
+
+    cTexto  := ""
+    nEjer   := Year( Date() )
+    nArea   := Select()
+    nBaseRep := 0
+    nIvaRep  := 0
+    nRetRep  := 0
+    nTotRep  := 0
+    nBaseSop := 0
+    nIvaSop  := 0
+    nTotSop  := 0
+
+    cTexto += PadC( "INFORME IVA - EJERCICIO " + ;
+                    AllTrim( Str( nEjer ) ), 110 ) + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+
+    cTexto += "IVA REPERCUTIDO - FACTURAS EMITIDAS" + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += PadR( "FECHA",   10 ) + " "
+    cTexto += PadR( "NUMERO",  10 ) + " "
+    cTexto += PadR( "CLIENTE", 14 ) + " "
+    cTexto += PadL( "BASE",    14 ) + " "
+    cTexto += PadL( "IVA",     12 ) + " "
+    cTexto += PadL( "RET.",    12 ) + " "
+    cTexto += PadL( "TOTAL",   14 ) + " "
+    cTexto += "ASIENTO" + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+
+    IF ABRIR_TABLA( "FACTURA", "FAC_IVA", "FAC_FEC" )
+        DbSelectArea( "FAC_IVA" )
+        OrdSetFocus( "FAC_FEC" )
+        DbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted() .AND. Year( FAC_IVA->FECHA ) == nEjer .AND. ;
+               !DbFieldValue( "ANULADA", .F. )
+                nBaseRep += FAC_IVA->SUBTOTAL
+                nIvaRep  += FAC_IVA->IVA
+                nRetRep  += DbFieldValue( "RETENCIO", 0 )
+                nTotRep  += FAC_IVA->TOTAL
+                cTexto += _InformeIVALinea( FAC_IVA->FECHA, ;
+                    AllTrim( FAC_IVA->NUMERO ), AllTrim( FAC_IVA->CLIENTE_ ), ;
+                    FAC_IVA->SUBTOTAL, FAC_IVA->IVA, ;
+                    DbFieldValue( "RETENCIO", 0 ), FAC_IVA->TOTAL, ;
+                    AllTrim( DbFieldValue( "ASIENTO", "" ) ) )
+            ENDIF
+            DbSkip()
+        ENDDO
+        FAC_IVA->( DbCloseArea() )
+    ENDIF
+
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += PadR( "TOTAL REPERCUTIDO", 36 ) + " "
+    cTexto += PadL( Transform( nBaseRep, "999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nIvaRep,  "999,999.99" ), 12 ) + " "
+    cTexto += PadL( Transform( nRetRep,  "999,999.99" ), 12 ) + " "
+    cTexto += PadL( Transform( nTotRep,  "999,999.99" ), 14 ) + hb_Eol()
+    cTexto += hb_Eol()
+
+    cTexto += "IVA SOPORTADO - FACTURAS RECIBIDAS" + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += PadR( "FECHA",   10 ) + " "
+    cTexto += PadR( "NUM.INT.",10 ) + " "
+    cTexto += PadR( "PROV.",   14 ) + " "
+    cTexto += PadL( "BASE",    14 ) + " "
+    cTexto += PadL( "IVA",     12 ) + " "
+    cTexto += PadL( "RET.",    12 ) + " "
+    cTexto += PadL( "TOTAL",   14 ) + " "
+    cTexto += "ASIENTO" + hb_Eol()
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+
+    IF ABRIR_TABLA( "COMPRAS", "COM_IVA", "COM_FEC" )
+        DbSelectArea( "COM_IVA" )
+        OrdSetFocus( "COM_FEC" )
+        DbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted() .AND. Year( COM_IVA->FECHA ) == nEjer
+                nBaseSop += COM_IVA->SUBTOTAL
+                nIvaSop  += COM_IVA->IVA
+                nTotSop  += COM_IVA->TOTAL
+                cTexto += _InformeIVALinea( COM_IVA->FECHA, ;
+                    AllTrim( COM_IVA->NUM_INTE ), AllTrim( COM_IVA->PROV_ID ), ;
+                    COM_IVA->SUBTOTAL, COM_IVA->IVA, 0, COM_IVA->TOTAL, ;
+                    AllTrim( COM_IVA->ASIENTO ) )
+            ENDIF
+            DbSkip()
+        ENDDO
+        COM_IVA->( DbCloseArea() )
+    ENDIF
+
+    cTexto += Replicate( "-", 110 ) + hb_Eol()
+    cTexto += PadR( "TOTAL SOPORTADO", 36 ) + " "
+    cTexto += PadL( Transform( nBaseSop, "999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nIvaSop,  "999,999.99" ), 12 ) + " "
+    cTexto += PadL( Transform( 0,        "999,999.99" ), 12 ) + " "
+    cTexto += PadL( Transform( nTotSop,  "999,999.99" ), 14 ) + hb_Eol()
+    cTexto += hb_Eol()
+    cTexto += "RESUMEN IVA" + hb_Eol()
+    cTexto += "IVA repercutido : " + Transform( nIvaRep, "999,999,999.99" ) + hb_Eol()
+    cTexto += "IVA soportado   : " + Transform( nIvaSop, "999,999,999.99" ) + hb_Eol()
+    cTexto += "DIFERENCIA      : " + Transform( nIvaRep - nIvaSop, "999,999,999.99" ) + hb_Eol()
+
+    Select( nArea )
+
+RETURN _MostrarInformeTexto( "INFORME IVA", cTexto, ;
+    "IVA_" + AllTrim( Str( nEjer ) ) + ".TXT" )
+
+
+STATIC FUNCTION _InformeIVALinea( dFecha, cNum, cTercero, nBase, nIva, nRet, nTotal, cAsi )
+
+    LOCAL cLinea
+
+    cLinea := PadR( DToC( dFecha ), 10 ) + " "
+    cLinea += PadR( cNum, 10 ) + " "
+    cLinea += PadR( cTercero, 14 ) + " "
+    cLinea += PadL( Transform( nBase,  "999,999.99" ), 14 ) + " "
+    cLinea += PadL( Transform( nIva,   "999,999.99" ), 12 ) + " "
+    cLinea += PadL( Transform( nRet,   "999,999.99" ), 12 ) + " "
+    cLinea += PadL( Transform( nTotal, "999,999.99" ), 14 ) + " "
+    cLinea += cAsi + hb_Eol()
+
+RETURN cLinea
+
+
+// ============================================================================
 // InformeBalanceSumasSaldos()
 // ============================================================================
 FUNCTION InformeBalanceSumasSaldos()
