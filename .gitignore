@@ -23,6 +23,7 @@ dist/
 scripts/
 logs/
 INFORME/
+Test/
 admin_recovery.hbp
 seed_*.hbp
 
