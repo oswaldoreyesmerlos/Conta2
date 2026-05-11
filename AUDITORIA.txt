@@ -1,168 +1,437 @@
 ================================================================================
-AUDITORIA DEL SISTEMA - FUNCIONES DE GESTION POR APARTADO DE MENU
-Fecha: 06/05/2026
+AUDITORIA DE USABILIDAD Y MADUREZ - APPGESTION OBRAS
+Fecha: 10/05/2026
 ================================================================================
 
-LEYENDA
-  [OK]      Implementado y conectado al menu
-  [FALTA]   Requerido por el menu pero no implementado
-  [PARCIAL] Implementado pero incompleto (ver nota)
-  [EXTRA]   Implementado pero no accesible desde el menu todavia
+OBJETIVO
+--------
+
+Evaluar si la aplicacion es usable en el estado actual y que debe mejorar para
+convertirse en una herramienta diaria fiable para una empresa de reformas,
+presupuestos, obras, facturacion, tesoreria y contabilidad basica.
+
+La evaluacion no juzga la aplicacion como ERP generico. Se califica contra el
+enfoque decidido: negocio centrado en PRESUPUESTO -> OBRA -> FACTURA -> COBRO,
+con soporte de tesoreria y contabilidad.
+
 
 ================================================================================
-MENU: MAESTROS
+1. VEREDICTO EJECUTIVO
 ================================================================================
 
-  CLIENTES
-  --------
-  [OK]      ClientesView()                     Listado / busqueda
-  [OK]      ClientesForm( lNuevo, cId )        Alta y edicion
+Estado actual:
 
-  PROVEEDORES
-  -----------
-  [OK]      ProveedView()                      Listado / busqueda
-  [OK]      ProveedForm( lNuevo, cId )         Alta y edicion
+  MVP INTERNO USABLE CON RESERVAS.
 
-  ARTICULOS
-  ---------
-  [OK]      ArticulosView()                    Listado / inventario
-  [OK]      ArticulosForm( lNuevo, cCodigo )   Alta y edicion
+La aplicacion ya puede usarse para pruebas reales controladas y para operar un
+flujo basico de gestion, siempre que el usuario entienda que aun no es un cierre
+administrativo completo.
 
-  VENDEDORES
-  ----------
-  [OK]      VendedoresView()                   Listado
-  [OK]      VendedoresForm( lNuevo, cId )      Alta y edicion
+Calificacion global:
 
-  FAMILIAS
-  --------
-  [OK]      M_Familias()                       ABM familias de articulos
+  6.8 / 10
 
-  FORMAS DE PAGO
-  --------------
-  [OK]      M_FormaPago()                      ABM formas de pago
+Lectura de la nota:
 
-  TIPOS IVA
-  ---------
-  [OK]      M_TiposIva()                       ABM tipos de IVA
+  - Por debajo de 5: prototipo no operativo.
+  - 5 a 6.5: demo funcional con huecos importantes.
+  - 6.5 a 7.5: MVP interno usable con supervision.
+  - 7.5 a 8.5: herramienta diaria razonablemente fiable.
+  - 8.5 a 10: producto maduro.
 
-  EMPRESA  (solo ADM)
-  -------------------
-  [OK]      Empresa()                          Alta y edicion datos empresa
+La app esta entrando en zona de MVP real. Ya no es solo una demo, pero todavia
+necesita consolidacion antes de depender de ella como unico sistema de gestion.
+
 
 ================================================================================
-MENU: VENTAS
+2. CALIFICACION POR AREAS
 ================================================================================
 
-  PRESUPUESTOS
-  ------------
-  [OK]      PresupuestosView()                 Listado de presupuestos
-  [OK]      AltaPresupuesto()                  Nuevo presupuesto
-  [OK]      ImprimirPresupuesto( cNumero )     Genera HTML + abre navegador
-  [FALTA]   PresupuestosForm( cNumero )        Edicion de presupuesto existente
-  [FALTA]   ConvertirAFactura( cNumPre )       Convertir presupuesto en factura
+AREA                                      NOTA      ESTADO
+----                                      ----      ------
+Enfoque de negocio                         8.0      Bien orientado a obras
+Menu y navegacion                          7.0      Bastante usable
+Clientes / proveedores / maestros          7.0      Suficiente para operar
+Presupuestos                               7.2      Ya usable, falta pulido
+Obras                                      6.8      Base util, falta profundidad
+Facturacion                                6.8      Operativa, falta anulacion fuerte
+Tesoreria                                  6.5      Funcional inicial
+Contabilidad                               6.2      Util para pruebas, cierre pendiente
+Informes                                   6.7      Buenos basicos, faltan filtros
+Seguridad / usuarios                       7.0      Correcta para uso interno
+Estabilidad tecnica                        6.4      Mejorando, aun sensible
+Mantenibilidad codigo                      6.5      Aceptable, necesita patrones
+Experiencia diaria de uso                  6.8      Rapida, pero irregular
 
-  FACTURAS
-  --------
-  [OK]      FacturasView()                     Listado de facturas
-  [OK]      AltaFact()                         Nueva factura directa
-  [OK]      AltaFactDesdePre( cNumPre )        Factura desde presupuesto
-  [OK]      ImprimirFactura( cNumero )         Genera HTML + abre navegador
-  [FALTA]   AnularFactura( cNumero )           Anulacion con trazabilidad
-
-================================================================================
-MENU: TESORERIA  (solo ADM/CAJA)
-================================================================================
-
-  BANCOS / CAJA
-  -------------
-  [OK]      TesoreriaView()                    Listado cuentas bancarias
-  [FALTA]   MovimientosTesoreria( cBanco )     Movimientos por cuenta
-  [FALTA]   CobrosView()                       Gestion de cobros / vencimientos
-  [FALTA]   PagosView()                        Gestion de pagos a proveedores
 
 ================================================================================
-MENU: CONTABILIDAD  (solo ADM/CONT)
+3. LO QUE YA ES USABLE
 ================================================================================
 
-  PLAN DE CUENTAS
-  ---------------
-  [OK]      PlanCuentasView()                  Listado del plan contable
-  [OK]      PlanCuentasForm( cCuenta )         Alta y edicion de cuenta
-  [FALTA]   CierreEjercicio()                  Cierre contable anual
+3.1 Flujo comercial basico
 
-  LIBRO DIARIO
-  ------------
-  [OK]      LibroDiarioView()                  Consulta y alta de asientos
-  [FALTA]   AsientoAutomatico( cTipo, cDoc )   Generacion automatica desde docs
+La aplicacion ya permite:
 
-  CENTROS DE COSTE
-  ----------------
-  [OK]      M_CCostes()                        ABM centros de coste
+  - Dar de alta clientes.
+  - Crear presupuestos.
+  - Imprimir presupuestos con formato profesional cercano al modelo aportado.
+  - Consultar historial de presupuestos.
+  - Aceptar/rechazar presupuestos.
+  - Trabajar con obras desde el flujo de ventas.
+  - Emitir facturas directas.
+  - Consultar facturas.
+
+Valoracion:
+
+  Esta parte ya tiene suficiente cuerpo para usarla en pruebas de negocio.
+  El modulo de presupuesto era el hueco mas visible y ya tiene entrada directa,
+  numeracion, lineas, totales, impresion y validaciones basicas.
+
+
+3.2 Tesoreria inicial
+
+La aplicacion ya permite:
+
+  - Ver caja / recibos.
+  - Crear recibos de caja.
+  - Consultar facturas pendientes de cobro.
+  - Registrar cobros.
+  - Consultar compras pendientes de pago.
+  - Registrar pagos libres o pagos de compras.
+  - Tratar pagos como hechos contables.
+  - Gestionar bancos basicos.
+
+Valoracion:
+
+  Es usable para pruebas y para entender la deuda/cobro pendiente, aunque aun
+  necesita mas trazabilidad bancaria y conciliacion.
+
+
+3.3 Contabilidad e informes
+
+La aplicacion ya incluye:
+
+  - Plan de cuentas.
+  - Libro diario.
+  - Alta manual de asiento.
+  - Asientos automaticos desde documentos principales.
+  - Centros de coste.
+  - Libro diario imprimible.
+  - Libro mayor.
+  - Balance de sumas y saldos.
+  - Balance general.
+  - Perdidas y ganancias.
+
+Valoracion:
+
+  Sirve para pruebas contables y revision interna. No debe considerarse aun un
+  modulo contable cerrado, porque falta cierre/apertura formal, validaciones de
+  auditoria y mas filtros.
+
+
+3.4 Seguridad y administracion
+
+Existe:
+
+  - Login.
+  - Roles.
+  - Usuario administrador.
+  - Accesos separados por ADM / CONT / CAJA.
+  - Reindexado administrativo.
+  - Recuperacion de admin fuera del flujo normal.
+
+Valoracion:
+
+  Correcto para una aplicacion de escritorio interna. No hace falta crecer aqui
+  antes de terminar el flujo de negocio.
+
 
 ================================================================================
-MENU: INFORMES
+4. PRINCIPALES LIMITES ACTUALES
 ================================================================================
 
-  [OK]      InformeClientes()                  Listado HTML de clientes
-  [OK]      InformeFacturas()                  Listado HTML de facturas
-  [OK]      InformeArticulos()                 Listado HTML de articulos
-  [OK]      InformePresupuestos()              Listado HTML de presupuestos
-  [FALTA]   InformeVencimientos()              Vencimientos pendientes de cobro
-  [FALTA]   InformeProveedores()               Listado de proveedores
-  [FALTA]   InformeStockMinimo()               Articulos por debajo de stock min
-  [FALTA]   InformeDiario()                    Libro diario contable imprimible
+4.1 Cierre de ejercicio no implementado
+
+El menu conserva la opcion, pero actualmente muestra aviso y no modifica datos.
+Esto es correcto como decision prudente.
+
+Riesgo:
+
+  No se puede cerrar contabilidad anual de forma real.
+
+Impacto:
+
+  Alto para uso contable definitivo.
+
+Recomendacion:
+
+  Mantener bloqueado hasta implementar:
+  - regularizacion de cuentas 6/7 contra resultado,
+  - asiento de cierre,
+  - asiento de apertura,
+  - bloqueo/marca de ejercicio cerrado,
+  - informe previo de comprobaciones.
+
+
+4.2 Falta un modelo fuerte de partidas tecnicas
+
+Ya no queremos inventario/articulos como centro del sistema. Para reformas, la
+pieza clave debe ser la partida tecnica reusable:
+
+  - tabique,
+  - falso techo,
+  - trasdosado,
+  - aislamiento,
+  - demolicion,
+  - electricidad,
+  - fontaneria,
+  - desplazamiento.
+
+Riesgo:
+
+  Si todo se escribe libremente en lineas, se puede presupuestar, pero no se
+  gana velocidad ni consistencia.
+
+Impacto:
+
+  Alto para productividad diaria.
+
+Recomendacion:
+
+  Crear maestro de partidas tecnicas y permitir insertar partidas al presupuesto.
+
+
+4.3 Migraciones DBF incompletas
+
+`InicioDBF()` crea tablas si no existen, pero no parece migrar estructuras ya
+existentes cuando agregamos campos nuevos.
+
+Riesgo:
+
+  Una base de datos antigua puede no tener campos nuevos como `FORMA_PA` o
+  `DIAS_PAG` en presupuestos.
+
+Impacto:
+
+  Alto para estabilidad en datos reales.
+
+Recomendacion:
+
+  Crear rutina de migracion/verificacion de estructura:
+  - detectar campos faltantes,
+  - crear backup,
+  - recrear DBF si procede,
+  - copiar datos antiguos,
+  - reindexar.
+
+
+4.4 Validaciones y foco todavia son zona sensible
+
+Se corrigio una recursividad en presupuesto al tabular. Aun asi, el framework
+de controles sigue siendo una pieza critica.
+
+Riesgo:
+
+  Formularios con `bValid` pueden bloquear foco si llaman a `GetValue()` del
+  mismo control o abren/cerran tablas durante cambio de foco.
+
+Impacto:
+
+  Medio/alto para uso diario.
+
+Recomendacion:
+
+  Definir regla tecnica:
+  - `bValid` debe leer buffer o valores ya normalizados.
+  - `GetValue()` no debe provocar recursiones.
+  - Los formularios deben guardar con hashes, no con listas de controles.
+
+
+4.5 Anulaciones y trazabilidad documental
+
+Falta completar un circuito fuerte para:
+
+  - anular factura,
+  - rectificar factura,
+  - bloquear documentos contabilizados,
+  - evitar doble contabilizacion,
+  - auditar cambios de importes.
+
+Riesgo:
+
+  En uso real, los errores de documento son inevitables. Si no hay anulacion
+  ordenada, se corrige a mano y se pierde confianza.
+
+Impacto:
+
+  Alto.
+
+
+4.6 Informes correctos, pero poco parametrizables
+
+Los informes principales existen, pero necesitan filtros:
+
+  - fecha desde/hasta,
+  - cliente/proveedor,
+  - obra,
+  - centro de coste,
+  - estado,
+  - origen del asiento.
+
+Riesgo:
+
+  El usuario ve datos, pero no siempre la pregunta exacta que necesita.
+
+Impacto:
+
+  Medio.
+
 
 ================================================================================
-MENU: SISTEMA
+5. USABILIDAD REAL
 ================================================================================
 
-  USUARIOS  (solo ADM)
-  --------------------
-  [OK]      UsuariosView()                     Listado de usuarios
-  [PARCIAL] UsuariosForm( cCodigo )            Alta/edicion — falta baja logica
-                                               y cambio de clave por el propio usuario
+Lo mejor:
 
-  ROLES  (solo ADM)
-  -----------------
-  [OK]      RolesEdit()                        ABM de roles
+  - La app es rapida.
+  - La navegacion por menu es clara.
+  - El enfoque por modulos clasicos encaja con escritorio administrativo.
+  - El presupuesto ya se parece a un documento de negocio real.
+  - La separacion ventas / tesoreria / contabilidad es intuitiva.
+  - Los formularios son directos y no sobrecargados.
 
-  SALIR
-  -----
-  [OK]      App_Exit()                         Cierre limpio
+Lo que mas molesta al usuario:
 
-================================================================================
-MODULOS IMPLEMENTADOS SIN ENTRADA EN MENU ACTUAL
-================================================================================
+  - Algunos formularios aun tienen distribucion visual irregular.
+  - Hay campos tecnicos heredados de ERP generico.
+  - Falta ayuda contextual minima en procesos delicados.
+  - Algunas acciones parecen definitivas sin suficiente resumen previo.
+  - El flujo presupuesto -> obra -> factura -> cobro aun no se siente continuo
+    en una sola vista.
 
-  [EXTRA]   ImprimirPresup( cNumero )          En V_Imprimir — llamado interno
-  [EXTRA]   OS_Open( cFile )                   Utilidad apertura SO — interna
-  [EXTRA]   InicioDBF_Empresa()               En InicioDBF — no se usa en el flujo actual
+Diagnostico:
 
-================================================================================
-RESUMEN
-================================================================================
+  Usable para alguien que conoce el sistema y esta dispuesto a probar. Todavia
+  no es suficientemente autoexplicativa para un usuario externo sin apoyo.
 
-  Total opciones de menu activas          : 28
-  Funciones OK (implementadas)            : 24
-  Funciones FALTA (pendientes)            : 11
-  Funciones PARCIAL                       :  1
-  Funciones EXTRA (implementadas, sin menu):  3
 
 ================================================================================
-PENDIENTES PRIORITARIOS (por impacto en el flujo de negocio)
+6. PRIORIDADES RECOMENDADAS
 ================================================================================
 
-  1. ConvertirAFactura( cNumPre )        VENTAS — flujo principal del negocio
-  2. CobrosView()                        TESORERIA — gestion de vencimientos
-  3. AnularFactura( cNumero )            VENTAS — obligatorio para correccion
-  4. MovimientosTesoreria()              TESORERIA — sin esto el modulo esta vacio
-  5. InformeVencimientos()               INFORMES — critico para seguimiento cobros
-  6. AsientoAutomatico()                 CONTABILIDAD — automatizar desde facturas
-  7. PagosView()                         TESORERIA — pagos a proveedores
-  8. InformeProveedores()                INFORMES — complemento basico
-  9. InformeStockMinimo()                INFORMES — util para reposicion
- 10. CierreEjercicio()                   CONTABILIDAD — necesario fin de año
- 11. InformeDiario()                     INFORMES — impresion libro diario
+PRIORIDAD 1 - Hacer solido el flujo principal
+
+  1. Crear maestro de partidas tecnicas.
+  2. Insertar partidas tecnicas en presupuesto.
+  3. Permitir duplicar presupuesto.
+  4. Convertir presupuesto aceptado en obra de forma mas guiada.
+  5. Desde obra, ver resumen: presupuestado, facturado, cobrado, pendiente.
+  6. Emitir factura/certificacion desde obra con control de pendiente.
+
+
+PRIORIDAD 2 - Seguridad documental
+
+  1. Bloquear edicion de documentos aceptados/facturados/contabilizados.
+  2. Implementar anulacion de factura con trazabilidad.
+  3. Implementar factura rectificativa o nota de abono bien conectada.
+  4. Mostrar origen y asiento asociado en cada documento.
+  5. Evitar doble asiento automatico.
+
+
+PRIORIDAD 3 - Base tecnica y datos
+
+  1. Crear migrador DBF.
+  2. Reglas para validadores de foco.
+  3. Normalizar `GetValue()` / `SetValue()` en controles.
+  4. Usar hashes en formularios.
+  5. Limpiar ejecutables/logs/scripts de la carpeta raiz.
+
+
+PRIORIDAD 4 - Contabilidad fiable
+
+  1. Informe de asientos descuadrados.
+  2. Informe por origen: FAC, COM, REC, PAG.
+  3. Extracto cliente/proveedor.
+  4. IVA soportado/repercutido.
+  5. Cierre/apertura de ejercicio.
+
+
+PRIORIDAD 5 - Pulido de experiencia
+
+  1. Revisar layouts de formularios.
+  2. Unificar textos de botones: Nuevo, Guardar, Cerrar, Imprimir.
+  3. Mejorar mensajes de confirmacion antes de acciones importantes.
+  4. Permitir exportar/imprimir mas vistas.
+  5. Revisar accesibilidad de teclado en todos los formularios.
+
+
+================================================================================
+7. RIESGOS ANTES DE USO REAL
+================================================================================
+
+Riesgo alto:
+
+  - Cierre contable no implementado.
+  - Migraciones DBF pendientes.
+  - Anulacion/rectificacion documental incompleta.
+  - Partidas tecnicas aun no existen como maestro.
+
+Riesgo medio:
+
+  - Filtros de informes limitados.
+  - Layouts de formularios aun no uniformes.
+  - Dependencia de datos de prueba para validar informes.
+  - Artefactos locales en raiz que conviene ordenar.
+
+Riesgo bajo:
+
+  - Estetica de documentos aun mejorable.
+  - Textos de ayuda y etiquetas pueden pulirse.
+  - Algunas funciones antiguas aisladas podrian documentarse mejor.
+
+
+================================================================================
+8. PLAN DE 10 CAMBIOS PARA SUBIR LA NOTA A 8/10
+================================================================================
+
+1. Maestro de partidas tecnicas.
+2. Boton "insertar partida" en presupuesto.
+3. Duplicar presupuesto.
+4. Vista economica completa de obra.
+5. Certificaciones parciales desde obra.
+6. Anulacion/rectificacion de facturas.
+7. Informe de IVA.
+8. Comprobador de asientos descuadrados.
+9. Migrador DBF.
+10. Cierre/apertura de ejercicio con modo simulacion previo.
+
+Con esos diez puntos, la aplicacion pasaria de MVP interno a herramienta diaria
+razonablemente fiable.
+
+
+================================================================================
+9. CONCLUSION
+================================================================================
+
+La aplicacion ya tiene valor real. Su mayor fortaleza es que ha dejado de ser un
+ERP generico y empieza a hablar el idioma correcto: presupuesto, obra, factura,
+cobro y contabilidad asociada.
+
+Es usable hoy para:
+
+  - pruebas internas,
+  - carga de datos de ejemplo,
+  - emision de presupuestos controlados,
+  - validacion del flujo comercial,
+  - pruebas de informes contables.
+
+No deberia usarse todavia como unico sistema real para cierre fiscal/contable o
+documentacion definitiva sin supervision.
+
+Prioridad inmediata recomendada:
+
+  Consolidar presupuesto y obra con partidas tecnicas. Ese es el siguiente salto
+  natural del producto.
 
 ================================================================================
 FIN DE AUDITORIA

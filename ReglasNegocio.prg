@@ -163,6 +163,130 @@ RETURN .T.
 
 
 // ============================================================================
+// FacturaContabilizada()
+// Una factura con asiento informado queda congelada: no se modifica.
+// ============================================================================
+FUNCTION FacturaContabilizada( cSerie, cNumero )
+
+   LOCAL lContab := .F.
+
+   DEFAULT cSerie TO "A"
+
+   IF Empty( cNumero )
+      RETURN .F.
+   ENDIF
+
+   IF !ABRIR_TABLA( "FACTURA", "FAC_BLQ", "FAC_NUM" )
+      RETURN .F.
+   ENDIF
+
+   DbSelectArea( "FAC_BLQ" )
+   OrdSetFocus( "FAC_NUM" )
+
+   IF DbSeek( PadR( cSerie, 4 ) + PadR( cNumero, 10 ) ) .OR. ;
+      DbSeek( cSerie + cNumero )
+      lContab := !Empty( AllTrim( DbFieldValue( "ASIENTO", "" ) ) )
+   ENDIF
+
+   FAC_BLQ->( DbCloseArea() )
+
+RETURN lContab
+
+
+// ============================================================================
+// ValidarFacturaNoContabilizada()
+// Bloquea cualquier modificacion directa de facturas ya contabilizadas.
+// ============================================================================
+FUNCTION ValidarFacturaNoContabilizada( cSerie, cNumero, cAccion )
+
+   LOCAL cAcc
+
+   DEFAULT cSerie TO "A"
+   DEFAULT cAccion TO "modificar"
+
+   cAcc := Lower( AllTrim( cAccion ) )
+
+   IF FacturaContabilizada( cSerie, cNumero )
+      MsgStop( "No se puede " + cAcc + " la factura " + ;
+               AllTrim( cNumero ) + " porque ya esta contabilizada." + Chr(13) + ;
+               "Debe usar un documento corrector o un asiento nuevo.", ;
+               "Documento contabilizado" )
+      RETURN .F.
+   ENDIF
+
+RETURN .T.
+
+
+// ============================================================================
+// CompraContabilizada()
+// Una compra con asiento informado queda congelada: no se modifica.
+// ============================================================================
+FUNCTION CompraContabilizada( cNumero )
+
+   LOCAL lContab := .F.
+
+   IF Empty( cNumero )
+      RETURN .F.
+   ENDIF
+
+   IF !ABRIR_TABLA( "COMPRAS", "COM_BLQ", "COM_INT" )
+      RETURN .F.
+   ENDIF
+
+   DbSelectArea( "COM_BLQ" )
+   OrdSetFocus( "COM_INT" )
+
+   IF DbSeek( cNumero )
+      lContab := !Empty( AllTrim( DbFieldValue( "ASIENTO", "" ) ) )
+   ENDIF
+
+   COM_BLQ->( DbCloseArea() )
+
+RETURN lContab
+
+
+// ============================================================================
+// FacturaTieneAbono()
+// Detecta abonos por marca en FACTURA o por documento NOTASDC vinculado.
+// ============================================================================
+FUNCTION FacturaTieneAbono( cSerie, cNumero )
+
+   LOCAL lTiene := .F.
+
+   DEFAULT cSerie TO "A"
+
+   IF Empty( cNumero )
+      RETURN .F.
+   ENDIF
+
+   IF ABRIR_TABLA( "FACTURA", "FAC_ABO", "FAC_NUM" )
+      DbSelectArea( "FAC_ABO" )
+      OrdSetFocus( "FAC_NUM" )
+      IF DbSeek( PadR( cSerie, 4 ) + PadR( cNumero, 10 ) ) .OR. ;
+         DbSeek( cSerie + cNumero )
+         lTiene := !Empty( AllTrim( DbFieldValue( "NUM_ABONO", "" ) ) )
+      ENDIF
+      FAC_ABO->( DbCloseArea() )
+   ENDIF
+
+   IF !lTiene .AND. ABRIR_TABLA( "NOTASDC", "NDC_ABO", "NDC_NUM" )
+      DbSelectArea( "NDC_ABO" )
+      DbGoTop()
+      DO WHILE !Eof()
+         IF !Deleted() .AND. AllTrim( DbFieldValue( "REF_DOC", "" ) ) == AllTrim( cNumero ) .AND. ;
+            AllTrim( DbFieldValue( "TIPO", "" ) ) == "C"
+            lTiene := .T.
+            EXIT
+         ENDIF
+         DbSkip()
+      ENDDO
+      NDC_ABO->( DbCloseArea() )
+   ENDIF
+
+RETURN lTiene
+
+
+// ============================================================================
 // GetTotalFactura()
 // ============================================================================
 FUNCTION GetTotalFactura( cSerie, cNumero )

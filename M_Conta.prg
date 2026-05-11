@@ -482,7 +482,7 @@ STATIC FUNCTION _DiaForm( cAsiento )
     ENDIF
 
     oWin := TWindow():New( 1, 2, 37, 129, ;
-        If( lNuevo, "NUEVO ASIENTO", "EDITAR ASIENTO: " + cAsientoDisp ) )
+        If( lNuevo, "NUEVO ASIENTO", "VER ASIENTO: " + cAsientoDisp ) )
 
     oWin:AddCtrl( TLabel():New(  2,  2, "Asiento :", oWin ) )
     oWin:AddCtrl( TLabel():New(  2, 40, "Fecha   :", oWin ) )
@@ -495,9 +495,15 @@ STATIC FUNCTION _DiaForm( cAsiento )
     oWin:AddCtrl( oGAsi )
 
     oGFec := TGet():New(  2, 52, dFecha, "99/99/9999", oWin )
+    IF !lNuevo
+        oGFec:bWhen := {|| .F. }
+    ENDIF
     oWin:AddCtrl( oGFec )
 
     oGDes := TGet():New(  4, 14, cDescrip, "@!", oWin )
+    IF !lNuevo
+        oGDes:bWhen := {|| .F. }
+    ENDIF
     oWin:AddCtrl( oGDes )
 
     oWin:AddCtrl( TLabel():New(  4, 70, PadR( cUsuario, 20 ), oWin ) )
@@ -512,28 +518,32 @@ STATIC FUNCTION _DiaForm( cAsiento )
     oGrid:AddColumn( "C.Coste",  10, "@!",        { |a| a[5] } )
     oGrid:AddColumn( "Descripcion",40, "@!",        { |a| a[6] } )
 
-    oGrid:bEnter := {| g | _DiaEditLin( g, @aLineas, oGrid ) }
+    IF lNuevo
+        oGrid:bEnter := {| g | _DiaEditLin( g, @aLineas, oGrid ) }
 
-    oBtNLin := TButton():New( 32,  2, 33, 18, oWin, "NUEVA LINEA (F5)", ;
-        {|| _DiaNuevaLin( oGrid, @aLineas ) } )
+        oBtNLin := TButton():New( 32,  2, 33, 18, oWin, "NUEVA LINEA (F5)", ;
+            {|| _DiaNuevaLin( oGrid, @aLineas ) } )
 
-    oBtELin := TButton():New( 32, 20, 33, 38, oWin, "EDITAR LINEA", ;
-        {|| _DiaEditLin( oGrid, @aLineas ) } )
+        oBtELin := TButton():New( 32, 20, 33, 38, oWin, "EDITAR LINEA", ;
+            {|| _DiaEditLin( oGrid, @aLineas ) } )
 
-    oBtDLin := TButton():New( 32, 38, 33, 56, oWin, "BORRAR LINEA", ;
-        {|| _DiaBorrarLin( oGrid, @aLineas ) } )
+        oBtDLin := TButton():New( 32, 38, 33, 56, oWin, "BORRAR LINEA", ;
+            {|| _DiaBorrarLin( oGrid, @aLineas ) } )
 
-    oBtGua := TButton():New( 33, 63, 34, 82, oWin, "GUARDAR", ;
-        {|| _DiaGuardar( oGAsi, oGFec, oGDes, aLineas, lNuevo, oWin ) } )
+        oBtGua := TButton():New( 33, 63, 34, 82, oWin, "GUARDAR", ;
+            {|| _DiaGuardar( oGAsi, oGFec, oGDes, aLineas, lNuevo, oWin ) } )
+    ENDIF
 
     oBtCan := TButton():New( 33, 86, 34, 105, oWin, "CERRAR", ;
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGrid   )
-    oWin:AddCtrl( oBtNLin )
-    oWin:AddCtrl( oBtELin )
-    oWin:AddCtrl( oBtDLin )
-    oWin:AddCtrl( oBtGua  )
+    IF lNuevo
+        oWin:AddCtrl( oBtNLin )
+        oWin:AddCtrl( oBtELin )
+        oWin:AddCtrl( oBtDLin )
+        oWin:AddCtrl( oBtGua  )
+    ENDIF
     oWin:AddCtrl( oBtCan  )
 
     oWin:Run()
@@ -747,6 +757,13 @@ STATIC FUNCTION _DiaGuardar( oLAsi, oGFec, oGDes, aLins, lNuevo, oWin )
     LOCAL i
     LOCAL nDebeTotal
     LOCAL nHaberTotal
+
+    IF !lNuevo
+        MsgStop( "Un asiento ya grabado no se modifica." + Chr(13) + ;
+                 "Use un contraasiento o un asiento de ajuste.", ;
+                 "Asiento contabilizado" )
+        RETURN NIL
+    ENDIF
 
     IF Len( aLins ) < 2
         MsgStop( "Debe introducir al menos dos lineas.", "Guardar" )

@@ -1,0 +1,278 @@
+================================================================================
+AUDITORIA HACIA 9/10 — APPGESTION OBRAS
+Fecha: 10/05/2026
+================================================================================
+
+CALIFICACION ACTUAL ESTIMADA: 7.2 / 10
+
+Para llegar a 9/10 se necesita pasar de MVP interno usable a herramienta
+diaria fiable sin supervision. La diferencia entre 7.2 y 9.0 son 1.8 puntos
+que se ganan en 5 areas concretas.
+
+================================================================================
+AREA 1 — FLUJO DE OBRA INCOMPLETO  (impacto: +0.6 puntos)
+================================================================================
+
+Es el area de mayor impacto porque es el negocio principal.
+
+1.1  Maestro de partidas tecnicas
+     ESTADO: NO EXISTE
+     IMPACTO: Alto. Sin partidas, cada presupuesto se escribe desde cero.
+              La velocidad de presupuestacion es clave en obras.
+     QUE FALTA:
+       - Tabla PARTIDAS (codigo, familia, descrip corta, descrip larga,
+         unidad, precio base, observaciones tecnicas)
+       - M_Partidas.prg: PartidasView(), PartidaForm()
+       - Familias de partidas: Pladur, Techos, Aislamientos, Demolicion,
+         Electricidad, Fontaneria, Desplazamiento...
+
+1.2  Insertar partida en presupuesto
+     ESTADO: NO EXISTE
+     IMPACTO: Alto. Complementario al punto anterior.
+     QUE FALTA:
+       - Boton "Insertar partida" en formulario de presupuesto
+       - PopupSelect() ya disponible en Util — reutilizar
+       - Al seleccionar partida, vuelca descripcion y precio base
+         en la linea del presupuesto (editable)
+
+1.3  Duplicar presupuesto
+     ESTADO: NO EXISTE
+     IMPACTO: Medio-alto. Muy frecuente en obras similares.
+     QUE FALTA:
+       - DuplicarPresupuesto( cNumPre ) en V_Presupuesto.prg
+       - Nuevo numero, fecha actualizada, mismo cliente (editable)
+       - Copia de todas las lineas
+       - Estado = BORRADOR
+
+1.4  Vista economica completa de obra
+     ESTADO: PARCIAL — ObrasView() muestra resumen
+     IMPACTO: Medio. Falta detalle de facturas y cobros vinculados.
+     QUE FALTA:
+       - Ficha detallada de obra: historial de facturas emitidas,
+         cobros recibidos, pendiente real
+       - Desde la ficha, boton "Certificar" con control de importe
+
+1.5  Certificaciones desde obra con control de pendiente
+     ESTADO: FacturarObra() existe pero no tiene UI integrada en ObrasView
+     IMPACTO: Alto. Es el corazon del flujo de facturacion en obra.
+     QUE FALTA:
+       - Boton "Certificar" en ficha de obra
+       - Formulario: tipo (A/C/F), importe, concepto, fecha, IVA
+       - Validacion: importe <= GetPendienteObra() excepto anticipo
+       - Genera factura vinculada a la obra via ID_OBRA
+
+
+================================================================================
+AREA 2 — SEGURIDAD DOCUMENTAL INCOMPLETA  (impacto: +0.4 puntos)
+================================================================================
+
+2.1  Bloqueo de documentos contabilizados
+     ESTADO: NO EXISTE
+     IMPACTO: Alto. Sin esto, un usuario puede modificar una factura
+              que ya tiene asiento contable, rompiendo la trazabilidad.
+     QUE FALTA:
+       - Campo CONTABIL L en FACTURA y PRESUPUEST
+       - Al generar asiento, marcar CONTABIL = .T.
+       - En formularios: si CONTABIL = .T. -> solo lectura
+
+2.2  Anulacion de factura con nota de abono completa
+     ESTADO: NotaAbonoForm() existe pero la integracion es parcial
+     IMPACTO: Alto. En uso diario los errores son inevitables.
+     QUE FALTA:
+       - Verificar que nota de abono actualiza saldo de obra
+       - Nota de abono debe restarse de FACTURADO en OBRAS
+       - Asiento inverso completo (D:430 H:700 H:477)
+
+2.3  Evitar doble asiento automatico
+     ESTADO: NO EXISTE verificacion
+     IMPACTO: Medio. AsientoAutomatico() no verifica si ya existe asiento.
+     QUE FALTA:
+       - Antes de crear asiento verificar campo ASIENTO en el documento
+       - Si ya tiene asiento -> MsgStop, no crear otro
+
+2.4  Bloqueo de presupuestos facturados o con obra
+     ESTADO: NO EXISTE
+     IMPACTO: Medio. Un presupuesto con obra activa no deberia editarse.
+     QUE FALTA:
+       - Si ESTADO != 'B' (borrador) -> formulario en solo lectura
+       - Mostrar motivo del bloqueo al usuario
+
+
+================================================================================
+AREA 3 — CONTABILIDAD INCOMPLETA  (impacto: +0.3 puntos)
+================================================================================
+
+3.1  Cierre de ejercicio real
+     ESTADO: CierreEjercicio() existe como esqueleto
+     IMPACTO: Alto para uso fiscal definitivo.
+     QUE FALTA:
+       - Verificar cuadre de diario (ya parcial)
+       - Asiento de regularizacion: cerrar cuentas 6 y 7 contra 129
+       - Asiento de cierre: cerrar todas las cuentas de balance
+       - Asiento de apertura del nuevo ejercicio
+       - Bloquear ejercicio cerrado (EMPRESA.FEC_CIER)
+       - Informe previo de comprobaciones
+
+3.2  Informe de IVA por trimestre
+     ESTADO: NO EXISTE
+     IMPACTO: Alto para declaracion trimestral (modelo 303).
+     QUE FALTA:
+       - InformeIVA() en Informes.prg
+       - IVA repercutido (facturas emitidas por trimestre)
+       - IVA soportado (compras por trimestre)
+       - Diferencia a ingresar/devolver
+       - Filtro por fecha: trimestre seleccionable
+
+3.3  Comprobador de asientos descuadrados
+     ESTADO: NO EXISTE
+     IMPACTO: Medio. Detectar errores antes del cierre.
+     QUE FALTA:
+       - Recorrer LDIARIO agrupando por D_ASIENT
+       - Calcular suma DEBE y HABER por asiento
+       - Listar asientos donde ABS(DEBE - HABER) > 0.01
+
+3.4  Extracto de cliente / proveedor
+     ESTADO: NO EXISTE
+     IMPACTO: Medio. Esencial para reclamaciones y conciliacion.
+     QUE FALTA:
+       - InformeExtractoCli( cCliID, dDesde, dHasta )
+       - Todas las facturas, cobros y notas del cliente
+       - Saldo final
+
+
+================================================================================
+AREA 4 — DATOS Y ESTABILIDAD  (impacto: +0.3 puntos)
+================================================================================
+
+4.1  Migrador DBF
+     ESTADO: NO EXISTE
+     IMPACTO: Alto para evitar errores al añadir campos nuevos.
+     QUE FALTA:
+       - Detectar campos faltantes comparando estructura definida vs disco
+       - Crear backup antes de migrar
+       - Añadir campos faltantes sin borrar datos existentes
+       - Reindexar tras migracion
+
+4.2  Filtros en informes
+     ESTADO: Informes sin filtros — muestran todos los registros
+     IMPACTO: Medio. En produccion con datos reales son imprescindibles.
+     QUE FALTA:
+       - Dialogo de filtros: fecha desde/hasta, cliente, obra, estado
+       - Al menos InformeFacturas e InformeVencimientos necesitan filtro
+         urgente por fecha y por estado (cobrada/pendiente)
+
+4.3  Normalizacion de formularios restantes a patron hash
+     ESTADO: PARCIAL — M_Empresa, Clientes, Vendedor, Auxiliar, Facturas,
+             Presupuesto ya usan hash. Faltan:
+     QUE FALTA:
+       - M_Proveedo: ProveedGuardar(hProv, lNuevo)
+       - M_Articulos: ArticuloGuardar(hArt, lNuevo)
+       - M_Usuarios: UsuarioGuardar(hUsr, lNuevo)
+       - M_Obras: formularios manuales con hash
+
+
+================================================================================
+AREA 5 — EXPERIENCIA DE USO  (impacto: +0.2 puntos)
+================================================================================
+
+5.1  Busqueda de cliente en documentos
+     ESTADO: PARCIAL — LookupCliente() existe en Util
+     IMPACTO: Medio. En documentos debe poder buscar por nombre
+              ademas de introducir codigo.
+     QUE FALTA:
+       - Usar LookupCliente() en V_Presupuesto y V_Facturas
+       - Al pulsar F2 sobre campo cliente, abrir selector
+
+5.2  Aviso de vencimientos al entrar
+     ESTADO: NO EXISTE
+     IMPACTO: Medio. Productividad diaria.
+     QUE FALTA:
+       - Al arrancar, si hay facturas vencidas sin cobrar
+         mostrar aviso: "Tienes N facturas vencidas"
+       - Opcion de ir a CobrosView directamente
+
+5.3  Mensajes de confirmacion mejorados
+     ESTADO: Algunos procesos criticos sin resumen previo
+     IMPACTO: Bajo-medio.
+     QUE FALTA:
+       - Antes de emitir certificacion: mostrar resumen
+         (obra, presupuestado, ya facturado, este importe, pendiente tras)
+       - Antes de cerrar obra: mostrar estado economico final
+
+5.4  Textos de botones uniformes
+     ESTADO: Algunos inconsistentes (Guardar/Grabar, Cerrar/Salir/Cancelar)
+     IMPACTO: Bajo.
+     QUE FALTA:
+       - Estandarizar: GUARDAR / CERRAR / IMPRIMIR / NUEVO / CANCELAR
+
+
+================================================================================
+RESUMEN — CAMINO A 9/10
+================================================================================
+
+AREA                         PUNTOS    ESFUERZO    PRIORIDAD
+----------------------------  -------   ---------   ---------
+1. Flujo de obra completo      +0.6      Alto        MAXIMA
+2. Seguridad documental        +0.4      Medio       ALTA
+3. Contabilidad completa       +0.3      Medio       ALTA
+4. Datos y estabilidad         +0.3      Medio       MEDIA
+5. Experiencia de uso          +0.2      Bajo        MEDIA
+
+TOTAL POTENCIAL               +1.8      —           —
+
+7.2 + 1.8 = 9.0 / 10
+
+
+================================================================================
+ORDEN DE IMPLEMENTACION RECOMENDADO
+================================================================================
+
+SPRINT 1 — Flujo de obra (mayor impacto inmediato)
+  1. Tabla PARTIDAS + M_Partidas.prg
+  2. Insertar partida en presupuesto
+  3. Duplicar presupuesto
+  4. Boton "Certificar" en ObrasView con control de pendiente
+
+SPRINT 2 — Seguridad documental
+  5. Campo CONTABIL en FACTURA — bloqueo tras contabilizar
+  6. Bloqueo de presupuestos con obra activa
+  7. Integracion completa de nota de abono con OBRAS.FACTURADO
+  8. Verificacion de doble asiento en AsientoAutomatico()
+
+SPRINT 3 — Contabilidad
+  9. InformeIVA() por trimestre
+  10. Comprobador de asientos descuadrados
+  11. Extracto de cliente/proveedor
+  12. Cierre de ejercicio completo
+
+SPRINT 4 — Datos y experiencia
+  13. Migrador DBF
+  14. Filtros en InformeFacturas e InformeVencimientos
+  15. Aviso de vencimientos al arrancar
+  16. Normalizar M_Proveedo, M_Articulos a patron hash
+
+
+================================================================================
+LO QUE YA ESTA BIEN Y NO NECESITA CAMBIOS
+================================================================================
+
+  - Framework completo: TGet/TCheck/TCombo/TWindow/TGrid/TMenu
+  - GetValue()/SetValue() en todos los controles
+  - ReglasNegocio.prg — separacion correcta
+  - Seguridad con hash, HasPerm(), AuditLog()
+  - M_Obras.prg — motor de negocio correcto
+  - GetResumenObra() — calculo dinamico
+  - FacturarObra() — control de pendiente
+  - Patron hash en modulos principales
+  - Flujo PRESUPUESTO -> OBRA -> FACTURA -> COBRO implementado
+  - InicioDBF con tabla OBRAS e ID_OBRA en documentos
+  - AppLockAcquire(), SecurityEnsureSchema()
+  - Informes financieros: Mayor, Balance, P&G
+  - Tesoreria: ReciboNuevo, CobroNuevo, PagoNuevo
+  - PopupSelect(), LookupCliente() en Util
+  - OS_Open() sin dependencias Win32
+
+
+================================================================================
+FIN DE AUDITORIA
+================================================================================

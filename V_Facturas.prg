@@ -1057,7 +1057,8 @@ RETURN NIL
 //   - REF_DOC apunta a la factura original
 //   - Las lineas se copian de FACTUR_DE con importes en negativo
 //   - Se genera asiento contable inverso al de la factura
-//   - La factura queda marcada: ANULADA=.T., NUM_ABONO=numero NA
+//   - Si la factura NO esta contabilizada, queda marcada con el abono
+//   - Si ya esta contabilizada, no se modifica: el abono queda vinculado por REF_DOC
 //   - Si la factura estaba cobrada, se revierte tambien el cobro
 // ============================================================================
 FUNCTION NotaAbonoForm( cNumFac )
@@ -1116,10 +1117,10 @@ FUNCTION NotaAbonoForm( cNumFac )
         RETURN NIL
     ENDIF
 
-    IF !Empty( AllTrim( FAC_NA->NUM_ABONO ) )
+    IF FacturaTieneAbono( "A", cNumFac_ )
         FAC_NA->( DbCloseArea() )
-        MsgStop( "Esta factura ya tiene nota de abono: " + ;
-                 AllTrim( FAC_NA->NUM_ABONO ), "Nota de Abono" )
+        MsgStop( "Esta factura ya tiene una nota de abono vinculada.", ;
+                 "Nota de Abono" )
         RETURN NIL
     ENDIF
 
@@ -1323,16 +1324,18 @@ STATIC FUNCTION _NaGuardar( cNumFac, cCliID, cCtaCli, oGFec, oGMot, ;
         NDD_G->( DbCloseArea() )
     ENDIF
 
-    // Marcar factura como anulada con referencia al abono
-    IF ABRIR_TABLA( "FACTURA", "FAC_NA2", "FAC_NUM" )
-        DbSelectArea( "FAC_NA2" )
-        OrdSetFocus( "FAC_NUM" )
-        IF DbSeek( PadR( "A", 4 ) + PadR( cNumFac, 10 ) ) .AND. NetRLock()
-            DbFieldPutIf( "ANULADA", .T. )
-            DbFieldPutIf( "NUM_ABONO", cNumNA )
-            DbUnlock()
+    // Si la factura ya esta contabilizada, no se toca el documento original.
+    IF !FacturaContabilizada( "A", cNumFac )
+        IF ABRIR_TABLA( "FACTURA", "FAC_NA2", "FAC_NUM" )
+            DbSelectArea( "FAC_NA2" )
+            OrdSetFocus( "FAC_NUM" )
+            IF DbSeek( PadR( "A", 4 ) + PadR( cNumFac, 10 ) ) .AND. NetRLock()
+                DbFieldPutIf( "ANULADA", .T. )
+                DbFieldPutIf( "NUM_ABONO", cNumNA )
+                DbUnlock()
+            ENDIF
+            FAC_NA2->( DbCloseArea() )
         ENDIF
-        FAC_NA2->( DbCloseArea() )
     ENDIF
 
     // Asiento contable inverso
@@ -1340,7 +1343,8 @@ STATIC FUNCTION _NaGuardar( cNumFac, cCliID, cCtaCli, oGFec, oGMot, ;
                 "Nota abono " + cNumNA + " / Fac " + cNumFac )
 
     MsgInfo( "Nota de abono " + cNumNA + " emitida correctamente." + Chr(13) + ;
-             "Factura " + cNumFac + " marcada como abonada.", "Nota de Abono" )
+             "La factura original queda sin cambios si ya estaba contabilizada.", ;
+             "Nota de Abono" )
 
     oWin:Close()
 

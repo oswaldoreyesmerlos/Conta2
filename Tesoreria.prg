@@ -627,6 +627,10 @@ RETURN .T.
 
 STATIC FUNCTION _RecMarcarFactura( cNumFac )
 
+    IF FacturaContabilizada( "A", cNumFac )
+        RETURN .T.
+    ENDIF
+
     IF !ABRIR_TABLA( "FACTURA", "FAC_RG", "FAC_NUM" )
         RETURN .F.
     ENDIF
@@ -1327,6 +1331,10 @@ RETURN .T.
 
 
 STATIC FUNCTION _PagoMarcarCompra( cNumCom, cFormPag )
+
+    IF CompraContabilizada( cNumCom )
+        RETURN .T.
+    ENDIF
 
     IF !ABRIR_TABLA( "COMPRAS", "COM_PR", "COM_INT" )
         RETURN .F.
