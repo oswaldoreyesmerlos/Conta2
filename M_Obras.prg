@@ -210,7 +210,7 @@ FUNCTION FacturarObra( cIdObra, nImporte, cTipoFac, nPorcIva, cConcepto, dFecha 
       RETURN ""
    ENDIF
 
-   IF !ValidarFacturaObra( cIdObra, nImporte )
+   IF !ValidarFacturaObra( cIdObra, nImporte, cTipoFac )
       Select( nArea )
       RETURN ""
    ENDIF
@@ -1034,34 +1034,73 @@ STATIC FUNCTION _ObraFacturaForm( cIdObra, cTipoFac )
    LOCAL aRes      := GetResumenObra( cIdObra )
    LOCAL nImporte  := If( cTipoFac == "F", aRes[3], 0.00 )
    LOCAL nIva      := 21.00
-   LOCAL cConcepto := PadR( _ObraTituloTipo( cTipoFac ) + " " + AllTrim( cIdObra ), 80 )
+   LOCAL cCliente  := ""
+   LOCAL cNumPre   := ""
+   LOCAL cDescObra := ""
+   LOCAL cNomCli   := ""
+   LOCAL cConcepto
+   LOCAL dFecha    := Date()
+   LOCAL nBase     := 0.00
+   LOCAL nCuotaIva := 0.00
    LOCAL oGImp
    LOCAL oGIva
    LOCAL oGCon
+   LOCAL oGFec
    LOCAL oBtGua
    LOCAL oBtCan
 
-   oWin := TWindow():New( 6, 12, 27, 118, _ObraTituloTipo( cTipoFac ) )
+   IF !_ObraLeerCab( cIdObra, @cCliente, @cNumPre, @cDescObra )
+      RETURN NIL
+   ENDIF
+
+   cNomCli   := _ObraClienteNombre( cCliente )
+   cConcepto := PadR( _ObraConceptoFactura( cTipoFac, cIdObra, cDescObra ), 80 )
+
+   IF nImporte > 0 .AND. nIva > 0
+      nBase     := Round( nImporte / ( 1 + ( nIva / 100 ) ), 2 )
+      nCuotaIva := Round( nImporte - nBase, 2 )
+   ELSE
+      nBase     := nImporte
+      nCuotaIva := 0.00
+   ENDIF
+
+   oWin := TWindow():New( 4, 8, 31, 122, _ObraTituloTipo( cTipoFac ) )
 
    oWin:AddCtrl( TLabel():New(  2,  2, "Obra          : " + AllTrim( cIdObra ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  4,  2, "Total obra    : " + Transform( aRes[1], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  5,  2, "Facturado     : " + Transform( aRes[2], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  6,  2, "Pendiente     : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  9,  2, "Importe TOTAL :", oWin ) )
-   oWin:AddCtrl( TLabel():New( 11,  2, "IVA %         :", oWin ) )
-   oWin:AddCtrl( TLabel():New( 13,  2, "Concepto      :", oWin ) )
-   oWin:AddCtrl( TLabel():New( 16,  2, "Nota: el importe es total factura. Para ISP use IVA 0.", oWin ) )
+   oWin:AddCtrl( TLabel():New(  3,  2, "Cliente       : " + AllTrim( cCliente ) + " " + cNomCli, oWin ) )
+   oWin:AddCtrl( TLabel():New(  4,  2, "Presupuesto   : " + AllTrim( cNumPre ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  5,  2, "Descripcion   : " + AllTrim( cDescObra ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  7,  2, "Total obra    : " + Transform( aRes[1], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  8,  2, "Facturado     : " + Transform( aRes[2], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  9,  2, "Pendiente     : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New( 10,  2, "Tipo          : " + _ObraTituloTipo( cTipoFac ), oWin ) )
+   oWin:AddCtrl( TLabel():New( 12,  2, "Fecha factura :", oWin ) )
+   oWin:AddCtrl( TLabel():New( 14,  2, "Importe TOTAL :", oWin ) )
+   oWin:AddCtrl( TLabel():New( 16,  2, "IVA %         :", oWin ) )
+   oWin:AddCtrl( TLabel():New( 18,  2, "Concepto      :", oWin ) )
+   oWin:AddCtrl( TLabel():New( 21,  2, "Base estimada : " + Transform( nBase, "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New( 22,  2, "IVA estimado  : " + Transform( nCuotaIva, "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New( 23,  2, "Total factura : " + Transform( nImporte, "999,999,999.99" ), oWin ) )
 
-   oGImp := TGet():New(  9, 20, nImporte,  "999,999.99", oWin )
-   oGIva := TGet():New( 11, 20, nIva,      "99.99",      oWin )
-   oGCon := TGet():New( 13, 20, cConcepto, "@!",         oWin )
+   oGFec := TGet():New( 12, 20, dFecha,    "99/99/9999", oWin )
+   oGImp := TGet():New( 14, 20, nImporte,  "999,999.99", oWin )
+   oGIva := TGet():New( 16, 20, nIva,      "99.99",      oWin )
+   oGCon := TGet():New( 18, 20, cConcepto, "@!",         oWin )
 
-   oBtGua := TButton():New( 18, 34, 19, 53, oWin, "EMITIR", ;
-      {|| _ObraFacturaGuardar( cIdObra, cTipoFac, oGImp, oGIva, oGCon, oWin ) } )
+   oGFec:bValid := {| o | !Empty( o:cBuffer ) .OR. ;
+      ( MsgStop( "La fecha de factura es obligatoria.", "Validacion" ), .F. ) }
+   oGImp:bValid := {| o | o:uVar > 0 .OR. ;
+      ( MsgStop( "El importe debe ser mayor que cero.", "Validacion" ), .F. ) }
+   oGIva:bValid := {| o | o:uVar >= 0 .AND. o:uVar <= 100 .OR. ;
+      ( MsgStop( "El IVA debe estar entre 0 y 100.", "Validacion" ), .F. ) }
 
-   oBtCan := TButton():New( 18, 57, 19, 76, oWin, "CANCELAR", ;
+   oBtGua := TButton():New( 25, 34, 26, 53, oWin, "EMITIR", ;
+      {|| _ObraFacturaGuardar( cIdObra, cTipoFac, oGFec, oGImp, oGIva, oGCon, oWin ) } )
+
+   oBtCan := TButton():New( 25, 57, 26, 76, oWin, "CANCELAR", ;
       {|| oWin:Close() } )
 
+   oWin:AddCtrl( oGFec )
    oWin:AddCtrl( oGImp )
    oWin:AddCtrl( oGIva )
    oWin:AddCtrl( oGCon )
@@ -1073,16 +1112,58 @@ STATIC FUNCTION _ObraFacturaForm( cIdObra, cTipoFac )
 RETURN NIL
 
 
-STATIC FUNCTION _ObraFacturaGuardar( cIdObra, cTipoFac, oGImp, oGIva, oGCon, oWin )
+STATIC FUNCTION _ObraFacturaGuardar( cIdObra, cTipoFac, oGFec, oGImp, oGIva, oGCon, oWin )
 
    LOCAL cFactura
+   LOCAL dFecha
+   LOCAL nImporte
+   LOCAL nIva
+   LOCAL nBase
+   LOCAL nCuotaIva
+   LOCAL aRes
+   LOCAL cMsg
 
-   IF !MsgYesNo( "Emitir factura de obra?", "Obras" )
+   dFecha   := oGFec:GetValue()
+   nImporte := Round( oGImp:GetValue(), 2 )
+   nIva     := Round( oGIva:GetValue(), 2 )
+   aRes     := GetResumenObra( cIdObra )
+
+   IF Empty( dFecha )
+      MsgStop( "La fecha de factura es obligatoria.", "Validacion" )
       RETURN NIL
    ENDIF
 
-   cFactura := FacturarObra( cIdObra, oGImp:GetValue(), cTipoFac, oGIva:GetValue(), ;
-                              AllTrim( oGCon:GetValue() ), Date() )
+   IF !ValidarFacturaObra( cIdObra, nImporte, cTipoFac )
+      RETURN NIL
+   ENDIF
+
+   IF nIva < 0 .OR. nIva > 100
+      MsgStop( "El IVA debe estar entre 0 y 100.", "Validacion" )
+      RETURN NIL
+   ENDIF
+
+   IF nIva > 0
+      nBase     := Round( nImporte / ( 1 + ( nIva / 100 ) ), 2 )
+      nCuotaIva := Round( nImporte - nBase, 2 )
+   ELSE
+      nBase     := nImporte
+      nCuotaIva := 0.00
+   ENDIF
+
+   cMsg := "Emitir " + Lower( _ObraTituloTipo( cTipoFac ) ) + "?" + Chr(13) + ;
+           "Obra      : " + AllTrim( cIdObra ) + Chr(13) + ;
+           "Pendiente : " + Transform( aRes[3], "999,999,999.99" ) + Chr(13) + ;
+           "Fecha     : " + DToC( dFecha ) + Chr(13) + ;
+           "Base      : " + Transform( nBase, "999,999,999.99" ) + Chr(13) + ;
+           "IVA       : " + Transform( nCuotaIva, "999,999,999.99" ) + Chr(13) + ;
+           "Total     : " + Transform( nImporte, "999,999,999.99" )
+
+   IF !MsgYesNo( cMsg, "Obras" )
+      RETURN NIL
+   ENDIF
+
+   cFactura := FacturarObra( cIdObra, nImporte, cTipoFac, nIva, ;
+                              AllTrim( oGCon:GetValue() ), dFecha )
 
    IF !Empty( cFactura )
       MsgInfo( "Factura emitida: " + cFactura, "Obras" )

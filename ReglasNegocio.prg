@@ -54,13 +54,19 @@ RETURN .T.
 // ============================================================================
 // ValidarFacturaObra()
 // Evita facturar mas que el pendiente total de una obra.
-// Incluye anticipos, certificaciones y factura final.
+// Los anticipos se permiten sin controlar pendiente porque pueden emitirse
+// antes de certificar ejecucion.
 // ============================================================================
-FUNCTION ValidarFacturaObra( cIdObra, nImporte )
+FUNCTION ValidarFacturaObra( cIdObra, nImporte, cTipoFac )
 
    LOCAL nTotal
    LOCAL nFacturado
    LOCAL nPendiente
+   LOCAL cTipo
+
+   DEFAULT cTipoFac TO "C"
+
+   cTipo := Upper( AllTrim( cTipoFac ) )
 
    IF Empty( cIdObra )
       MsgStop( "Debe indicar una obra.", "Validacion" )
@@ -76,8 +82,27 @@ FUNCTION ValidarFacturaObra( cIdObra, nImporte )
    nFacturado := GetFacturadoObra( cIdObra )
    nPendiente := nTotal - nFacturado
 
+   IF !( cTipo $ "ACFR" )
+      MsgStop( "Tipo de facturacion de obra no valido.", "Validacion" )
+      RETURN .F.
+   ENDIF
+
    IF nImporte <= 0
       MsgStop( "El importe a facturar debe ser mayor que cero.", "Validacion" )
+      RETURN .F.
+   ENDIF
+
+   IF cTipo == "A"
+      RETURN .T.
+   ENDIF
+
+   IF nTotal <= 0
+      MsgStop( "La obra no tiene total presupuestado para certificar.", "Validacion" )
+      RETURN .F.
+   ENDIF
+
+   IF nPendiente <= 0.01
+      MsgStop( "La obra no tiene pendiente de facturar.", "Validacion" )
       RETURN .F.
    ENDIF
 
