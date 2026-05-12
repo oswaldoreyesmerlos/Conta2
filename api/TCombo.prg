@@ -120,7 +120,7 @@ METHOD SetIndex( nIdx ) CLASS TCombo
     ENDIF
 
     IF ::bChange != NIL
-        Eval( ::bChange, Self )
+        EvalSafe( ::bChange, "TCombo:bChange", Self )
     ENDIF
 
 RETURN Self

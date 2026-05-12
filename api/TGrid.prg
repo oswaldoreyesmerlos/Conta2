@@ -199,12 +199,12 @@ METHOD IsRowEmpty( nRow ) CLASS TGrid
     aRow := ::aData[ nRow ]
 
     IF ::bRowEmpty != NIL
-        RETURN Eval( ::bRowEmpty, aRow )
+        RETURN EvalSafe( ::bRowEmpty, "TGrid:bRowEmpty", aRow ) == .T.
     ENDIF
 
     // Heuristica por defecto: primera columna vacia/cero/false
     IF Len( ::aColumns ) > 0
-        xVal := Eval( ::aColumns[ 1, COL_GETVAL ], aRow )
+        xVal := EvalSafe( ::aColumns[ 1, COL_GETVAL ], "TGrid:COL_GETVAL", aRow )
         DO CASE
         CASE ValType( xVal ) == "C"
              RETURN Empty( xVal )
@@ -293,6 +293,8 @@ METHOD Paint() CLASS TGrid
         GfxRecessed( ::nTop, ::nLeft, ::nBottom, ::nRight )
     ENDIF
 
+    GfxCursor( SC_NONE )
+
     ::Unlock()
 
 RETURN NIL
@@ -373,7 +375,7 @@ METHOD PaintRow( nRowIdx, nState ) CLASS TGrid
 
         // Obtener valor via codeblock
         IF bGet != NIL
-            xVal := Eval( bGet, aRow )
+            xVal := EvalSafe( bGet, "TGrid:COL_GETVAL", aRow )
         ELSE
             xVal := ""
         ENDIF
@@ -426,7 +428,7 @@ METHOD HandleKey( nKey ) CLASS TGrid
     CASE nKey == K_ENTER .OR. nKey == K_F2
          IF ::bEnter != NIL .AND. ::nCurRow >= 1 .AND. ;
             ::nCurRow <= Len( ::aData )
-            Eval( ::bEnter, Self )
+            EvalSafe( ::bEnter, "TGrid:bEnter", Self )
             ::Paint()
          ENDIF
 
@@ -462,7 +464,7 @@ METHOD GoUp() CLASS TGrid
         ::Paint()
 
         IF ::bChange != NIL
-            Eval( ::bChange, Self )
+            EvalSafe( ::bChange, "TGrid:bChange", Self )
         ENDIF
     ENDIF
 
@@ -490,7 +492,7 @@ METHOD GoDown() CLASS TGrid
         ::Paint()
 
         IF ::bChange != NIL
-            Eval( ::bChange, Self )
+            EvalSafe( ::bChange, "TGrid:bChange", Self )
         ENDIF
 
     ELSEIF ::nCurRow == Len( ::aData ) .AND. Len( ::aData ) > 0
@@ -498,7 +500,7 @@ METHOD GoDown() CLASS TGrid
         // Estamos en la ultima fila.  Si NO esta vacia y hay bInsert,
         // llamar al codeblock que anyade nueva fila.
         IF !::IsRowEmpty( ::nCurRow ) .AND. ::bInsert != NIL
-            Eval( ::bInsert, Self )
+            EvalSafe( ::bInsert, "TGrid:bInsert", Self )
 
             // Tras anyadir, posicionarse en la nueva ultima fila
             ::nCurRow := Len( ::aData )
@@ -513,7 +515,7 @@ METHOD GoDown() CLASS TGrid
     ELSEIF Len( ::aData ) == 0 .AND. ::bInsert != NIL
 
         // Grid completamente vacio: pulsar abajo anyade primera fila
-        Eval( ::bInsert, Self )
+        EvalSafe( ::bInsert, "TGrid:bInsert", Self )
 
         IF Len( ::aData ) > 0
             ::nCurRow := 1
@@ -538,7 +540,7 @@ METHOD GoTop() CLASS TGrid
         ::Paint()
 
         IF ::bChange != NIL
-            Eval( ::bChange, Self )
+            EvalSafe( ::bChange, "TGrid:bChange", Self )
         ENDIF
     ENDIF
 
@@ -557,7 +559,7 @@ METHOD GoBottom() CLASS TGrid
         ::Paint()
 
         IF ::bChange != NIL
-            Eval( ::bChange, Self )
+            EvalSafe( ::bChange, "TGrid:bChange", Self )
         ENDIF
     ENDIF
 
@@ -579,7 +581,7 @@ METHOD PageUp() CLASS TGrid
     ::Paint()
 
     IF ::bChange != NIL
-        Eval( ::bChange, Self )
+        EvalSafe( ::bChange, "TGrid:bChange", Self )
     ENDIF
 
 RETURN Self
@@ -601,7 +603,7 @@ METHOD PageDown() CLASS TGrid
     ::Paint()
 
     IF ::bChange != NIL
-        Eval( ::bChange, Self )
+        EvalSafe( ::bChange, "TGrid:bChange", Self )
     ENDIF
 
 RETURN Self
@@ -646,7 +648,7 @@ METHOD SeekChar( cChar ) CLASS TGrid
 
     // Recorrer aData buscando coincidencia
     FOR i := 1 TO Len( ::aData )
-        xVal := Eval( bGet, ::aData[ i ] )
+        xVal := EvalSafe( bGet, "TGrid:COL_GETVAL", ::aData[ i ] )
         cVal := Upper( AllTrim( hb_CStr( xVal ) ) )
 
         IF Left( cVal, Len( ::cSeekBuf ) ) == ::cSeekBuf
@@ -668,7 +670,7 @@ METHOD SeekChar( cChar ) CLASS TGrid
         ::Paint()
 
         IF ::bChange != NIL
-            Eval( ::bChange, Self )
+            EvalSafe( ::bChange, "TGrid:bChange", Self )
         ENDIF
     ENDIF
 

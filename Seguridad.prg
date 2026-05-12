@@ -295,7 +295,8 @@ FUNCTION Login()
         oGetUsr := TGet():New( 2, 13, cUser, "@!", oWin )
         oGetUsr:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
 
-        oGetPas := TGet():New( 4, 13, cPass, "@K!", oWin )
+        oGetPas := TGet():New( 4, 13, cPass, "@!", oWin )
+        oGetPas:lPassword := .T.
 
         oLblErr := TLabel():New( 7, 3, Space( 38 ), oWin )
         oLblErr:cColor := "R+/W"
@@ -569,8 +570,10 @@ STATIC FUNCTION _ChangeOwnPassword( cUser )
     oWin:AddCtrl( TLabel():New( 2, 3, "Nueva clave :", oWin ) )
     oWin:AddCtrl( TLabel():New( 4, 3, "Repetir     :", oWin ) )
 
-    oGP1 := TGet():New( 2, 18, cPass1, "@K!", oWin )
-    oGP2 := TGet():New( 4, 18, cPass2, "@K!", oWin )
+    oGP1 := TGet():New( 2, 18, cPass1, "@!", oWin )
+    oGP2 := TGet():New( 4, 18, cPass2, "@!", oWin )
+    oGP1:lPassword := .T.
+    oGP2:lPassword := .T.
 
     oGP1:bValid := {| o | Len( AllTrim( o:cBuffer ) ) >= 6 }
     oGP2:bValid := {| o | Len( AllTrim( o:cBuffer ) ) >= 6 }

@@ -129,9 +129,7 @@ METHOD Paint() CLASS TButton
 
     GfxText( ::nTop, ::nLeft, cText, cCol )
 
-    IF ::lFocused
-        GfxCursor( SC_NONE )
-    ENDIF
+    GfxCursor( SC_NONE )
 
     ::Unlock()
 
@@ -150,7 +148,7 @@ METHOD Click() CLASS TButton
     Inkey(0.05)
 
     IF ::bAction != NIL
-        Eval( ::bAction, Self )
+        EvalSafe( ::bAction, "TButton:" + ::cCaption, Self )
     ENDIF
 
     ::lPressed := .F.

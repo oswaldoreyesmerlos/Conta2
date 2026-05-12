@@ -92,7 +92,7 @@ METHOD Toggle() CLASS TCheck
     ::lValue := ! ::lValue
 
     IF ::bChange != NIL
-        Eval( ::bChange, Self )
+        EvalSafe( ::bChange, "TCheck:bChange", Self )
     ENDIF
 
     ::Paint()

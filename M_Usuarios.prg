@@ -174,7 +174,8 @@ FUNCTION UsuariosForm( cCodigo )
     oGNom := TGet():New(  4, 17, cNombre, "@!", oWin )
     oGNom:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
 
-    oGPas := TGet():New(  6, 17, cClave, "@K!", oWin )
+    oGPas := TGet():New(  6, 17, cClave, "@!", oWin )
+    oGPas:lPassword := .T.
     oGPas:bValid := {| o | !lNuevo .OR. !Empty( AllTrim( o:cBuffer ) ) }
 
     oGRol := TGet():New(  8, 17, cRolID, "@!", oWin )

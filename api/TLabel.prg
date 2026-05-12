@@ -41,6 +41,8 @@ METHOD Paint() CLASS TLabel
 
     ::DrawText( 0, 0, ::cCaption, ::cColor )
 
+    GfxCursor( SC_NONE )
+
     ::Unlock()
 
 RETURN NIL

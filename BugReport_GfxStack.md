@@ -29,7 +29,7 @@ Marca con `[x]` cada uno conforme lo trabajes.
 
 # CRITICOS
 
-## [ ] B001 — GetNextNum lee del buffer rancio tras RLock
+## [x] B001 — GetNextNum lee del buffer rancio tras RLock
 
 **Archivo:** `Util.prg`, función `GetNextNum`, líneas ~419-430.
 **Severidad:** CRITICO. Genera duplicados de número de documento bajo
@@ -77,7 +77,7 @@ frescos".
 
 ---
 
-## [ ] B002 — GetNextNum permite duplicados en el primer alta de un cCodDoc
+## [x] B002 — GetNextNum permite duplicados en el primer alta de un cCodDoc
 
 **Archivo:** `Util.prg`, función `GetNextNum`, líneas ~431-447.
 **Severidad:** CRITICO. Causa duplicados del **registro de contador**, no
@@ -136,7 +136,7 @@ comprobar la condición que te llevó a tomar ese lock.
 
 ---
 
-## [ ] B003 — GetNextNum cierra CONTADOR aunque el llamador la tuviera abierta
+## [x] B003 — GetNextNum cierra CONTADOR aunque el llamador la tuviera abierta
 
 **Archivo:** `Util.prg`, función `GetNextNum`, líneas ~410 y ~463.
 **Severidad:** CRITICO. Rompe silenciosamente módulos que mantengan
@@ -191,7 +191,7 @@ coste innecesario.
 
 ---
 
-## [ ] B004 — TLabel revienta si cText es NIL
+## [x] B004 — TLabel revienta si cText es NIL
 
 **Archivo:** `TLabel.prg`, método `New`, línea 16.
 **Severidad:** CRITICO. Cualquier llamada accidental con NIL produce
@@ -229,7 +229,7 @@ METHOD New( nRow, nCol, cText, oPar ) CLASS TLabel
 
 # SERIOS
 
-## [ ] B005 — TGet no acepta el separador en pictures de fecha distintas a "99/99/9999"
+## [x] B005 — TGet no acepta el separador en pictures de fecha distintas a "99/99/9999"
 
 **Archivo:** `TGet.prg`, método `HandleKey`, línea ~336.
 **Severidad:** SERIO. El control rechaza la `/` o `-` en cuanto la
@@ -287,7 +287,7 @@ es redundante con el case anterior.
 
 ---
 
-## [ ] B006 — TGet ejecuta Validate() dos veces en una salida normal
+## [x] B006 — TGet ejecuta Validate() dos veces en una salida normal
 
 **Archivo:** `TGet.prg`, métodos `HandleKey` y `KillFocus`, líneas
 ~212-244 y ~159-168.
@@ -459,7 +459,7 @@ diagnosticar.
 
 # MEJORAS / DECISIONES DE DISEÑO
 
-## [ ] B008 — NetFLock con rama inicial redundante
+## [x] B008 — NetFLock con rama inicial redundante
 
 **Archivo:** `Util.prg`, función `NetFLock`, líneas ~337-357.
 **Severidad:** MEJORA. No produce bug, solo es código innecesario.
@@ -504,7 +504,7 @@ Mismo cambio aplicable a `NetRLock`.
 
 ---
 
-## [ ] B009 — NetUnLock libera todos los locks, no solo el último
+## [x] B009 — NetUnLock libera todos los locks, no solo el último
 
 **Archivo:** `Util.prg`, función `NetUnLock`, línea ~383.
 **Severidad:** MEJORA. Comportamiento correcto pero nombre engañoso.
@@ -534,7 +534,7 @@ Si elijes A, recuerda actualizar todas las llamadas en la app.
 
 ---
 
-## [ ] B010 — ABRIR_TABLA solo abre el .cdx de producción
+## [x] B010 — ABRIR_TABLA solo abre el .cdx de producción
 
 **Archivo:** `Util.prg`, función `ABRIR_TABLA`, líneas ~310-322.
 **Severidad:** MEJORA. No es bug actual, es limitación a futuro.
@@ -572,7 +572,7 @@ Por ahora seguramente no lo necesitas, pero queda preparado.
 
 ---
 
-## [ ] B011 — ABRIR_TABLA hace DbGoTop solo si abre la tabla
+## [x] B011 — ABRIR_TABLA hace DbGoTop solo si abre la tabla
 
 **Archivo:** `Util.prg`, función `ABRIR_TABLA`, líneas ~302-330.
 **Severidad:** MEJORA. Comportamiento condicional sutil.
@@ -598,7 +598,7 @@ A es lo más limpio para una librería.
 
 ---
 
-## [ ] B012 — TGrid IsRowEmpty por defecto solo mira la primera columna
+## [x] B012 — TGrid IsRowEmpty por defecto solo mira la primera columna
 
 **Archivo:** `TGrid.prg`, método `IsRowEmpty`, líneas ~186-216.
 **Severidad:** MEJORA. Para apps de gestión casi siempre vas a querer
@@ -628,7 +628,7 @@ oGrid:bRowEmpty := { |aRow| Empty( aRow[ "ARTICULO" ] ) }
 
 ---
 
-## [ ] B013 — Manejo de errores no uniforme entre clases
+## [x] B013 — Manejo de errores no uniforme entre clases
 
 **Archivo:** Todos los `T*.prg`.
 **Severidad:** MEJORA. Riesgo de UX errática.
@@ -701,7 +701,7 @@ más expuestas a errores de programación de la app cliente.
 
 ---
 
-## [ ] B014 — Política de cursor inconsistente entre controles
+## [x] B014 — Política de cursor inconsistente entre controles
 
 **Archivo:** Varios `T*.prg`.
 **Severidad:** MEJORA. Cosmética.
@@ -735,7 +735,7 @@ apaga.
 
 ---
 
-## [ ] B015 — TGet detecta password con "@K", que en Clipper no significa eso
+## [x] B015 — TGet detecta password con "@K", que en Clipper no significa eso
 
 **Archivo:** `TGet.prg`, método `New`, línea ~44.
 **Severidad:** MEJORA. Riesgo de confusión.
@@ -776,7 +776,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar, lPwd ) CLASS TGet
 
 ---
 
-## [ ] B016 — ValidNif acepta cadena vacía como válida
+## [x] B016 — ValidNif acepta cadena vacía como válida
 
 **Archivo:** `Util.prg`, funciones `ValidNif*`, líneas ~804 y ~846.
 **Severidad:** MEJORA. Decisión de diseño que conviene documentar.

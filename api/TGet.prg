@@ -47,7 +47,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
     ::uVar     := uValue
     ::cPicture := cPic
     ::cType    := ValType( uValue )
-    ::lPassword := ( "@K" $ Upper( cPic ) )
+    ::lPassword := .F.
     nScroll := _TGetScrollLen( cPic )
 
     DO CASE
@@ -163,7 +163,7 @@ RETURN NIL
 METHOD SetFocus() CLASS TGet
 
     IF ::bWhen != NIL
-        IF ! Eval( ::bWhen, Self )
+        IF EvalSafe( ::bWhen, "TGet:bWhen", Self ) != .T.
             RETURN NIL
         ENDIF
     ENDIF
@@ -217,7 +217,7 @@ METHOD Validate() CLASS TGet
     ENDCASE
 
     IF ::bValid != NIL
-        lOk := Eval( ::bValid, Self )
+        lOk := EvalSafe( ::bValid, "TGet:bValid", Self ) == .T.
     ENDIF
 
 RETURN lOk

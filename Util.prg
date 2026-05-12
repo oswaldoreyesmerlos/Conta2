@@ -9,7 +9,8 @@
  * 3) ABRIR_TABLA         - Apertura segura de DBF con reintento
  * 4) NetFLock / NetRLock / NetUnLock - Bloqueos de red con reintento
  * 5) GetNextNum          - Contador correlativo de documentos
- * 6) Utilidades genericas: DirExiste, MiDefault, IsDbUsed,
+ * 6) EvalSafe            - Ejecucion protegida de callbacks de UI
+ * 7) Utilidades genericas: DirExiste, MiDefault, IsDbUsed,
  *                          GetDbArea, ASPLIT, CEILING, ArraySkip
  *
  * NOTA: MsgBox, MsgInfo y MsgStop estan en API\MsgBox.prg
@@ -291,9 +292,11 @@ RETURN NIL
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// ABRIR_TABLA( cArchivo, cAlias, cIndice )
+// ABRIR_TABLA( cArchivo, cAlias, cIndice, aCdxAdicionales )
+// Abre DBF/CDX y fija tag si se pide. No reposiciona el cursor: el llamador
+// decide si necesita DbGoTop(), DbSeek(), etc.
 // ----------------------------------------------------------------------------
-FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice )
+FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice, aCdxAdicionales )
 
     LOCAL lReintentar := .T.
 
@@ -321,11 +324,13 @@ FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice )
         ENDIF
     ENDDO
 
+    IF HB_ISARRAY( aCdxAdicionales )
+        AEval( aCdxAdicionales, { |cCdx| OrdListAdd( cCdx ) } )
+    ENDIF
+
     IF !Empty( cIndice )
         OrdSetFocus( cIndice )
     ENDIF
-
-    DbGoTop()
 
 RETURN .T.
 
@@ -501,7 +506,49 @@ RETURN cPref
 
 
 // ============================================================================
-// 6) UTILIDADES GENERICAS
+// 6) EJECUCION PROTEGIDA DE CALLBACKS
+// ============================================================================
+
+FUNCTION EvalSafe( bBlock, cContext, xArg1, xArg2, xArg3 )
+
+    LOCAL xRet := NIL
+    LOCAL oErr
+    LOCAL bOld
+    LOCAL cMsg
+
+    DEFAULT cContext TO "callback"
+
+    IF ValType( bBlock ) != "B"
+        RETURN NIL
+    ENDIF
+
+    bOld := ErrorBlock( {| e | Break( e ) } )
+
+    BEGIN SEQUENCE
+        DO CASE
+        CASE PCount() <= 2
+            xRet := Eval( bBlock )
+        CASE PCount() == 3
+            xRet := Eval( bBlock, xArg1 )
+        CASE PCount() == 4
+            xRet := Eval( bBlock, xArg1, xArg2 )
+        OTHERWISE
+            xRet := Eval( bBlock, xArg1, xArg2, xArg3 )
+        ENDCASE
+    RECOVER USING oErr
+        cMsg := "Error en " + cContext + ": " + hb_ValToStr( oErr:Description )
+        ErrorLogAppend( cMsg )
+        MsgStop( cMsg, "Error" )
+        xRet := NIL
+    END SEQUENCE
+
+    ErrorBlock( bOld )
+
+RETURN xRet
+
+
+// ============================================================================
+// 7) UTILIDADES GENERICAS
 // ============================================================================
 
 FUNCTION DirExiste( cRuta )
