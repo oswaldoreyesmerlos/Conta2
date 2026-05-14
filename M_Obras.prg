@@ -1208,15 +1208,28 @@ STATIC FUNCTION _ObraEstadoForm( cIdObra )
    LOCAL oBtSal
    LOCAL aRes := GetResumenObra( cIdObra )
    LOCAL aMov := _ObraMovCobros( cIdObra )
+   LOCAL cNumPre := ""
+   LOCAL nArea   := Select()
+
+   IF ABRIR_TABLA( "OBRAS", "OBR_EF", "OBR_ID" )
+      DbSelectArea( "OBR_EF" )
+      OrdSetFocus( "OBR_ID" )
+      IF DbSeek( PadR( AllTrim( cIdObra ), 12 ) ) .OR. DbSeek( AllTrim( cIdObra ) )
+         cNumPre := AllTrim( DbFieldValue( "NUM_PRE", "" ) )
+      ENDIF
+      OBR_EF->( DbCloseArea() )
+   ENDIF
+   Select( nArea )
 
    oWin  := TWindow():New( 3, 6, 35, 126, "ESTADO ECONOMICO DE OBRA" )
    oGrid := TGrid():New( 8, 2, 28, 116, oWin )
 
    oWin:AddCtrl( TLabel():New(  2,  2, "Obra       : " + AllTrim( cIdObra ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  3,  2, "Total obra : " + Transform( aRes[1], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  4,  2, "Facturado  : " + Transform( aRes[2], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  5,  2, "Pendiente  : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  6,  2, "Estado     : " + _ObraEstadoTexto( aRes[4] ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  3,  2, "Presupuesto: " + If( Empty( cNumPre ), "(manual)", cNumPre ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  4,  2, "Total obra : " + Transform( aRes[1], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  5,  2, "Facturado  : " + Transform( aRes[2], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  6,  2, "Pendiente  : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  7,  2, "Estado     : " + _ObraEstadoTexto( aRes[4] ), oWin ) )
    oWin:AddCtrl( TLabel():New( 30,  2, "ENTER: detalle del movimiento   ESC/CERRAR: volver a obras", oWin ) )
 
    oGrid:aData    := aMov

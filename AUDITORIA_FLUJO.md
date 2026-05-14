@@ -114,9 +114,12 @@ obra con año (`OBR2026####`). No se ha revisado el flujo completo.
 
 ### Debilidades
 
-#### D05 — Una obra debería vincularse a presupuesto origen
+#### D05 — Una obra debería vincularse a presupuesto origen — ***CORREGIDO***
 Actualmente no hay certeza de que la obra se cree desde un presupuesto.
 El nuevo enfoque exige que el flujo sea PRESUPUESTO → OBRA.
+*Fix aplicado:* el estado económico de obra (`_ObraEstadoForm`) ahora
+muestra el presupuesto origen (campo NUM_PRE de OBRAS). Si la obra es
+manual, indica "(manual)". Ya existía la columna "Presup." en el grid.
 
 #### D06 — La ficha de obra debería mostrar estado económico
 El nuevo enfoque (punto 5) pide: importe presupuestado, facturado,
