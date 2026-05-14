@@ -27,7 +27,7 @@ FUNCTION InicioDrywall()
     LOCAL i, nCdx
     LOCAL cDbf, cCdx
 
-    SET DEFAULT TO "C:\Users\ferna\Desktop\Prgs\GptWvg\GfxStack\DATA"
+    DirChange( hb_DirBase() + "DATA" )
 
     // =========================================================
         // 1. ARTICULO
