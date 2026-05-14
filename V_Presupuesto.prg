@@ -854,10 +854,13 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     oWin:AddCtrl( TLabel():New( 8,  3, "IMPORTE     :", oWin ) )
 
     oGDesc := TGet():New( 2, 17, cDesc, "@S38!", oWin )
-    oGDesc:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
+    oGDesc:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) .OR. ;
+        ( _PrePartidaLookup( oGDesc, oGPre, oGIva, bRecalc ), ;
+          !Empty( AllTrim( oGDesc:cBuffer ) ) ) }
 
     oBtPar := TButton():New( 2, 56, 2, 72, oWin, "BUSCAR PARTIDA", ;
         {|| _PrePartidaLookup( oGDesc, oGPre, oGIva, bRecalc ) } )
+    oBtPar:lTabStop := .F.
 
     oGCant := TGet():New( 4, 17, nCant, "9,999.99", oWin )
     oGPre  := TGet():New( 4, 48, nPre,  "9,999.99", oWin )
