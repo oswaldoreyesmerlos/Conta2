@@ -26,7 +26,6 @@ EXTERNAL Menu_Init
 EXTERNAL Login
 EXTERNAL SecurityEnsureSchema
 EXTERNAL InicioDBF
-EXTERNAL InicioDrywall
 EXTERNAL Empresa
 
 INIT PROCEDURE IniGlobales()
@@ -129,13 +128,6 @@ FUNCTION Main()
         App_Exit()
         RETURN NIL
     ENDIF
-
-    // ------------------------------------------------------------------
-    // PASO 4b: TABLAS ESPECIFICAS DRYWALL
-    //         InicioDrywall() crea las tablas del modulo de calculo
-    //         de tabiqueria seca (OOPTRAMO).
-    // ------------------------------------------------------------------
-    InicioDrywall()
 
     // ------------------------------------------------------------------
     // PASO 5: MENU PRINCIPAL
