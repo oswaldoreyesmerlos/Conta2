@@ -7,6 +7,7 @@
 #define LIN_C_IMP   5
 
 #define MAX_LINS  50
+#define IVA_DEF   21.00
 
 FUNCTION CertificacionesView()
 
