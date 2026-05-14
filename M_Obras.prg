@@ -663,7 +663,9 @@ STATIC FUNCTION _ObraSiguiente()
 
    LOCAL cId      := ""
    LOCAL cCodDoc  := PadR( "OBR", 3 )
-   LOCAL cPrefijo := "OBR" + AllTrim( Str( Year( Date() ) ) )
+   LOCAL cPrefijo := "OBR"
+   LOCAL cAnio    := AllTrim( Str( Year( Date() ) ) )
+   LOCAL cDescrip := "Obras " + cAnio
    LOCAL nUltNum  := 0
    LOCAL cUsuario := "SISTEMA"
    LOCAL nArea    := Select()
@@ -688,11 +690,13 @@ STATIC FUNCTION _ObraSiguiente()
          Select( nArea )
          RETURN ""
       ENDIF
+      DbSkip( 0 )
       nUltNum := CON_OBR->ULT_NUM
       // Si cambia el año, reinicia la serie anual.
-      IF AllTrim( CON_OBR->PREFIJO ) != cPrefijo
+      IF AllTrim( CON_OBR->DESCRIP ) != cDescrip
          nUltNum := 0
          REPLACE CON_OBR->PREFIJO WITH cPrefijo
+         REPLACE CON_OBR->DESCRIP WITH cDescrip
          REPLACE CON_OBR->DIGITOS WITH 4
       ENDIF
    ELSE
@@ -701,15 +705,26 @@ STATIC FUNCTION _ObraSiguiente()
          Select( nArea )
          RETURN ""
       ENDIF
-      DbAppend()
-      REPLACE CON_OBR->COD_DOC WITH cCodDoc
-      REPLACE CON_OBR->DESCRIP WITH "Obras"
-      REPLACE CON_OBR->PREFIJO WITH cPrefijo
-      REPLACE CON_OBR->DIGITOS WITH 4
+      IF DbSeek( cCodDoc )
+         DbSkip( 0 )
+         nUltNum := CON_OBR->ULT_NUM
+         IF AllTrim( CON_OBR->DESCRIP ) != cDescrip
+            nUltNum := 0
+            REPLACE CON_OBR->PREFIJO WITH cPrefijo
+            REPLACE CON_OBR->DESCRIP WITH cDescrip
+            REPLACE CON_OBR->DIGITOS WITH 4
+         ENDIF
+      ELSE
+         DbAppend()
+         REPLACE CON_OBR->COD_DOC WITH cCodDoc
+         REPLACE CON_OBR->DESCRIP WITH cDescrip
+         REPLACE CON_OBR->PREFIJO WITH cPrefijo
+         REPLACE CON_OBR->DIGITOS WITH 4
+      ENDIF
    ENDIF
 
    nUltNum++
-   cId := cPrefijo + StrZero( nUltNum, 4 )
+   cId := cPrefijo + cAnio + StrZero( nUltNum, 4 )
 
    REPLACE CON_OBR->ULT_NUM WITH nUltNum
    REPLACE CON_OBR->ULT_USR WITH cUsuario

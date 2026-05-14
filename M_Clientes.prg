@@ -132,6 +132,7 @@ FUNCTION ClientesForm( lNuevo, cId )
     LOCAL cCtaCon
     LOCAL cCtaAnt
     LOCAL lBaja
+    LOCAL lFueAbierta
     LOCAL oGId
     LOCAL oGNif
     LOCAL oGNom
@@ -193,6 +194,8 @@ FUNCTION ClientesForm( lNuevo, cId )
     cCtaCon  := Space( 10 )
     cCtaAnt  := Space( 10 )
     lBaja    := .F.
+
+    lFueAbierta := DBUSED( "CLI" )
 
     IF !ABRIR_TABLA( "CLIENTES", "CLI", "CLI_ID" )
         RETURN NIL
@@ -342,7 +345,9 @@ FUNCTION ClientesForm( lNuevo, cId )
 
     oWin:Run()
 
-    CLI->( DbCloseArea() )
+    IF !lFueAbierta
+        CLI->( DbCloseArea() )
+    ENDIF
     Select( nArea )
 
 RETURN NIL

@@ -908,11 +908,20 @@ FUNCTION FacturaGuardar( hFac, aLins, lNuevo )
     ENDIF
 
     IF !_FacGuardarLins( hFac, aLins )
+        IF lNuevo
+            _FacBorrarCabDB( hFac[ "NUMERO" ] )
+        ENDIF
         RETURN .F.
     ENDIF
 
-    _FacGenVencim( hFac[ "NUMERO" ], hFac[ "CLIENTE_" ], ;
-                   hFac[ "FECHA_VT" ], hFac[ "TOTAL" ] )
+    IF !_FacGenVencim( hFac[ "NUMERO" ], hFac[ "CLIENTE_" ], ;
+                       hFac[ "FECHA_VT" ], hFac[ "TOTAL" ] )
+        IF lNuevo
+            _FacBorrarLinsDB( hFac[ "NUMERO" ] )
+            _FacBorrarCabDB( hFac[ "NUMERO" ] )
+        ENDIF
+        RETURN .F.
+    ENDIF
 
 RETURN .T.
 
@@ -962,9 +971,31 @@ STATIC FUNCTION _FacGuardarCab( hFac, lNuevo )
         REPLACE FAC->NUM_PRE WITH hFac[ "NUM_PRE" ]
     ENDIF
 
+    DbCommit()
     DbUnlock()
 
 RETURN .T.
+
+
+STATIC FUNCTION _FacBorrarCabDB( cNum )
+
+    IF !ABRIR_TABLA( "FACTURA", "FAC_B", "FAC_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "FAC_B" )
+    OrdSetFocus( "FAC_NUM" )
+
+    IF DbSeek( _FacKey( cNum ) ) .AND. NetRLock()
+        FAC_B->( DbDelete() )
+        DbUnlock()
+        FAC_B->( DbCloseArea() )
+        RETURN .T.
+    ENDIF
+
+    FAC_B->( DbCloseArea() )
+
+RETURN .F.
 
 
 STATIC FUNCTION _FacGuardarLins( hFac, aLins )
@@ -995,9 +1026,34 @@ STATIC FUNCTION _FacGuardarLins( hFac, aLins )
         REPLACE FAC_D->IMPORTE  WITH aLins[i, LIN_IMP]
     NEXT
 
+    DbCommit()
     DbUnlock()
 
     FAC_D->( DbCloseArea() )
+
+RETURN .T.
+
+
+STATIC FUNCTION _FacBorrarLinsDB( cNum )
+
+    IF !ABRIR_TABLA( "FACTUR_DE", "FAD_B", "FAC_LIN" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "FAD_B" )
+    OrdSetFocus( "FAC_LIN" )
+    DbSeek( PadR( "A", 4 ) + PadR( AllTrim( cNum ), 10 ) + "  1" )
+
+    DO WHILE !Eof() .AND. AllTrim( FAD_B->SERIE ) == "A" .AND. ;
+          AllTrim( FAD_B->NUMERO ) == AllTrim( cNum )
+        IF NetRLock()
+            FAD_B->( DbDelete() )
+            DbUnlock()
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    FAD_B->( DbCloseArea() )
 
 RETURN .T.
 
@@ -1025,7 +1081,7 @@ STATIC FUNCTION _FacGenVencim( cNum, cCli, dVto, nTotal )
     cNom := ""
 
     IF !ABRIR_TABLA( "VENCIMIEN", "VEN_F", "VEN_NUM" )
-        RETURN NIL
+        RETURN .F.
     ENDIF
 
     IF ABRIR_TABLA( "CLIENTES", "CLI_V", "CLI_ID" )
@@ -1037,22 +1093,26 @@ STATIC FUNCTION _FacGenVencim( cNum, cCli, dVto, nTotal )
 
     DbSelectArea( "VEN_F" )
 
-    IF NetFLock()
-        DbAppend()
-        REPLACE VEN_F->EJERCICIO WITH Year( Date() )
-        REPLACE VEN_F->TIPO      WITH "C"
-        REPLACE VEN_F->NUMERO    WITH cNum
-        REPLACE VEN_F->VENCTO    WITH dVto
-        REPLACE VEN_F->IMPORTE   WITH nTotal
-        REPLACE VEN_F->COBRADO   WITH .F.
-        REPLACE VEN_F->CODTERCE  WITH cCli
-        REPLACE VEN_F->NOMBRE    WITH cNom
-        DbUnlock()
+    IF !NetFLock()
+        VEN_F->( DbCloseArea() )
+        RETURN .F.
     ENDIF
+
+    DbAppend()
+    REPLACE VEN_F->EJERCICIO WITH Year( Date() )
+    REPLACE VEN_F->TIPO      WITH "C"
+    REPLACE VEN_F->NUMERO    WITH cNum
+    REPLACE VEN_F->VENCTO    WITH dVto
+    REPLACE VEN_F->IMPORTE   WITH nTotal
+    REPLACE VEN_F->COBRADO   WITH .F.
+    REPLACE VEN_F->CODTERCE  WITH cCli
+    REPLACE VEN_F->NOMBRE    WITH cNom
+    DbCommit()
+    DbUnlock()
 
     VEN_F->( DbCloseArea() )
 
-RETURN NIL
+RETURN .T.
 
 
 // ============================================================================

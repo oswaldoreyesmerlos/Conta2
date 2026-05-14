@@ -927,6 +927,7 @@ STATIC FUNCTION _AsiFactura( cNumFac )
     LOCAL nIva
     LOCAL nTotal
     LOCAL cConc
+    LOCAL lAsientoOK
 
     // Cargar datos de la factura
     IF !ABRIR_TABLA( "FACTURA", "FAC_AS", "FAC_NUM" )
@@ -967,7 +968,12 @@ STATIC FUNCTION _AsiFactura( cNumFac )
     ENDIF
 
     cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    IF Empty( cAsi )
+        RETURN .F.
+    ENDIF
+
     cConc := "Factura " + cNumFac + " / " + cCli
+    lAsientoOK := .F.
 
     IF !ABRIR_TABLA( "LDIARIO", "DIA_AS", "DIA_ASI" )
         RETURN .F.
@@ -1015,11 +1021,19 @@ STATIC FUNCTION _AsiFactura( cNumFac )
             REPLACE DIA_AS->DOC_ORIG WITH cNumFac
         ENDIF
 
+        DbCommit()
         DbUnlock()
+        lAsientoOK := .T.
 
     ENDIF
 
     DIA_AS->( DbCloseArea() )
+
+    IF !lAsientoOK
+        MsgStop( "No se pudo bloquear el diario. La factura no se ha marcado como contabilizada.", ;
+                 "Asiento" )
+        RETURN .F.
+    ENDIF
 
     // Actualizar referencia asiento en la factura
     IF ABRIR_TABLA( "FACTURA", "FAC_AU", "FAC_NUM" )
@@ -1047,6 +1061,7 @@ STATIC FUNCTION _AsiCompra( cNumCom )
     LOCAL nIva
     LOCAL nTotal
     LOCAL cConc
+    LOCAL lAsientoOK
 
     IF !ABRIR_TABLA( "COMPRAS", "COM_AS", "COM_INT" )
         RETURN .F.
@@ -1084,7 +1099,12 @@ STATIC FUNCTION _AsiCompra( cNumCom )
     ENDIF
 
     cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    IF Empty( cAsi )
+        RETURN .F.
+    ENDIF
+
     cConc := "Compra " + cNumCom + " / " + cPrv
+    lAsientoOK := .F.
 
     IF !ABRIR_TABLA( "LDIARIO", "DIA_C", "DIA_ASI" )
         RETURN .F.
@@ -1132,11 +1152,19 @@ STATIC FUNCTION _AsiCompra( cNumCom )
         REPLACE DIA_C->TIP_ORIG WITH "COM"
         REPLACE DIA_C->DOC_ORIG WITH cNumCom
 
+        DbCommit()
         DbUnlock()
+        lAsientoOK := .T.
 
     ENDIF
 
     DIA_C->( DbCloseArea() )
+
+    IF !lAsientoOK
+        MsgStop( "No se pudo bloquear el diario. La compra no se ha marcado como contabilizada.", ;
+                 "Asiento" )
+        RETURN .F.
+    ENDIF
 
     IF ABRIR_TABLA( "COMPRAS", "COM_AU", "COM_INT" )
         DbSelectArea( "COM_AU" )
@@ -1162,6 +1190,7 @@ STATIC FUNCTION _AsiPago( cNumCom )
     LOCAL cCtaHaber
     LOCAL nTotal
     LOCAL cConc
+    LOCAL lAsientoOK
 
     IF !ABRIR_TABLA( "COMPRAS", "COM_PG", "COM_INT" )
         RETURN .F.
@@ -1193,7 +1222,12 @@ STATIC FUNCTION _AsiPago( cNumCom )
     ENDIF
 
     cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    IF Empty( cAsi )
+        RETURN .F.
+    ENDIF
+
     cConc := "Pago compra " + cNumCom + " / " + cPrv
+    lAsientoOK := .F.
 
     IF !ABRIR_TABLA( "LDIARIO", "DIA_PG", "DIA_ASI" )
         RETURN .F.
@@ -1224,10 +1258,18 @@ STATIC FUNCTION _AsiPago( cNumCom )
         REPLACE DIA_PG->TIP_ORIG WITH "PAG"
         REPLACE DIA_PG->DOC_ORIG WITH cNumCom
 
+        DbCommit()
         DbUnlock()
+        lAsientoOK := .T.
     ENDIF
 
     DIA_PG->( DbCloseArea() )
+
+    IF !lAsientoOK
+        MsgStop( "No se pudo bloquear el diario. No se ha generado el asiento de pago.", ;
+                 "Asiento" )
+        RETURN .F.
+    ENDIF
 
     MsgInfo( "Asiento " + cAsi + " generado para pago " + cNumCom, "Asiento" )
 
@@ -1243,6 +1285,7 @@ STATIC FUNCTION _AsiRecibo( cNumRec )
     LOCAL cCtaDebe
     LOCAL nTotal
     LOCAL cConc
+    LOCAL lAsientoOK
 
     IF !ABRIR_TABLA( "RECIBOS", "REC_AS", "REC_NUM" )
         RETURN .F.
@@ -1280,7 +1323,12 @@ STATIC FUNCTION _AsiRecibo( cNumRec )
     ENDIF
 
     cAsi  := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+    IF Empty( cAsi )
+        RETURN .F.
+    ENDIF
+
     cConc := "Cobro recibo " + cNumRec + " / " + cCli
+    lAsientoOK := .F.
 
     IF !ABRIR_TABLA( "LDIARIO", "DIA_R", "DIA_ASI" )
         RETURN .F.
@@ -1312,11 +1360,19 @@ STATIC FUNCTION _AsiRecibo( cNumRec )
         REPLACE DIA_R->TIP_ORIG WITH "REC"
         REPLACE DIA_R->DOC_ORIG WITH cNumRec
 
+        DbCommit()
         DbUnlock()
+        lAsientoOK := .T.
 
     ENDIF
 
     DIA_R->( DbCloseArea() )
+
+    IF !lAsientoOK
+        MsgStop( "No se pudo bloquear el diario. El recibo no se ha marcado como contabilizado.", ;
+                 "Asiento" )
+        RETURN .F.
+    ENDIF
 
     IF ABRIR_TABLA( "RECIBOS", "REC_AU", "REC_NUM" )
         DbSelectArea( "REC_AU" )

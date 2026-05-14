@@ -914,33 +914,44 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
         DbFieldPutIf( "TIPO",    "C" )
     ENDIF
 
+    DbCommit()
     DbUnlock()
 
-    IF !lNuevo
-        _PreBorrarLinsDB( cNum )
-    ENDIF
-
     IF !ABRIR_TABLA( "PRESUP_DE", "PRD_G", "PRD_LIN" )
+        IF lNuevo
+            _PreBorrarCabDB( cNum )
+        ENDIF
         RETURN .F.
     ENDIF
 
     DbSelectArea( "PRD_G" )
 
-    IF NetFLock()
-        FOR i := 1 TO Len( aLins )
-            DbAppend()
-            REPLACE PRD_G->NUMERO   WITH cNum
-            REPLACE PRD_G->LINEA    WITH i
-            REPLACE PRD_G->DESCRIPC WITH aLins[i, LIN_DESC]
-            REPLACE PRD_G->CANTIDAD WITH aLins[i, LIN_CANT]
-            REPLACE PRD_G->PRECIO   WITH aLins[i, LIN_PRE]
-            REPLACE PRD_G->DESCUENT WITH aLins[i, LIN_DTO]
-            REPLACE PRD_G->PORC_IVA WITH aLins[i, LIN_IVA]
-            REPLACE PRD_G->IMPORTE  WITH aLins[i, LIN_IMP]
-        NEXT
-        DbUnlock()
+    IF !NetFLock()
+        PRD_G->( DbCloseArea() )
+        IF lNuevo
+            _PreBorrarCabDB( cNum )
+        ENDIF
+        RETURN .F.
     ENDIF
 
+    IF !lNuevo
+        _PreBorrarLinsArea( cNum )
+    ENDIF
+
+    FOR i := 1 TO Len( aLins )
+        DbAppend()
+        REPLACE PRD_G->NUMERO   WITH cNum
+        REPLACE PRD_G->LINEA    WITH i
+        REPLACE PRD_G->DESCRIPC WITH aLins[i, LIN_DESC]
+        REPLACE PRD_G->CANTIDAD WITH aLins[i, LIN_CANT]
+        REPLACE PRD_G->PRECIO   WITH aLins[i, LIN_PRE]
+        REPLACE PRD_G->DESCUENT WITH aLins[i, LIN_DTO]
+        REPLACE PRD_G->PORC_IVA WITH aLins[i, LIN_IVA]
+        REPLACE PRD_G->IMPORTE  WITH aLins[i, LIN_IMP]
+    NEXT
+
+    DbCommit()
+    DbUnlock()
     PRD_G->( DbCloseArea() )
 
     IF lNuevo .AND. oLNumero != NIL
@@ -956,6 +967,27 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
     ENDIF
 
 RETURN .T.
+
+
+STATIC FUNCTION _PreBorrarCabDB( cNum )
+
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_B", "PRE_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "PRE_B" )
+    OrdSetFocus( "PRE_NUM" )
+
+    IF DbSeek( cNum ) .AND. NetRLock()
+        PRE_B->( DbDelete() )
+        DbUnlock()
+        PRE_B->( DbCloseArea() )
+        RETURN .T.
+    ENDIF
+
+    PRE_B->( DbCloseArea() )
+
+RETURN .F.
 
 
 STATIC FUNCTION _PreSiguiente()
@@ -1047,6 +1079,19 @@ STATIC FUNCTION _PreBorrarLinsDB( cNum )
     ENDDO
 
     PRD_B->( DbCloseArea() )
+
+RETURN NIL
+
+
+STATIC FUNCTION _PreBorrarLinsArea( cNum )
+
+    OrdSetFocus( "PRD_LIN" )
+    DbSeek( PadR( cNum, 10 ) + "  1" )
+
+    DO WHILE !Eof() .AND. AllTrim( PRD_G->NUMERO ) == AllTrim( cNum )
+        PRD_G->( DbDelete() )
+        DbSkip()
+    ENDDO
 
 RETURN NIL
 

@@ -117,6 +117,7 @@ FUNCTION VendedoresForm( lNuevo, cId )
     LOCAL oGCom
     LOCAL oGCta
     LOCAL oChkBaja
+    LOCAL lFueAbierta
     LOCAL oBtGua
     LOCAL oBtCan
 
@@ -131,6 +132,8 @@ FUNCTION VendedoresForm( lNuevo, cId )
     nComision:= 0.00
     cCtaCon  := Space( 10 )
     lBaja    := .F.
+
+    lFueAbierta := DBUSED( "VEN" )
 
     IF !ABRIR_TABLA( "VENDEDOR", "VEN", "VEN_ID" )
         RETURN NIL
@@ -197,7 +200,9 @@ FUNCTION VendedoresForm( lNuevo, cId )
 
     oWin:Run()
 
-    VEN->( DbCloseArea() )
+    IF !lFueAbierta
+        VEN->( DbCloseArea() )
+    ENDIF
     Select( nArea )
 
 RETURN NIL

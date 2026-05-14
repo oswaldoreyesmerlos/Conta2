@@ -143,6 +143,7 @@ FUNCTION ProveedForm( lNuevo, cId )
     LOCAL oGCtaCon
     LOCAL oGCtaAnt
     LOCAL oChkBaja
+    LOCAL lFueAbierta
     LOCAL oBtGua
     LOCAL oBtCan
 
@@ -169,6 +170,8 @@ FUNCTION ProveedForm( lNuevo, cId )
     cCtaCon  := Space( 10 )
     cCtaAnt  := Space( 10 )
     lBaja    := .F.
+
+    lFueAbierta := DBUSED( "PRV" )
 
     IF !ABRIR_TABLA( "PROVEED", "PRV", "PRV_ID" )
         RETURN NIL
@@ -289,7 +292,9 @@ FUNCTION ProveedForm( lNuevo, cId )
 
     oWin:Run()
 
-    PRV->( DbCloseArea() )
+    IF !lFueAbierta
+        PRV->( DbCloseArea() )
+    ENDIF
     Select( nArea )
 
 RETURN NIL
