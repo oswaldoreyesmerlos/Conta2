@@ -120,3 +120,81 @@ FUNCTION InformeStockMinimo()
     Select( nArea )
 
 RETURN _MostrarInformeTexto( "ARTICULOS BAJO STOCK MINIMO", cTexto, "STOCK_MINIMO.TXT" )
+
+
+// ============================================================================
+// FUNCIONES DE APOYO (adaptadas de Informes.prg)
+// ============================================================================
+FUNCTION _MostrarInformeTexto( cTitulo, cTexto, cFile )
+
+    LOCAL oWin
+    LOCAL oGrid
+    LOCAL oBtPrn
+    LOCAL oBtSal
+    LOCAL aLineas := _InformeTextoLineas( cTexto )
+
+    oWin   := TWindow():New( 1, 2, 37, 129, cTitulo )
+    oGrid  := TGrid():New( 2, 2, 30, 124, oWin )
+    oGrid:aData    := aLineas
+    oGrid:nSeekCol := 1
+    oGrid:AddColumn( "Vista previa TXT", 118, "@!", { |a| a[1] } )
+
+    oWin:AddCtrl( TLabel():New( 32, 2, ;
+        "Flechas/PgUp/PgDn: navegar   Letras: buscar texto   GUARDAR TXT: exportar", oWin ) )
+
+    oBtPrn := TButton():New( 33, 40, 34, 59, oWin, "GUARDAR TXT", ;
+        {|| _ImpTexto( cTexto, cFile ) } )
+    oBtSal := TButton():New( 33, 63, 34, 82, oWin, "CERRAR", ;
+        {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGrid  )
+    oWin:AddCtrl( oBtPrn )
+    oWin:AddCtrl( oBtSal )
+    oWin:Run()
+
+RETURN NIL
+
+
+STATIC FUNCTION _InformeTextoLineas( cTexto )
+
+    LOCAL aLineas := {}
+    LOCAL nStart  := 1
+    LOCAL nPos
+    LOCAL cLine
+
+    DEFAULT cTexto TO ""
+
+    cTexto := StrTran( cTexto, Chr( 13 ) + Chr( 10 ), Chr( 10 ) )
+    cTexto := StrTran( cTexto, Chr( 13 ), Chr( 10 ) )
+
+    DO WHILE nStart <= Len( cTexto ) + 1
+        nPos := At( Chr( 10 ), SubStr( cTexto, nStart ) )
+        IF nPos == 0
+            cLine := SubStr( cTexto, nStart )
+            AAdd( aLineas, { cLine } )
+            EXIT
+        ENDIF
+        cLine := SubStr( cTexto, nStart, nPos - 1 )
+        AAdd( aLineas, { cLine } )
+        nStart += nPos
+    ENDDO
+
+    IF Empty( aLineas )
+        AAdd( aLineas, { "" } )
+    ENDIF
+
+RETURN aLineas
+
+
+STATIC FUNCTION _ImpTexto( cTexto, cFile )
+
+    LOCAL cPath := ".\INFORME\"
+
+    IF !DirExiste( cPath )
+        DirMake( cPath )
+    ENDIF
+
+    hb_MemoWrit( cPath + cFile, cTexto )
+    MsgInfo( "Informe guardado en: " + cPath + cFile, "Impresion" )
+
+RETURN NIL

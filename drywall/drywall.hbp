@@ -46,4 +46,7 @@ PRES_MOD.prg
 REPT_MOD.prg
 TARE_MOD.prg
 VAL_MOD.prg
+M_Articulos.prg
+M_Familias.prg
+Informes_Inventario.prg
 drywall_main.prg

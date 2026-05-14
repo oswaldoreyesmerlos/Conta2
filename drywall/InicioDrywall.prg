@@ -27,6 +27,8 @@ FUNCTION InicioDrywall()
     LOCAL i, nCdx
     LOCAL cDbf, cCdx
 
+    SET DEFAULT TO ".\DATA"
+
     // -- TMP_TRA (tramos/parametros de calculo) --
     aCampos  := {}
     aIndices := {}
