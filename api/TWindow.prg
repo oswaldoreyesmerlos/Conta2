@@ -622,13 +622,10 @@ STATIC FUNCTION _WinMouseClick( oWin, nRow, nCol )
                         oWin:SetFocus( nFocus )
                     ENDIF
 
-                    // Si el control tiene bAction (TButton, etc.), ejecutarlo
-                    BEGIN SEQUENCE
-                        IF oCtrl:bAction != NIL
-                            EvalSafe( oCtrl:bAction, "Click:Mouse", oCtrl )
-                        ENDIF
-                    RECOVER
-                    END SEQUENCE
+                    // Solo TButton tiene bAction
+                    IF Upper( oCtrl:ClassName() ) == "TBUTTON" .AND. oCtrl:bAction != NIL
+                        EvalSafe( oCtrl:bAction, "Click:Mouse", oCtrl )
+                    ENDIF
                     RETURN NIL
                 ENDIF
             NEXT
