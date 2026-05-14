@@ -57,8 +57,9 @@ FUNCTION InitApp( nRows, nCols, cFont, nFontH, nFontW )
 
     GfxCursor( SC_NONE )
 
-    // Activar tracking de raton (GTWVG)
+    // Activar eventos de raton (GTWVG)
     BEGIN SEQUENCE
+        SET EVENTMASK TO HB_INKEY_ALL
         wvt_SetMouseMove( .T. )
     RECOVER
     END SEQUENCE
