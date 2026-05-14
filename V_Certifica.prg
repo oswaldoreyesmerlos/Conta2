@@ -210,6 +210,7 @@ STATIC FUNCTION _CertAltaForm()
     LOCAL oLblObra
     LOCAL oLTotalObra
     LOCAL oLTotalCert
+    LOCAL oBtBus
     LOCAL oBtGua
     LOCAL oBtCan
     LOCAL aLineas     := {}
@@ -258,9 +259,10 @@ STATIC FUNCTION _CertAltaForm()
     oGObs := TGet():New( 10, 16, cObs, "@S60!", oWin )
 
     oGIdObr := TGet():New( 2, 16, cIdObra, "@!", oWin )
-    oGIdObr:bValid := {| o | _CertBuscarObra( o, @cIdObra, @aLineas, @nTotalObra, @nIvaFijo, @lInv, ;
-                                               oLblObra, oLTotalObra, oGrid, oGPorc ) }
     oWin:AddCtrl( oGrid )
+    oBtBus := TButton():New( 2, 56, 2, 72, oWin, "BUSCAR OBRA", ;
+        {|| _CertBuscarObra( oGIdObr, @cIdObra, @aLineas, @nTotalObra, @nIvaFijo, @lInv, ;
+                             oLblObra, oLTotalObra, oGrid, oGPorc ) } )
 
     oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
         {|| _CertGuardar( oGIdObr, oGFec, oGPorc, oGObs, aLineas, nIvaFijo, oWin ) } )
@@ -269,6 +271,7 @@ STATIC FUNCTION _CertAltaForm()
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGIdObr )
+    oWin:AddCtrl( oBtBus  )
     oWin:AddCtrl( oGFec   )
     oWin:AddCtrl( oGPorc  )
     oWin:AddCtrl( oGObs   )
