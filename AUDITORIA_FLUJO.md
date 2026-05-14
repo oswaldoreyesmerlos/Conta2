@@ -160,9 +160,10 @@ lógico, pero ningún llamador verifica el retorno.
 Antes no existía el módulo. Ahora `_CertFacturar()` genera la factura
 vinculada a la certificación y a la obra. Pendiente: reflejo contable.
 
-#### D08 — No hay opción de inversión del sujeto pasivo en facturas
-El nuevo enfoque (punto 2) menciona IVA normal o inversión del sujeto
-pasivo. Verificar si está soportado.
+#### D08 — Inversión del sujeto pasivo — ***IMPLEMENTADO VÍA B003***
+Implementado: campo INVERSION en FACTURA y PRESUPUEST, checkbox en
+formularios con cambio automático de IVA a 0%, texto legal condicional
+en impresión. Ver B003.
 
 ---
 
