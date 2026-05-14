@@ -194,6 +194,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL cObserva
     LOCAL cPieDoc
     LOCAL lAnulada
+    LOCAL lInv
     LOCAL aLineas
     LOCAL nBase
     LOCAL nIva
@@ -221,6 +222,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL oBtDLin
     LOCAL oBtCli
     LOCAL oBtFP
+    LOCAL oGInv
     LOCAL oGrid
 
     lNuevo   := Empty( AllTrim( cNumero ) )
@@ -236,6 +238,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     cObserva := Space( 60 )
     cPieDoc  := ""
     lAnulada := .F.
+    lInv     := .F.
     aLineas  := {}
     nBase    := 0.00
     nIva     := 0.00
@@ -246,7 +249,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
 
     IF !lNuevo
         IF !_PreCargarCab( cNumero, @cCliID, @cCliNom, @cCliInfo, @dFecha, @dValidez, ;
-                             @cFormPag, @nDias, @nPorcRet, @cObserva, @lAnulada )
+                             @cFormPag, @nDias, @nPorcRet, @cObserva, @lAnulada, @lInv )
             RETURN NIL
         ENDIF
         _PreCargarLins( cNumero, @aLineas )
@@ -267,6 +270,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oWin:AddCtrl( TLabel():New(  6, 62, "Dias pago :", oWin ) )
     oWin:AddCtrl( TLabel():New(  6, 86, "Ret.IRPF %:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8,  2, "Observ.   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  7, 86, "Inv.Suj.Pas:", oWin ) )
 
     oLNumero := TLabel():New( 2, 14, PadR( If( lNuevo, "(se asigna al grabar)", cNumero ), 24 ), oWin )
     oLNumero:cColor := "W+/B"
@@ -289,6 +293,11 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oGDias := TGet():New(  6, 74, nDias,    "999",        oWin )
     oGRet  := TGet():New(  6, 98, nPorcRet, "99.99",      oWin )
     oGObs  := TGet():New(  8, 14, cObserva, "@S60!",      oWin )
+
+    oGInv  := TCheck():New( 7, 100, "Inversion", lInv, oWin )
+    oGInv:bChange := {|| _PreInvToggle( oGInv, @aLineas, nPorcRet, ;
+                                         @nBase, @nIva, @nRet, @nTotal, ;
+                                         oLBase, oLIva, oLRet, oLTotal, oGrid ) }
 
     IF lNuevo
         oBtCli := TButton():New( 3, 14, 3, 25, oWin, "BUSCAR CLI", ;
@@ -349,7 +358,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
                            oLBase, oLIva, oLRet, oLTotal ) } )
 
     oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
-        {|| If( PreGuardar( _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs ), ;
+        {|| If( PreGuardar( _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, oGInv ), ;
                            aLineas, cPieDoc, cNumero, lNuevo, ;
                            nBase, nIva, nRet, nTotal, @cNumero, oLNumero ), ;
                 oWin:Close(), NIL ) } )
@@ -373,6 +382,7 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oWin:AddCtrl( oGDias  )
     oWin:AddCtrl( oGRet   )
     oWin:AddCtrl( oGObs   )
+    oWin:AddCtrl( oGInv   )
     oWin:AddCtrl( oGrid   )
     oWin:AddCtrl( oBtNLin )
     oWin:AddCtrl( oBtELin )
@@ -405,7 +415,7 @@ STATIC FUNCTION _PreCargarEmpPie( cPie )
 RETURN NIL
 
 
-STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, nRet, cObs, lAnu )
+STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, nRet, cObs, lAnu, lInv )
 
     IF !ABRIR_TABLA( "PRESUPUEST", "PRE_C", "PRE_NUM" )
         RETURN .F.
@@ -428,6 +438,7 @@ STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, 
     cObs  := AllTrim( DbFieldValue( "OBSERVA", "" ) )
     lAnu  := ( DbFieldValue( "ESTADO", "P" ) == "A" .OR. ;
                DbFieldValue( "ESTADO", "P" ) == "F" )
+    lInv  := DbFieldValue( "INVERSION", .F. )
 
     IF ABRIR_TABLA( "CLIENTES", "CLI_P", "CLI_ID" )
         IF CLI_P->( DbSeek( cCli ) )
@@ -698,6 +709,29 @@ STATIC FUNCTION _PreBorrarLin( oGrid, aLins, nPRet, nBase, nIva, nRet, nTotal, ;
 RETURN NIL
 
 
+STATIC FUNCTION _PreInvToggle( oInv, aLins, nPRet, nBase, nIva, nRet, nTotal, ;
+                                oLBase, oLIva, oLRet, oLTotal, oGrid )
+
+    LOCAL i
+    LOCAL lInv := oInv:GetValue()
+
+    FOR i := 1 TO Len( aLins )
+        aLins[i, LIN_IVA] := If( lInv, 0, IVA_DEF )
+        aLins[i, LIN_IMP] := ( aLins[i, LIN_CANT] * aLins[i, LIN_PRE] ) * ;
+                              ( 1 - aLins[i, LIN_DTO] / 100 )
+    NEXT
+
+    oGrid:aData := aLins
+    oGrid:Paint()
+    _PreCalcTot( aLins, nPRet, @nBase, @nIva, @nRet, @nTotal )
+    oLBase:SetText(  _FmtNP( nBase  ) )
+    oLIva:SetText(   _FmtNP( nIva   ) )
+    oLRet:SetText(   _FmtNP( nRet   ) )
+    oLTotal:SetText( _FmtNP( nTotal ) )
+
+RETURN NIL
+
+
 STATIC FUNCTION _PreFormLin( aLin, lNuevo )
 
     LOCAL oWin
@@ -799,7 +833,7 @@ RETURN Val( StrTran( AllTrim( oGet:cBuffer ), ",", "" ) )
 // ============================================================================
 // FORM HASH
 // ============================================================================
-STATIC FUNCTION _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs )
+STATIC FUNCTION _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs, oGInv )
 
     LOCAL hPre := {=>}
 
@@ -810,6 +844,7 @@ STATIC FUNCTION _PreFormHash( oGCli, oGFec, oGVal, oGFP, oGDias, oGRet, oGObs )
     hPre[ "DIAS_PAG" ] := oGDias:GetValue()
     hPre[ "PORC_RET" ] := oGRet:GetValue()
     hPre[ "OBSERVA"  ] := AllTrim( oGObs:GetValue() )
+    hPre[ "INVERSION" ] := oGInv:GetValue()
 
 RETURN hPre
 
@@ -870,11 +905,13 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
 
     IF lNuevo
         IF !NetFLock()
+            PRE_G->( DbCloseArea() )
             RETURN .F.
         ENDIF
         DbAppend()
     ELSE
         IF !DbSeek( cNum )
+            PRE_G->( DbCloseArea() )
             RETURN .F.
         ENDIF
 
@@ -888,39 +925,14 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
         ENDIF
 
         IF !NetRLock()
+            PRE_G->( DbCloseArea() )
             RETURN .F.
         ENDIF
     ENDIF
 
-    REPLACE PRE_G->NUMERO   WITH cNum
-    REPLACE PRE_G->FECHA    WITH dFec
-    DbFieldPutIf( "VALIDEZ", dVal )
-    REPLACE PRE_G->CLIENTE_ WITH cCli
-    REPLACE PRE_G->VENDEDOR WITH Space( 10 )
-    REPLACE PRE_G->SUBTOTAL WITH nBase
-    REPLACE PRE_G->IVA      WITH nIva
-    REPLACE PRE_G->TOTAL    WITH nTotal
-    DbFieldPutIf( "OBSERVA",  cObs )
-    DbFieldPutIf( "PIE_DOC",  cPieDoc )
-    DbFieldPutIf( "FORMA_PA", PadR( cFP, 3 ) )
-    DbFieldPutIf( "DIAS_PAG", nDias )
-    DbFieldPutIf( "RETENCIO", nRet )
-    DbFieldPutIf( "PORC_RET", nPRet )
-
-    IF lNuevo
-        DbFieldPutIf( "ESTADO",  "P" )
-        DbFieldPutIf( "NUM_FAC", Space( 10 ) )
-        DbFieldPutIf( "ID_OBRA", Space( 10 ) )
-        DbFieldPutIf( "TIPO",    "C" )
-    ENDIF
-
-    DbCommit()
-    DbUnlock()
-
     IF !ABRIR_TABLA( "PRESUP_DE", "PRD_G", "PRD_LIN" )
-        IF lNuevo
-            _PreBorrarCabDB( cNum )
-        ENDIF
+        PRE_G->( DbUnlock() )
+        PRE_G->( DbCloseArea() )
         RETURN .F.
     ENDIF
 
@@ -928,9 +940,8 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
 
     IF !NetFLock()
         PRD_G->( DbCloseArea() )
-        IF lNuevo
-            _PreBorrarCabDB( cNum )
-        ENDIF
+        PRE_G->( DbUnlock() )
+        PRE_G->( DbCloseArea() )
         RETURN .F.
     ENDIF
 
@@ -938,21 +949,66 @@ FUNCTION PreGuardar( hPre, aLins, cPieDoc, cNumero, lNuevo, ;
         _PreBorrarLinsArea( cNum )
     ENDIF
 
-    FOR i := 1 TO Len( aLins )
-        DbAppend()
-        REPLACE PRD_G->NUMERO   WITH cNum
-        REPLACE PRD_G->LINEA    WITH i
-        REPLACE PRD_G->DESCRIPC WITH aLins[i, LIN_DESC]
-        REPLACE PRD_G->CANTIDAD WITH aLins[i, LIN_CANT]
-        REPLACE PRD_G->PRECIO   WITH aLins[i, LIN_PRE]
-        REPLACE PRD_G->DESCUENT WITH aLins[i, LIN_DTO]
-        REPLACE PRD_G->PORC_IVA WITH aLins[i, LIN_IVA]
-        REPLACE PRD_G->IMPORTE  WITH aLins[i, LIN_IMP]
-    NEXT
+    BEGIN SEQUENCE
 
-    DbCommit()
-    DbUnlock()
+        BEGIN TRANSACTION
+
+            DbSelectArea( "PRE_G" )
+
+            REPLACE PRE_G->NUMERO   WITH cNum
+            REPLACE PRE_G->FECHA    WITH dFec
+            DbFieldPutIf( "VALIDEZ", dVal )
+            REPLACE PRE_G->CLIENTE_ WITH cCli
+            REPLACE PRE_G->VENDEDOR WITH Space( 10 )
+            REPLACE PRE_G->SUBTOTAL WITH nBase
+            REPLACE PRE_G->IVA      WITH nIva
+            REPLACE PRE_G->TOTAL    WITH nTotal
+            DbFieldPutIf( "OBSERVA",  cObs )
+            DbFieldPutIf( "PIE_DOC",  cPieDoc )
+            DbFieldPutIf( "FORMA_PA", PadR( cFP, 3 ) )
+            DbFieldPutIf( "DIAS_PAG", nDias )
+            DbFieldPutIf( "RETENCIO", nRet )
+            DbFieldPutIf( "PORC_RET", nPRet )
+            DbFieldPutIf( "INVERSION", hPre[ "INVERSION" ] )
+
+            IF lNuevo
+                DbFieldPutIf( "ESTADO",  "P" )
+                DbFieldPutIf( "NUM_FAC", Space( 10 ) )
+                DbFieldPutIf( "ID_OBRA", Space( 10 ) )
+                DbFieldPutIf( "TIPO",    "C" )
+            ENDIF
+
+            DbSelectArea( "PRD_G" )
+
+            FOR i := 1 TO Len( aLins )
+                DbAppend()
+                REPLACE PRD_G->NUMERO   WITH cNum
+                REPLACE PRD_G->LINEA    WITH i
+                REPLACE PRD_G->DESCRIPC WITH aLins[i, LIN_DESC]
+                REPLACE PRD_G->CANTIDAD WITH aLins[i, LIN_CANT]
+                REPLACE PRD_G->PRECIO   WITH aLins[i, LIN_PRE]
+                REPLACE PRD_G->DESCUENT WITH aLins[i, LIN_DTO]
+                REPLACE PRD_G->PORC_IVA WITH aLins[i, LIN_IVA]
+                REPLACE PRD_G->IMPORTE  WITH aLins[i, LIN_IMP]
+            NEXT
+
+        END TRANSACTION
+
+    RECOVER
+        ROLLBACK
+        PRD_G->( DbUnlock() )
+        PRD_G->( DbCloseArea() )
+        PRE_G->( DbUnlock() )
+        PRE_G->( DbCloseArea() )
+        MsgStop( "Error al guardar el presupuesto. No se realizaron cambios.", "Error" )
+        RETURN .F.
+
+    END SEQUENCE
+
+    PRD_G->( DbUnlock() )
     PRD_G->( DbCloseArea() )
+    PRE_G->( DbUnlock() )
+    PRE_G->( DbCloseArea() )
 
     IF lNuevo .AND. oLNumero != NIL
         oLNumero:SetText( PadR( cNum, 24 ) )

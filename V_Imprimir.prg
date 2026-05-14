@@ -136,6 +136,7 @@ STATIC FUNCTION _ImpCargarCab( cTipo, cNum )
         AAdd( aC, AllTrim( FAC_I->FORMA_PA ) )
         AAdd( aC, AllTrim( FAC_I->OBSERVA  ) )
         AAdd( aC, ""  )
+        AAdd( aC, DbFieldValue( "INVERSION", .F. ) )
         cCli := aC[3]
         DbSelectArea( cAlias )
         DbCloseArea()
@@ -168,6 +169,7 @@ STATIC FUNCTION _ImpCargarCab( cTipo, cNum )
         AAdd( aC, AllTrim( DbFieldValue( "FORMA_PA", "" ) ) )
         AAdd( aC, AllTrim( PRE_I->OBSERVA  ) )
         AAdd( aC, DToC( PRE_I->VALIDEZ ) )
+        AAdd( aC, DbFieldValue( "INVERSION", .F. ) )
         cCli := aC[3]
         DbSelectArea( cAlias )
         DbCloseArea()
@@ -289,7 +291,12 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
 
     cPie := AllTrim( aEmp[13] )
     IF Empty( cPie ) .AND. cTitDoc == "PRESUPUESTO"
-        cPie := _ImpCondicionesPresup()
+        cPie := _ImpCondicionesPresup( aCab[19] )
+    ENDIF
+    IF aCab[19]
+        cInvTxt := "Operacion con inversion del sujeto pasivo conforme al Art. 84.1.2.f de la Ley 37/1992 del IVA. "
+        cInvTxt += "El sujeto pasivo del impuesto es el destinatario de la operacion."
+        cPie := If( Empty( cPie ), "", cPie + "<br><br>" ) + cInvTxt
     ENDIF
     cPie := _HtmlLines( cPie )
 
@@ -499,7 +506,7 @@ STATIC FUNCTION _HtmlLines( cTxt )
 RETURN cTxt
 
 
-STATIC FUNCTION _ImpCondicionesPresup()
+STATIC FUNCTION _ImpCondicionesPresup( lInv )
 
     LOCAL cTxt
 
@@ -509,8 +516,10 @@ STATIC FUNCTION _ImpCondicionesPresup()
     cTxt += "50% a la finalizacion de los trabajos o mediante certificaciones segun avance." + Chr(13) + Chr(10) + Chr(13) + Chr(10)
     cTxt += "3. Extras: Cualquier trabajo no especificado en la descripcion anterior se facturara aparte como partida adicional." + Chr(13) + Chr(10) + Chr(13) + Chr(10)
     cTxt += "4. Exclusiones: No se incluyen tasas municipales, licencias de obra, pintura ni limpieza final de obra salvo indicacion expresa." + Chr(13) + Chr(10) + Chr(13) + Chr(10)
-    cTxt += "5. Fiscalidad: Operacion con inversion del sujeto pasivo conforme al Art. 84.1.2.f de la Ley 37/1992 del IVA. "
-    cTxt += "El sujeto pasivo del impuesto es el destinatario de la operacion."
+    IF lInv
+        cTxt += "5. Fiscalidad: Operacion con inversion del sujeto pasivo conforme al Art. 84.1.2.f de la Ley 37/1992 del IVA. "
+        cTxt += "El sujeto pasivo del impuesto es el destinatario de la operacion."
+    ENDIF
 
 RETURN cTxt
 

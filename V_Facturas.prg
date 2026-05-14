@@ -156,6 +156,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     LOCAL cPieDoc
     LOCAL lAnulada
     LOCAL lCobrada
+    LOCAL lInv
     LOCAL aLineas
     LOCAL nBase
     LOCAL nIva
@@ -181,6 +182,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     LOCAL oBtDLin
     LOCAL oBtCli
     LOCAL oBtFP
+    LOCAL oGInv
     LOCAL oGrid
 
     lNuevo   := Empty( AllTrim( cNumero ) )
@@ -196,6 +198,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     cPieDoc  := ""
     lAnulada := .F.
     lCobrada := .F.
+    lInv     := .F.
     aLineas  := {}
     nBase    := 0.00
     nIva     := 0.00
@@ -207,7 +210,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     IF !lNuevo
         IF !_FacCargarCab( cNumero, @cCliID, @cCliNom, @dFecha, ;
                            @cFormPag, @nDias, @nPorcRet, ;
-                           @cObserva, @lAnulada, @lCobrada )
+                           @cObserva, @lAnulada, @lCobrada, @lInv )
             RETURN NIL
         ENDIF
         _FacCargarLins( cNumero, @aLineas )
@@ -230,6 +233,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     oWin:AddCtrl( TLabel():New(  8, 40, "Dias pago :", oWin ) )
     oWin:AddCtrl( TLabel():New(  8, 70, "Ret.IRPF %:", oWin ) )
     oWin:AddCtrl( TLabel():New( 10,  2, "Observ.   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6, 70, "Inv.Suj.Pas:", oWin ) )
 
     oLNumero := TLabel():New( 2, 14, PadR( cNumDisp, 24 ), oWin )
     oLNumero:cColor := "W+/B"
@@ -247,7 +251,12 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     oGFP   := TGet():New(  8, 14, cFormPag, "@!",         oWin )
     oGDias := TGet():New(  8, 52, nDias,    "999",        oWin )
     oGRet  := TGet():New(  8, 82, nPorcRet, "99.99",      oWin )
-    oGObs  := TGet():New( 10, 14, cObserva, "@!",         oWin )
+    oGObs  := TGet():New( 10, 14, cObserva, "@!", oWin )
+
+    oGInv  := TCheck():New( 6, 84, "Inversion", lInv, oWin )
+    oGInv:bChange := {|| _FacInvToggle( oGInv, @aLineas, nPorcRet, ;
+                                         @nBase, @nIva, @nRet, @nTotal, ;
+                                         oLBase, oLIva, oLRet, oLTotal, oGrid ) }
 
     IF lNuevo
         oBtCli := TButton():New( 4, 25, 4, 34, oWin, "BUSCAR", ;
@@ -311,8 +320,8 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
                                oLBase, oLIva, oLRet, oLTotal ) } )
 
         oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
-            {|| _FacGuardarForm( _FacFormHash( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
-                                                cNumPre, nBase, nIva, nRet, nTotal, cPieDoc ), ;
+           {|| _FacGuardarForm( _FacFormHash( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, oGInv, ;
+                                                 cNumPre, nBase, nIva, nRet, nTotal, cPieDoc ), ;
                                   aLineas, lNuevo, @cNumero, oLNumero, oWin ) } )
     ENDIF
 
@@ -334,6 +343,7 @@ STATIC FUNCTION _FacForm( cNumero, cNumPre )
     oWin:AddCtrl( oGDias  )
     oWin:AddCtrl( oGRet   )
     oWin:AddCtrl( oGObs   )
+    oWin:AddCtrl( oGInv   )
     oWin:AddCtrl( oGrid   )
     IF lNuevo
         oWin:AddCtrl( oBtNLin )
@@ -369,7 +379,7 @@ RETURN NIL
 
 
 STATIC FUNCTION _FacCargarCab( cNum, cCli, cNom, dFec, cFP, nDias, ;
-                                nRet, cObs, lAnu, lCob )
+                                nRet, cObs, lAnu, lCob, lInv )
 
     IF !ABRIR_TABLA( "FACTURA", "FAC", "FAC_NUM" )
         RETURN .F.
@@ -390,6 +400,7 @@ STATIC FUNCTION _FacCargarCab( cNum, cCli, cNom, dFec, cFP, nDias, ;
     cObs  := AllTrim( DbFieldValue( "OBSERVA", "" ) )
     lAnu  := DbFieldValue( "ANULADA", .F. )
     lCob  := DbFieldValue( "COBRADA", .F. )
+    lInv  := DbFieldValue( "INVERSION", .F. )
 
     // Cargar días de pago desde el cliente
     IF ABRIR_TABLA( "CLIENTES", "CLI_F2", "CLI_ID" )
@@ -624,6 +635,29 @@ RETURN NIL
 // GESTION DE LINEAS
 // ============================================================================
 
+STATIC FUNCTION _FacInvToggle( oInv, aLins, nPRet, nBase, nIva, nRet, nTotal, ;
+                                oLBase, oLIva, oLRet, oLTotal, oGrid )
+
+    LOCAL i
+    LOCAL lInv := oInv:GetValue()
+
+    FOR i := 1 TO Len( aLins )
+        aLins[i, LIN_IVA] := If( lInv, 0, IVA_DEF )
+        aLins[i, LIN_IMP] := ( aLins[i, LIN_CANT] * aLins[i, LIN_PRE] ) * ;
+                              ( 1 - aLins[i, LIN_DTO] / 100 )
+    NEXT
+
+    oGrid:aData := aLins
+    oGrid:Paint()
+    _FacCalcTot( aLins, nPRet, @nBase, @nIva, @nRet, @nTotal )
+    oLBase:SetText(  _FmtN( nBase  ) )
+    oLIva:SetText(   _FmtN( nIva   ) )
+    oLRet:SetText(   _FmtN( nRet   ) )
+    oLTotal:SetText( _FmtN( nTotal ) )
+
+RETURN NIL
+
+
 STATIC FUNCTION _FacNuevaLin( oGrid, aLins, nPRet, nBase, nIva, nRet, nTotal, ;
                                 oLBase, oLIva, oLRet, oLTotal )
 
@@ -802,7 +836,7 @@ RETURN lOK
 // ============================================================================
 // GUARDAR
 // ============================================================================
-STATIC FUNCTION _FacFormHash( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
+STATIC FUNCTION _FacFormHash( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, oGInv, ;
                                cNumPre, nBase, nIva, nRet, nTotal, cPieDoc )
 
     LOCAL cCli
@@ -842,6 +876,7 @@ STATIC FUNCTION _FacFormHash( oGCli, oGFec, oGFP, oGDias, oGRet, oGObs, ;
     hFac[ "ID_OBRA"  ] := ""
     hFac[ "TIPO_FAC" ] := ""
     hFac[ "TIPO_DOC" ] := "F"
+    hFac[ "INVERSION" ] := oGInv:GetValue()
 
 RETURN hFac
 
@@ -966,6 +1001,7 @@ STATIC FUNCTION _FacGuardarCab( hFac, lNuevo )
     DbFieldPutIf( "TIPO_DOC", hFac[ "TIPO_DOC" ] )
     DbFieldPutIf( "ID_OBRA",  hFac[ "ID_OBRA"  ] )
     DbFieldPutIf( "TIPO_FAC", hFac[ "TIPO_FAC" ] )
+    DbFieldPutIf( "INVERSION", hFac[ "INVERSION" ] )
 
     IF !Empty( hFac[ "NUM_PRE" ] )
         REPLACE FAC->NUM_PRE WITH hFac[ "NUM_PRE" ]

@@ -383,7 +383,7 @@ RETURN .T.
 // ============================================================================
 // _ObraLeerCab()
 // ============================================================================
-STATIC FUNCTION _ObraLeerCab( cIdObra, cCliente, cNumPre, cDescObra )
+FUNCTION _ObraLeerCab( cIdObra, cCliente, cNumPre, cDescObra )
 
    LOCAL lOk   := .F.
    LOCAL nArea := Select()
@@ -416,7 +416,7 @@ RETURN lOk
 // ============================================================================
 // _ObraFormaPagoCliente()
 // ============================================================================
-STATIC FUNCTION _ObraFormaPagoCliente( cCliente, cFormaPa, nDias )
+FUNCTION _ObraFormaPagoCliente( cCliente, cFormaPa, nDias )
 
    LOCAL nArea := Select()
 
@@ -441,7 +441,7 @@ RETURN NIL
 // ============================================================================
 // _ObraCrearFacturaCab()
 // ============================================================================
-STATIC FUNCTION _ObraCrearFacturaCab( cSerie, cNumFac, cCliente, dFecha, dVto, ;
+FUNCTION _ObraCrearFacturaCab( cSerie, cNumFac, cCliente, dFecha, dVto, ;
                                       nBase, nIva, nTotal, cFormaPa, cNumPre, ;
                                       cIdObra, cTipoFac, cConcepto )
 
@@ -494,7 +494,7 @@ RETURN .T.
 // ============================================================================
 // _ObraCrearFacturaLin()
 // ============================================================================
-STATIC FUNCTION _ObraCrearFacturaLin( cSerie, cNumFac, cConcepto, nBase, nPorcIva )
+FUNCTION _ObraCrearFacturaLin( cSerie, cNumFac, cConcepto, nBase, nPorcIva )
 
    LOCAL nArea := Select()
 
@@ -536,7 +536,7 @@ RETURN .T.
 // ============================================================================
 // _ObraGenVencimiento()
 // ============================================================================
-STATIC FUNCTION _ObraGenVencimiento( cSerie, cNumFac, cCliente, dVto, nTotal, cIdObra )
+FUNCTION _ObraGenVencimiento( cSerie, cNumFac, cCliente, dVto, nTotal, cIdObra )
 
    LOCAL cNombre := ""
    LOCAL nArea   := Select()
@@ -615,7 +615,7 @@ RETURN lOk
 // _ObraActualizarEstado()
 // Si queda pendiente cero, marca finalizada. Si no, en curso.
 // ============================================================================
-STATIC FUNCTION _ObraActualizarEstado( cIdObra )
+FUNCTION _ObraActualizarEstado( cIdObra )
 
    LOCAL nPendiente := GetPendienteObra( cIdObra )
    LOCAL cEstado    := If( nPendiente <= 0.01, "F", "E" )
@@ -648,7 +648,7 @@ RETURN cTipo + " " + AllTrim( cIdObra ) + " - " + AllTrim( cDescObra )
 // _ObraSiguienteFactura()
 // Usa el mismo contador de facturas que V_Facturas.prg.
 // ============================================================================
-STATIC FUNCTION _ObraSiguienteFactura()
+FUNCTION _ObraSiguienteFactura()
 
    LOCAL cAnio := AllTrim( Str( Year( Date() ) ) )
 

@@ -39,6 +39,7 @@ EXTERNAL LibroDiarioView
 EXTERNAL LibroDiarioNuevo
 EXTERNAL FacturasView
 EXTERNAL ObrasView
+EXTERNAL CertificacionesView
 EXTERNAL NotaAbonoForm
 EXTERNAL PresupuestosView
 EXTERNAL PresupuestoNuevo
@@ -139,7 +140,8 @@ FUNCTION Menu_Init()
     AAdd( aSubPre, { "Nuevo",     {|| PresupuestoNuevo()  }, NIL, "Nuevo presupuesto" } )
 
     // Obras
-    AAdd( aSubObr, { "Historial", {|| ObrasView() }, NIL, "Gestion y certificacion de obras" } )
+    AAdd( aSubObr, { "Historial",    {|| ObrasView() }, NIL, "Gestion y certificacion de obras" } )
+    AAdd( aSubObr, { "Certificac.",  {|| CertificacionesView() }, NIL, "Gestion de certificaciones de obra" } )
 
     // Facturas
     AAdd( aSubFac, { "Historial", {|| FacturasView() }, NIL, "Facturas emitidas" } )

@@ -386,6 +386,7 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "ID_OBRA",  "C", 12, 0 } )
     AAdd( aCampos, { "TIPO_FAC", "C",  1, 0 } ) // A=Anticipo C=Certif. F=Final R=Rectif.
     AAdd( aCampos, { "NUM_ABONO","C", 10, 0 } )
+    AAdd( aCampos, { "INVERSION","L",  1, 0 } )
     AAdd( aIndices, { "FAC_NUM", "SERIE+NUMERO" } )
     AAdd( aIndices, { "FAC_CLI", "CLIENTE_" } )
     AAdd( aIndices, { "FAC_FEC", "DtoS(FECHA)" } )
@@ -654,11 +655,44 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "DIAS_PAG", "N",  3, 0 } )
     AAdd( aCampos, { "RETENCIO", "N", 12, 2 } )
     AAdd( aCampos, { "PORC_RET", "N",  5, 2 } )
+    AAdd( aCampos, { "INVERSION","L",  1, 0 } )
     AAdd( aIndices, { "PRE_NUM", "NUMERO" } )
     AAdd( aIndices, { "PRE_CLI", "CLIENTE_" } )
     AAdd( aIndices, { "PRE_FEC", "DtoS(FECHA)" } )
     AAdd( aIndices, { "PRE_OBR", "ID_OBRA" } )
     AAdd( aTablas, { "PRESUPUEST", aCampos, aIndices } )
+
+    // -- CERTIFICA (cabecera certificaciones) --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "ID",        "C", 12, 0 } )
+    AAdd( aCampos, { "ID_OBRA",   "C", 12, 0 } )
+    AAdd( aCampos, { "FECHA",     "D",  8, 0 } )
+    AAdd( aCampos, { "PORCENTAJE","N",  5, 2 } )
+    AAdd( aCampos, { "IMPORTE",   "N", 12, 2 } )
+    AAdd( aCampos, { "BASE",      "N", 12, 2 } )
+    AAdd( aCampos, { "IVA",       "N", 12, 2 } )
+    AAdd( aCampos, { "PORC_IVA",  "N",  5, 2 } )
+    AAdd( aCampos, { "TOTAL",     "N", 12, 2 } )
+    AAdd( aCampos, { "ESTADO",    "C",  1, 0 } )
+    AAdd( aCampos, { "NUM_FAC",   "C", 10, 0 } )
+    AAdd( aCampos, { "OBSERVA",   "C", 80, 0 } )
+    AAdd( aIndices, { "CERT_NUM", "ID" } )
+    AAdd( aIndices, { "CERT_OBR", "ID_OBRA" } )
+    AAdd( aTablas, { "CERTIFICA", aCampos, aIndices } )
+
+    // -- CERTIF_DE (lineas de certificacion) --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "ID_CERT",  "C", 12, 0 } )
+    AAdd( aCampos, { "LINEA",    "N",  3, 0 } )
+    AAdd( aCampos, { "DESCRIPC", "C", 60, 0 } )
+    AAdd( aCampos, { "CANTIDAD", "N", 12, 2 } )
+    AAdd( aCampos, { "PRECIO",   "N", 12, 2 } )
+    AAdd( aCampos, { "IMPORTE",  "N", 12, 2 } )
+    AAdd( aIndices, { "CDE_CERT", "ID_CERT+Str(LINEA,3)" } )
+    AAdd( aIndices, { "CDE_NUM",  "ID_CERT" } )
+    AAdd( aTablas, { "CERTIF_DE", aCampos, aIndices } )
 
     // -- 24. PRESUP_DE --
     aCampos  := {}

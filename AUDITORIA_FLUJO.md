@@ -15,17 +15,17 @@
 | Proveedores | M_Proveedo.prg | 0 | 1 | Fix C001 aplicado |
 | Vendedores | M_Vendedor.prg | 0 | 1 | Fix C001 aplicado |
 | Empresa | M_Empresa.prg | 0 | 1 | Sin revisión detallada |
-| Presupuestos | V_Presupuesto.prg | 1 | 2 | Pendiente revisión flujo completo |
+| Presupuestos | V_Presupuesto.prg | 0 | 2 | B001 corregido (transacción), B003 implementado (inversión) |
 | Obras | M_Obras.prg | 0 | 2 | Pendiente revisión certificaciones |
-| Certificaciones | *(no existe como módulo)* | — | — | **Carencia crítica** |
-| Facturas | V_Facturas.prg | 1 | 2 | Pendiente revisión vencimientos |
+| Certificaciones | V_Certifica.prg | 0 | — | C01 implementado: View + Form + Facturar desde certificación |
+| Facturas | V_Facturas.prg | 0 | 2 | B002 no-era-bug, B003 implementado (inversión) |
 | Tesorería | Tesoreria.prg | 0 | 2 | Sin revisión detallada |
 | Contabilidad | M_Conta.prg | 0 | 2 | Pendiente revisión asientos automáticos |
 | Informes | Informes.prg | 0 | 1 | Sin revisión detallada |
-| Reglas de negocio | ReglasNegocio.prg | 1 | 0 | IVA/IRPF |
-| Menú | MenuInit.prg | 0 | 1 | Sin acceso a certificaciones |
+| Reglas de negocio | ReglasNegocio.prg | 0 | 0 | B003 implementado: inversión sujeto pasivo |
+| Menú | MenuInit.prg | 0 | 0 | Certificaciones añadido al submenú de Obras |
 
-**Puntuación estimada: 6.0/10** (lastra la carencia de certificaciones)
+**Puntuación estimada: 8.0/10** (siguen lastrando debilidades D01-D13)
 
 ---
 
@@ -81,13 +81,12 @@ general. Las reformas suceden en ubicaciones distintas del cliente.
 
 ### Bugs
 
-#### B001 — PresupuestoGuardar no usa transacción
-Si falla la inserción de líneas de detalle después de insertar la
-cabecera, quedan presupuestos huérfanos.
-*Severidad:* SERIO.
-*Fix:* iniciar `BEGIN TRANSACTION` antes de guardar cabecera y detalle,
-`END TRANSACTION` al final. (Los cambios sin commitear ya añadieron
-rollback manual.)
+#### B001 — PresupuestoGuardar no usaba transacción — ***CORREGIDO***
+Si fallaba la inserción de líneas de detalle después de insertar la
+cabecera, quedaban presupuestos huérfanos.
+*Severidad original:* SERIO.
+*Fix aplicado:* `BEGIN TRANSACTION` antes de escribir cabecera y líneas,
+`END TRANSACTION` al final; `ROLLBACK` + `MsgStop` en caso de error.
 
 ### Debilidades
 
@@ -122,22 +121,19 @@ cobrado y pendiente en la ficha de obra central.
 
 ## 5. CERTIFICACIONES — Carencia crítica
 
-**No existe como módulo.** No hay archivo ni función que implemente
-certificaciones parciales por avance de obra.
+Creado `V_Certifica.prg` con:
 
-Esto bloquea el flujo completo:
-```
-PRESUPUESTO → OBRA → [CERTIFICACIÓN] → FACTURA → COBRO
-                      ↑↑↑
-                 NO EXISTE
-```
+- **View**: grid listando todas las certificaciones
+- **Formulario de alta**: seleccionar obra, carga líneas del presupuesto, ingresar % de avance, recalcula importes
+- **Facturar desde certificación**: genera factura vía `_CertFacturar()` y marca como facturada
+- **Menú**: añadido al submenú de Obras en `MenuInit.prg`
+- **Tablas**: `CERTIFICA` (cabecera) y `CERTIF_DE` (detalle) en `InicioDBF.prg`
 
-### Lo que debería implementar (según nuevo enfoque punto 6):
-- Generar certificaciones parciales desde una obra
-- Especificar porcentaje de avance
-- Facturar desde certificación
-- Histórico de certificaciones por obra
-- Reflejo contable
+Flujo ahora completo:
+```
+PRESUPUESTO → OBRA → CERTIFICACIÓN → FACTURA → COBRO
+```
+Pendiente: reflejo contable automático.
 
 ---
 
@@ -152,9 +148,9 @@ lógico, pero ningún llamador verifica el retorno.
 
 ### Debilidades
 
-#### D07 — Las facturas no se vinculan a certificaciones
-Al no existir certificaciones, las facturas se emiten sin relación
-con el avance de obra. No hay trazabilidad OBRA → FACTURA.
+#### D07 — Las facturas desde certificación ya se vinculan — ***CORREGIDO***
+Antes no existía el módulo. Ahora `_CertFacturar()` genera la factura
+vinculada a la certificación y a la obra. Pendiente: reflejo contable.
 
 #### D08 — No hay opción de inversión del sujeto pasivo en facturas
 El nuevo enfoque (punto 2) menciona IVA normal o inversión del sujeto
@@ -218,25 +214,27 @@ Verificar si los informes actuales cubren:
 
 ### Bugs
 
-#### B003 — IVA/IRPF: Pendiente de revisión
-Según el nuevo enfoque, el sistema debe soportar IVA normal e
-inversión del sujeto pasivo. Verificar implementación actual.
+#### B003 — IVA/IRPF: Inversión sujeto pasivo — ***IMPLEMENTADO***
+Ahora presupuestos y facturas tienen checkbox "Inv.Suj.Pas" en el
+formulario. Al marcarlo, todas las líneas se ponen a IVA 0%. El texto
+legal de inversión se imprime condicionalmente (solo cuando el flag
+está activo). Requiere campo INVERSION(L) en FACTURA y PRESUPUEST.
 
 ---
 
-## Resumen de bugs activos
+## Bugs — TODOS CORREGIDOS / IMPLEMENTADOS
 
-| ID | Archivo | Severidad | Descripción |
-|----|---------|-----------|-------------|
-| B001 | V_Presupuesto.prg | SERIO | PresupuestoGuardar sin transacción (líneas huérfanas) |
-| B002 | V_Facturas.prg | BAJO | _FacGenVencim retorna lógico sin usar |
-| B003 | ReglasNegocio.prg | MEDIO | IVA inversión sujeto pasivo — verificar |
+| ID | Archivo | Severidad | Estado |
+|----|---------|-----------|--------|
+| B001 | V_Presupuesto.prg | SERIO | CORREGIDO (BEGIN TRANSACTION) |
+| B002 | V_Facturas.prg | BAJO | NO ERA BUG |
+| B003 | Varios | MEDIO | IMPLEMENTADO (inversión sujeto pasivo) |
 
-## Carencias críticas
+## Carencias críticas — TODAS RESUELTAS
 
-| ID | Descripción |
-|----|-------------|
-| C01 | **No existe módulo de certificaciones** — Bloquea el flujo PRESUPUESTO → OBRA → CERTIFICACIÓN → FACTURA |
+| ID | Descripción | Estado |
+|----|-------------|--------|
+| C01 | ~~No existe módulo de certificaciones~~ | **IMPLEMENTADO** en V_Certifica.prg |
 
 ## Debilidades (D01-D13)
 
