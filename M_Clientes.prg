@@ -160,6 +160,7 @@ FUNCTION ClientesForm( lNuevo, cId )
     LOCAL oChkLopd
     LOCAL oChkMail
     LOCAL oChkBaja
+    LOCAL oBtDir
     LOCAL oBtGua
     LOCAL oBtCan
 
@@ -300,6 +301,9 @@ FUNCTION ClientesForm( lNuevo, cId )
     oChkMail := TCheck():New( 24, 72, "Acepta comunicaciones email",  lMail,   oWin )
     oChkBaja := TCheck():New( 26, 72, "Baja",                         lBaja,   oWin )
 
+    oBtDir := TButton():New( 30, 2, 31, 16, oWin, "DIR.OBRA", ;
+        {|| _CliDiresGestion( AllTrim( oGId:GetValue() ) ) } )
+
     oBtGua := TButton():New( 33, 40, 34, 59, oWin, "GUARDAR", ;
         {|| If( ClienteGuardar( _CliFormHash( oGId, oGNif, oGNom, oGApe, oGDir, ;
                                              oGCiu, oGPro, oGPais, oGCP, oGTel, ;
@@ -340,6 +344,7 @@ FUNCTION ClientesForm( lNuevo, cId )
     oWin:AddCtrl( oChkLopd )
     oWin:AddCtrl( oChkMail )
     oWin:AddCtrl( oChkBaja )
+    oWin:AddCtrl( oBtDir   )
     oWin:AddCtrl( oBtGua   )
     oWin:AddCtrl( oBtCan   )
 
@@ -503,6 +508,276 @@ STATIC FUNCTION _CliSubcuenta( cId )
     ENDIF
 
 RETURN "430" + StrZero( Val( cNum ), 7 )
+
+
+// ============================================================================
+// DIRECCIONES DE OBRA POR CLIENTE
+// ============================================================================
+
+FUNCTION CliDiresListado( cCli )
+
+    LOCAL aData := {}
+
+    IF Empty( AllTrim( cCli ) )
+        RETURN aData
+    ENDIF
+
+    IF ABRIR_TABLA( "CLI_DIRES", "CDR_L", "CDR_CLI" )
+        DbSelectArea( "CDR_L" )
+        OrdSetFocus( "CDR_CLI" )
+        DbGoTop()
+
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( CDR_L->CLIENTE ) == AllTrim( cCli )
+                AAdd( aData, { ;
+                    AllTrim( CDR_L->CLIENTE   ), ;
+                    AllTrim( CDR_L->DESCRIPC  ), ;
+                    AllTrim( CDR_L->DIRECCION ), ;
+                    AllTrim( CDR_L->CIUDAD    ), ;
+                    AllTrim( CDR_L->CP        ) } )
+            ENDIF
+            DbSkip()
+        ENDDO
+
+        CDR_L->( DbCloseArea() )
+    ENDIF
+
+RETURN aData
+
+
+STATIC FUNCTION _CliDiresGestion( cCli )
+
+    LOCAL oWin
+    LOCAL oGrid
+    LOCAL aData
+    LOCAL oBtNvo
+    LOCAL oBtEdt
+    LOCAL oBtDel
+    LOCAL oBtSal
+
+    IF Empty( AllTrim( cCli ) )
+        MsgStop( "Guarde el cliente antes de gestionar direcciones.", "Direcciones" )
+        RETURN NIL
+    ENDIF
+
+    aData := CliDiresListado( cCli )
+
+    oWin := TWindow():New( 5, 10, 35, 120, "DIRECCIONES DE OBRA - " + AllTrim( cCli ) )
+    oGrid := TGrid():New( 2, 2, 25, 106, oWin )
+
+    oGrid:aData    := aData
+    oGrid:nSeekCol := 2
+
+    oGrid:AddColumn( "Descripcion", 30, "@!", { |a| a[2] } )
+    oGrid:AddColumn( "Direccion",   50, "@!", { |a| a[3] } )
+    oGrid:AddColumn( "Ciudad",      20, "@!", { |a| a[4] } )
+    oGrid:AddColumn( "CP",          8, "@!",  { |a| a[5] } )
+
+    oGrid:bEnter := {| g | _CliDiresForm( cCli, g:nCurRow, @aData, oGrid ) }
+
+    oLbl := TLabel():New( 27, 2, ;
+        "ENTER: editar   F5: nueva direccion   DEL: eliminar", oWin )
+
+    oBtNvo := TButton():New( 28,  2, 29, 20, oWin, "NUEVA (F5)", ;
+        {|| _CliDiresForm( cCli, 0, @aData, oGrid ) } )
+
+    oBtEdt := TButton():New( 28, 22, 29, 40, oWin, "EDITAR", ;
+        {|| If( oGrid:CurrentRow() != NIL, ;
+                _CliDiresForm( cCli, oGrid:nCurRow, @aData, oGrid ), NIL ) } )
+
+    oBtDel := TButton():New( 28, 42, 29, 60, oWin, "ELIMINAR", ;
+        {|| If( oGrid:CurrentRow() != NIL .AND. ;
+                MsgYesNo( "Eliminar " + AllTrim( oGrid:CurrentRow()[2] ) + "?", "Confirmar" ), ;
+                _CliDiresBorrar( cCli, oGrid:CurrentRow()[2], @aData, oGrid ), NIL ) } )
+
+    oBtSal := TButton():New( 28, 98, 29, 116, oWin, "CERRAR", ;
+        {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGrid  )
+    oWin:AddCtrl( oLbl   )
+    oWin:AddCtrl( oBtNvo )
+    oWin:AddCtrl( oBtEdt )
+    oWin:AddCtrl( oBtDel )
+    oWin:AddCtrl( oBtSal )
+
+    oWin:Run()
+
+RETURN NIL
+
+
+STATIC FUNCTION _CliDiresForm( cCli, nEdit, aData, oGrid )
+
+    LOCAL oWin
+    LOCAL cDesc  := Space( 30 )
+    LOCAL cDir   := Space( 50 )
+    LOCAL cCiudad:= Space( 40 )
+    LOCAL cProv  := Space( 30 )
+    LOCAL cPais  := Space( 40 )
+    LOCAL cCP    := Space( 5 )
+    LOCAL oGDesc
+    LOCAL oGDir
+    LOCAL oGCiu
+    LOCAL oGProv
+    LOCAL oGPais
+    LOCAL oGCP
+    LOCAL oBtGua
+    LOCAL oBtCan
+    LOCAL lOK := .F.
+    LOCAL nArea := Select()
+
+    DEFAULT nEdit TO 0
+
+    IF nEdit > 0 .AND. nEdit <= Len( aData )
+        cDesc   := PadR( aData[nEdit, 2], 30 )
+        cDir    := PadR( aData[nEdit, 3], 50 )
+        cCiudad := PadR( aData[nEdit, 4], 40 )
+        cCP     := PadR( aData[nEdit, 5], 5 )
+    ENDIF
+
+    oWin := TWindow():New( 10, 18, 26, 110, ;
+        If( nEdit == 0, "NUEVA DIRECCION DE OBRA", "EDITAR DIRECCION DE OBRA" ) )
+
+    oWin:AddCtrl( TLabel():New(  2,  3, "Descripcion :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4,  3, "Direccion   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6,  3, "Ciudad      :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  8,  3, "Provincia   :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 10,  3, "Pais        :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 12,  3, "C.P.        :", oWin ) )
+
+    oGDesc := TGet():New( 2, 18, cDesc,   "@!",      oWin )
+    oGDesc:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
+
+    oGDir  := TGet():New( 4, 18, cDir,    "@!",      oWin )
+    oGCiu  := TGet():New( 6, 18, cCiudad, "@!",      oWin )
+    oGProv := TGet():New( 8, 18, cProv,   "@!",      oWin )
+    oGPais := TGet():New( 10, 18, cPais,   "@!",      oWin )
+    oGCP   := TGet():New( 12, 18, cCP,     "99999",   oWin )
+
+    oBtGua := TButton():New( 14, 18, 15, 37, oWin, "GUARDAR", ;
+        {|| lOK := _CliDiresGuardar( cCli, nEdit, @aData, ;
+                                      oGDesc, oGDir, oGCiu, oGProv, oGPais, oGCP ), ;
+            If( lOK, ( oGrid:aData := aData, oGrid:Paint(), oWin:Close() ), NIL ) } )
+
+    oBtCan := TButton():New( 14, 40, 15, 59, oWin, "CANCELAR", ;
+        {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGDesc )
+    oWin:AddCtrl( oGDir  )
+    oWin:AddCtrl( oGCiu  )
+    oWin:AddCtrl( oGProv )
+    oWin:AddCtrl( oGPais )
+    oWin:AddCtrl( oGCP   )
+    oWin:AddCtrl( oBtGua )
+    oWin:AddCtrl( oBtCan )
+
+    oWin:Run()
+
+    Select( nArea )
+
+RETURN NIL
+
+
+STATIC FUNCTION _CliDiresGuardar( cCli, nEdit, aData, oGDesc, oGDir, oGCiu, oGProv, oGPais, oGCP )
+
+    LOCAL cDesc   := AllTrim( oGDesc:GetValue() )
+    LOCAL cDir    := AllTrim( oGDir:GetValue() )
+    LOCAL cCiudad := AllTrim( oGCiu:GetValue() )
+    LOCAL cProv   := AllTrim( oGProv:GetValue() )
+    LOCAL cPais   := AllTrim( oGPais:GetValue() )
+    LOCAL cCP     := AllTrim( oGCP:GetValue() )
+    LOCAL nArea   := Select()
+    LOCAL lOk     := .F.
+
+    IF Empty( cDesc )
+        MsgStop( "La descripcion es obligatoria.", "Guardar" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "CLI_DIRES", "CDR_G", "CDR_CLI" )
+        Select( nArea )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "CDR_G" )
+    OrdSetFocus( "CDR_CLI" )
+
+    IF nEdit > 0 .AND. nEdit <= Len( aData )
+        IF DbSeek( PadR( AllTrim( cCli ), 10 ) + aData[nEdit, 2] ) .AND. NetRLock()
+            REPLACE CDR_G->DIRECCION WITH PadR( cDir, 50 )
+            REPLACE CDR_G->CIUDAD    WITH PadR( cCiudad, 40 )
+            REPLACE CDR_G->PROVINCIA WITH PadR( cProv, 30 )
+            REPLACE CDR_G->PAIS      WITH PadR( cPais, 40 )
+            REPLACE CDR_G->CP        WITH PadR( cCP, 5 )
+            DbCommit()
+            DbUnlock()
+            aData[nEdit, 3] := cDir
+            aData[nEdit, 4] := cCiudad
+            aData[nEdit, 5] := cCP
+            lOk := .T.
+        ENDIF
+    ELSE
+        IF !NetFLock()
+            CDR_G->( DbCloseArea() )
+            Select( nArea )
+            RETURN .F.
+        ENDIF
+        DbAppend()
+        REPLACE CDR_G->CLIENTE   WITH PadR( AllTrim( cCli ), 10 )
+        REPLACE CDR_G->DESCRIPC  WITH PadR( cDesc, 30 )
+        REPLACE CDR_G->DIRECCION WITH PadR( cDir, 50 )
+        REPLACE CDR_G->CIUDAD    WITH PadR( cCiudad, 40 )
+        REPLACE CDR_G->PROVINCIA WITH PadR( cProv, 30 )
+        REPLACE CDR_G->PAIS      WITH PadR( cPais, 40 )
+        REPLACE CDR_G->CP        WITH PadR( cCP, 5 )
+        DbCommit()
+        DbUnlock()
+        AAdd( aData, { cCli, cDesc, cDir, cCiudad, cCP } )
+        lOk := .T.
+    ENDIF
+
+    CDR_G->( DbCloseArea() )
+    Select( nArea )
+
+RETURN lOk
+
+
+STATIC FUNCTION _CliDiresBorrar( cCli, cDesc, aData, oGrid )
+
+    LOCAL nArea := Select()
+    LOCAL nPos  := AScan( aData, {| a | a[2] == cDesc } )
+    LOCAL i
+
+    IF nPos == 0
+        RETURN NIL
+    ENDIF
+
+    IF !ABRIR_TABLA( "CLI_DIRES", "CDR_B", "CDR_CLI" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "CDR_B" )
+    OrdSetFocus( "CDR_CLI" )
+
+    IF DbSeek( PadR( AllTrim( cCli ), 10 ) + cDesc ) .AND. NetRLock()
+        CDR_B->( DbDelete() )
+        DbCommit()
+        DbUnlock()
+    ENDIF
+
+    CDR_B->( DbCloseArea() )
+    Select( nArea )
+
+    ADel( aData, nPos )
+    ASize( aData, Len( aData ) - 1 )
+
+    IF oGrid:nCurRow > Len( aData ) .AND. Len( aData ) > 0
+        oGrid:nCurRow := Len( aData )
+    ENDIF
+    oGrid:aData := aData
+    oGrid:Paint()
+
+RETURN NIL
 
 
 // ============================================================================

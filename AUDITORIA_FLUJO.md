@@ -11,7 +11,7 @@
 
 | Módulo | Archivo | Bugs | Debilidades | Estado |
 |--------|---------|------|-------------|--------|
-| Clientes | M_Clientes.prg | 0 | 1 | Fix C001 aplicado |
+| Clientes | M_Clientes.prg | 0 | 0 | D02 corregido: direcciones de obra múltiples |
 | Proveedores | M_Proveedo.prg | 0 | 1 | Fix C001 aplicado |
 | Vendedores | M_Vendedor.prg | 0 | 1 | Fix C001 aplicado |
 | Empresa | M_Empresa.prg | 0 | 1 | Sin revisión detallada |
@@ -25,7 +25,7 @@
 | Reglas de negocio | ReglasNegocio.prg | 0 | 0 | B003 implementado: inversión sujeto pasivo |
 | Menú | MenuInit.prg | 0 | 0 | Certificaciones añadido al submenú de Obras |
 
-**Puntuación estimada: 8.0/10** (siguen lastrando debilidades D01-D13)
+**Puntuación estimada: 8.5/10** (siguen lastrando debilidades restantes)
 
 ---
 
@@ -70,10 +70,12 @@ Contra el nuevo enfoque (punto "Uso de hash en formularios").
 *Sugerencia:* migrar a hash intermedio: `hCliente := FormToHash()` y
 `ClienteGuardar( hCliente, lNuevo )`.
 
-#### D02 — No hay direcciones de obra separadas
+#### D02 — No hay direcciones de obra separadas — ***CORREGIDO***
 El nuevo enfoque pide direcciones de obra adicionales en clientes
-(punto 1 del documento rector). Actualmente solo hay una dirección
-general. Las reformas suceden en ubicaciones distintas del cliente.
+(punto 1 del documento rector). Antes solo había una dirección general.
+*Fix aplicado:* nueva tabla `CLI_DIRES` con múltiples direcciones por
+cliente. Botón "DIR.OBRA" en formulario de cliente para gestionarlas.
+Botón "BUSCAR DIR" en creación manual y desde presupuesto de obra.
 
 ---
 

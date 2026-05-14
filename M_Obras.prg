@@ -896,45 +896,50 @@ STATIC FUNCTION _ObraManualForm()
    LOCAL cFecIn   := DToC( Date() )
    LOCAL cFecFin  := Space( 10 )
    LOCAL nTotal   := 0.00
-   LOCAL oGCli
-   LOCAL oGDes
-   LOCAL oGDir
-   LOCAL oGFI
-   LOCAL oGFF
-   LOCAL oGTot
-   LOCAL oBtGua
-   LOCAL oBtCan
+    LOCAL oGCli
+    LOCAL oGDes
+    LOCAL oGDir
+    LOCAL oGFI
+    LOCAL oGFF
+    LOCAL oGTot
+    LOCAL oBtBusDir
+    LOCAL oBtGua
+    LOCAL oBtCan
 
-   oWin := TWindow():New( 5, 10, 26, 118, "NUEVA OBRA MANUAL" )
+    oWin := TWindow():New( 5, 10, 26, 118, "NUEVA OBRA MANUAL" )
 
-   oWin:AddCtrl( TLabel():New(  2,  2, "Cliente       :", oWin ) )
-   oWin:AddCtrl( TLabel():New(  4,  2, "Descripcion   :", oWin ) )
-   oWin:AddCtrl( TLabel():New(  6,  2, "Direccion obra:", oWin ) )
-   oWin:AddCtrl( TLabel():New(  8,  2, "Fecha inicio  :", oWin ) )
-   oWin:AddCtrl( TLabel():New( 10,  2, "Fecha fin prev:", oWin ) )
-   oWin:AddCtrl( TLabel():New( 12,  2, "Total obra    :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  2,  2, "Cliente       :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4,  2, "Descripcion   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6,  2, "Direccion obra:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  8,  2, "Fecha inicio  :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 10,  2, "Fecha fin prev:", oWin ) )
+    oWin:AddCtrl( TLabel():New( 12,  2, "Total obra    :", oWin ) )
 
-   oGCli := TGet():New(  2, 20, cCliente, "@!",          oWin )
-   oGDes := TGet():New(  4, 20, cDesc,    "@!",          oWin )
-   oGDir := TGet():New(  6, 20, cDir,     "@!",          oWin )
-   oGFI  := TGet():New(  8, 20, cFecIn,   "@!",          oWin )
-   oGFF  := TGet():New( 10, 20, cFecFin,  "@!",          oWin )
-   oGTot := TGet():New( 12, 20, nTotal,   "999,999.99",  oWin )
+    oGCli := TGet():New(  2, 20, cCliente, "@!",          oWin )
+    oGDes := TGet():New(  4, 20, cDesc,    "@!",          oWin )
+    oGDir := TGet():New(  6, 20, cDir,     "@!",          oWin )
+    oGFI  := TGet():New(  8, 20, cFecIn,   "@!",          oWin )
+    oGFF  := TGet():New( 10, 20, cFecFin,  "@!",          oWin )
+    oGTot := TGet():New( 12, 20, nTotal,   "999,999.99",  oWin )
 
-   oBtGua := TButton():New( 17, 34, 18, 53, oWin, "GUARDAR", ;
-      {|| _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oWin ) } )
+    oBtBusDir := TButton():New( 6, 68, 6, 82, oWin, "BUSCAR DIR", ;
+       {|| _ObraBuscarDirCli( oGCli, oGDir ) } )
 
-   oBtCan := TButton():New( 17, 57, 18, 76, oWin, "CANCELAR", ;
-      {|| oWin:Close() } )
+    oBtGua := TButton():New( 17, 34, 18, 53, oWin, "GUARDAR", ;
+       {|| _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oWin ) } )
 
-   oWin:AddCtrl( oGCli )
-   oWin:AddCtrl( oGDes )
-   oWin:AddCtrl( oGDir )
-   oWin:AddCtrl( oGFI  )
-   oWin:AddCtrl( oGFF  )
-   oWin:AddCtrl( oGTot )
-   oWin:AddCtrl( oBtGua )
-   oWin:AddCtrl( oBtCan )
+    oBtCan := TButton():New( 17, 57, 18, 76, oWin, "CANCELAR", ;
+       {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGCli    )
+    oWin:AddCtrl( oGDes    )
+    oWin:AddCtrl( oGDir    )
+    oWin:AddCtrl( oGFI     )
+    oWin:AddCtrl( oGFF     )
+    oWin:AddCtrl( oGTot    )
+    oWin:AddCtrl( oBtBusDir )
+    oWin:AddCtrl( oBtGua   )
+    oWin:AddCtrl( oBtCan   )
 
    oWin:Run()
 
@@ -975,42 +980,47 @@ STATIC FUNCTION _ObraDesdePreForm()
    LOCAL cDir    := Space( 80 )
    LOCAL cFecIn  := DToC( Date() )
    LOCAL cFecFin := Space( 10 )
-   LOCAL oGPre
-   LOCAL oGDes
-   LOCAL oGDir
-   LOCAL oGFI
-   LOCAL oGFF
-   LOCAL oBtGua
-   LOCAL oBtCan
+    LOCAL oGPre
+    LOCAL oGDes
+    LOCAL oGDir
+    LOCAL oGFI
+    LOCAL oGFF
+    LOCAL oBtBusDir
+    LOCAL oBtGua
+    LOCAL oBtCan
 
-   oWin := TWindow():New( 5, 10, 25, 118, "CREAR OBRA DESDE PRESUPUESTO" )
+    oWin := TWindow():New( 5, 10, 25, 118, "CREAR OBRA DESDE PRESUPUESTO" )
 
-   oWin:AddCtrl( TLabel():New(  2,  2, "Presupuesto   :", oWin ) )
-   oWin:AddCtrl( TLabel():New(  4,  2, "Descripcion   :", oWin ) )
-   oWin:AddCtrl( TLabel():New(  6,  2, "Direccion obra:", oWin ) )
-   oWin:AddCtrl( TLabel():New(  8,  2, "Fecha inicio  :", oWin ) )
-   oWin:AddCtrl( TLabel():New( 10,  2, "Fecha fin prev:", oWin ) )
-   oWin:AddCtrl( TLabel():New( 13,  2, "Nota: el presupuesto debe estar aceptado (ESTADO=A).", oWin ) )
+    oWin:AddCtrl( TLabel():New(  2,  2, "Presupuesto   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4,  2, "Descripcion   :", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6,  2, "Direccion obra:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  8,  2, "Fecha inicio  :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 10,  2, "Fecha fin prev:", oWin ) )
+    oWin:AddCtrl( TLabel():New( 13,  2, "Nota: el presupuesto debe estar aceptado (ESTADO=A).", oWin ) )
 
-   oGPre := TGet():New(  2, 20, cNumPre, "@!", oWin )
-   oGDes := TGet():New(  4, 20, cDesc,   "@!", oWin )
-   oGDir := TGet():New(  6, 20, cDir,    "@!", oWin )
-   oGFI  := TGet():New(  8, 20, cFecIn,  "@!", oWin )
-   oGFF  := TGet():New( 10, 20, cFecFin, "@!", oWin )
+    oGPre := TGet():New(  2, 20, cNumPre, "@!", oWin )
+    oGDes := TGet():New(  4, 20, cDesc,   "@!", oWin )
+    oGDir := TGet():New(  6, 20, cDir,    "@!", oWin )
+    oGFI  := TGet():New(  8, 20, cFecIn,  "@!", oWin )
+    oGFF  := TGet():New( 10, 20, cFecFin, "@!", oWin )
 
-   oBtGua := TButton():New( 16, 34, 17, 53, oWin, "CREAR", ;
-      {|| _ObraDesdePreGuardar( oGPre, oGDes, oGDir, oGFI, oGFF, oWin ) } )
+    oBtBusDir := TButton():New( 6, 68, 6, 82, oWin, "BUSCAR DIR", ;
+       {|| _ObraBuscarDirPre( oGPre, oGDir ) } )
 
-   oBtCan := TButton():New( 16, 57, 17, 76, oWin, "CANCELAR", ;
-      {|| oWin:Close() } )
+    oBtGua := TButton():New( 16, 34, 17, 53, oWin, "CREAR", ;
+       {|| _ObraDesdePreGuardar( oGPre, oGDes, oGDir, oGFI, oGFF, oWin ) } )
 
-   oWin:AddCtrl( oGPre )
-   oWin:AddCtrl( oGDes )
-   oWin:AddCtrl( oGDir )
-   oWin:AddCtrl( oGFI  )
-   oWin:AddCtrl( oGFF  )
-   oWin:AddCtrl( oBtGua )
-   oWin:AddCtrl( oBtCan )
+    oBtCan := TButton():New( 16, 57, 17, 76, oWin, "CANCELAR", ;
+       {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGPre     )
+    oWin:AddCtrl( oGDes     )
+    oWin:AddCtrl( oGDir     )
+    oWin:AddCtrl( oGFI      )
+    oWin:AddCtrl( oGFF      )
+    oWin:AddCtrl( oBtBusDir )
+    oWin:AddCtrl( oBtGua    )
+    oWin:AddCtrl( oBtCan    )
 
    oWin:Run()
 
@@ -1493,6 +1503,104 @@ STATIC FUNCTION _ObraTituloTipo( cTipoFac )
    ENDCASE
 
 RETURN cTitulo
+
+
+// ============================================================================
+// BUSQUEDA DE DIRECCIONES DE OBRA DESDE CLIENTE
+// ============================================================================
+
+FUNCTION _ObraBuscarDirCli( oGCli, oGDir )
+
+    LOCAL cCli := AllTrim( oGCli:GetValue() )
+    LOCAL aDirs
+    LOCAL cSel
+
+    IF Empty( cCli )
+        MsgStop( "Indique primero el cliente.", "Direcciones" )
+        RETURN NIL
+    ENDIF
+
+    aDirs := CliDiresListado( cCli )
+
+    IF Empty( aDirs )
+        MsgInfo( "El cliente no tiene direcciones de obra registradas." + Chr(13) + ;
+                 "Puede gestionarlas desde el formulario del cliente (boton DIR.OBRA).", ;
+                 "Direcciones" )
+        RETURN NIL
+    ENDIF
+
+    cSel := _ObraDirLookup( aDirs )
+
+    IF !Empty( cSel )
+        oGDir:SetValue( cSel )
+    ENDIF
+
+RETURN NIL
+
+
+FUNCTION _ObraBuscarDirPre( oGPre, oGDir )
+
+    LOCAL cPre := AllTrim( oGPre:GetValue() )
+    LOCAL cCli := ""
+    LOCAL aDirs
+    LOCAL cSel
+    LOCAL nArea := Select()
+
+    IF Empty( cPre )
+        MsgStop( "Indique primero el presupuesto.", "Direcciones" )
+        RETURN NIL
+    ENDIF
+
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_BD", "PRE_NUM" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "PRE_BD" )
+    OrdSetFocus( "PRE_NUM" )
+    IF DbSeek( PadR( cPre, 10 ) ) .OR. DbSeek( cPre )
+        cCli := AllTrim( PRE_BD->CLIENTE_ )
+    ENDIF
+    PRE_BD->( DbCloseArea() )
+    Select( nArea )
+
+    IF Empty( cCli )
+        MsgStop( "Presupuesto no encontrado.", "Direcciones" )
+        RETURN NIL
+    ENDIF
+
+    aDirs := CliDiresListado( cCli )
+
+    IF Empty( aDirs )
+        MsgInfo( "El cliente no tiene direcciones de obra registradas.", "Direcciones" )
+        RETURN NIL
+    ENDIF
+
+    cSel := _ObraDirLookup( aDirs )
+
+    IF !Empty( cSel )
+        oGDir:SetValue( cSel )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _ObraDirLookup( aDirs )
+
+    LOCAL aCombo := {}
+    LOCAL i
+
+    FOR i := 1 TO Len( aDirs )
+        AAdd( aCombo, { i, AllTrim( aDirs[i, 2] ) + " - " + AllTrim( aDirs[i, 3] ) + ;
+                            ", " + AllTrim( aDirs[i, 4] ) } )
+    NEXT
+
+    IF Empty( aCombo )
+        RETURN ""
+    ENDIF
+
+RETURN PopupSelect( "SELECCIONAR DIRECCION", aCombo, ;
+                     { { "Direccion", 72, "@!", 2 } }, 1 )
 
 
 // ============================================================================

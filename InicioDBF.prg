@@ -662,6 +662,19 @@ FUNCTION InicioDBF()
     AAdd( aIndices, { "PRE_OBR", "ID_OBRA" } )
     AAdd( aTablas, { "PRESUPUEST", aCampos, aIndices } )
 
+    // -- CLI_DIRES (direcciones de obra por cliente) --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "CLIENTE",   "C", 10, 0 } )
+    AAdd( aCampos, { "DESCRIPC",  "C", 30, 0 } )
+    AAdd( aCampos, { "DIRECCION", "C", 50, 0 } )
+    AAdd( aCampos, { "CIUDAD",    "C", 40, 0 } )
+    AAdd( aCampos, { "PROVINCIA", "C", 30, 0 } )
+    AAdd( aCampos, { "PAIS",      "C", 40, 0 } )
+    AAdd( aCampos, { "CP",        "C",  5, 0 } )
+    AAdd( aIndices, { "CDR_CLI", "CLIENTE" } )
+    AAdd( aTablas, { "CLI_DIRES", aCampos, aIndices } )
+
     // -- CERTIFICA (cabecera certificaciones) --
     aCampos  := {}
     aIndices := {}
