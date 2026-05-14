@@ -1,0 +1,49 @@
+# ---------------------------------------------------
+# DRYWALL.HBP - Modulo de calculo de tabiqueria seca
+# Basado en GfxStack API
+# ---------------------------------------------------
+-oDrywall
+-gui
+-w0
+-i..\API
+-i..\drywall
+-i..
+-iC:\HARBOUR32\include
+
+# Dependencias GfxStack
+gtwvg.hbc
+hbct.hbc
+
+..\api\Gfx.prg
+..\api\TControl.prg
+..\api\TLabel.prg
+..\api\TGet.prg
+..\api\TButton.prg
+..\api\TCheck.prg
+..\api\TCombo.prg
+..\api\TGrid.prg
+..\api\TWindow.prg
+..\api\TMenu.prg
+..\api\MsgBox.prg
+..\api\MsgYesNo.prg
+
+..\Util.prg
+..\InicioDBF.prg
+..\Seguridad.prg
+..\ReglasNegocio.prg
+..\M_Clientes.prg
+
+# Modulo Drywall
+InicioDrywall.prg
+OOPTRAMO.prg
+FuncAux.prg
+CALC_ADD.prg
+CALC_EDIT.prg
+CALC_MOD.prg
+EDIT_MOD.prg
+MAT_EDIT.prg
+PRES_MOD.prg
+REPT_MOD.prg
+TARE_MOD.prg
+VAL_MOD.prg
+drywall_main.prg
