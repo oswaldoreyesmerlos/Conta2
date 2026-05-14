@@ -684,7 +684,8 @@ FUNCTION CobrosView()
     oGrid:AddColumn( "Factura",    10, "@!",         { |a| a[1] } )
     oGrid:AddColumn( "F.Emision",  10, "@!",         { |a| a[2] } )
     oGrid:AddColumn( "F.Vencto",   10, "@!",         { |a| a[3] } )
-    oGrid:AddColumn( "Cliente",    35, "@!",         { |a| a[4] } )
+    oGrid:AddColumn( "Cliente",    10, "@!",         { |a| a[4] } )
+    oGrid:AddColumn( "Obra",       12, "@!",         { |a| a[7] } )
     oGrid:AddColumn( "Total",      12, "999,999.99", { |a| a[5] } )
     oGrid:AddColumn( "Estado",     10, "@!",         { |a| a[6] } )
 
@@ -759,7 +760,8 @@ STATIC FUNCTION _CobCargar()
                 DToC(    FAC_CV->FECHA_VT ), ;
                 AllTrim( FAC_CV->CLIENTE_ ), ;
                 FAC_CV->TOTAL, ;
-                cEst } )
+                cEst, ;
+                AllTrim( DbFieldValue( "ID_OBRA", "" ) ) } )
         ENDIF
         DbSkip()
     ENDDO

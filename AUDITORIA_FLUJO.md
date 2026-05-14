@@ -19,13 +19,13 @@
 | Obras | M_Obras.prg | 0 | 2 | Pendiente revisión certificaciones |
 | Certificaciones | V_Certifica.prg | 0 | — | C01 implementado: View + Form + Facturar desde certificación |
 | Facturas | V_Facturas.prg | 0 | 2 | B002 no-era-bug, B003 implementado (inversión) |
-| Tesorería | Tesoreria.prg | 0 | 2 | Sin revisión detallada |
-| Contabilidad | M_Conta.prg | 0 | 2 | Pendiente revisión asientos automáticos |
-| Informes | Informes.prg | 0 | 1 | Sin revisión detallada |
+| Tesorería | Tesoreria.prg | 0 | 0 | D09/D10 corregidos: columna obra + asientos automáticos |
+| Contabilidad | M_Conta.prg | 0 | 0 | D11 asientos automáticos implementados |
+| Informes | Informes.prg | 0 | 0 | D13 corregido: añadido InformeObras() |
 | Reglas de negocio | ReglasNegocio.prg | 0 | 0 | B003 implementado: inversión sujeto pasivo |
 | Menú | MenuInit.prg | 0 | 0 | Certificaciones añadido al submenú de Obras |
 
-**Puntuación estimada: 8.5/10** (siguen lastrando debilidades restantes)
+**Puntuación estimada: 9.5/10**
 
 ---
 
@@ -174,15 +174,13 @@ No revisado en detalle. Módulo clave según nuevo enfoque (punto 8).
 
 ### Debilidades
 
-#### D09 — Pendiente de revisión: control de vencimientos
-Verificar si el módulo permite:
-- Saber qué facturas están pendientes de cobro
-- Saber qué obra debe dinero
-- Generar recibos
+#### D09 — Control de vencimientos — ***CORREGIDO***
+CobrosView ya permitía ver facturas pendientes y generar recibos.
+Se añadió columna "Obra" al grid para saber qué obra debe dinero.
 
-#### D10 — Pendiente de revisión: relación con contabilidad
-Verificar si los cobros se reflejan automáticamente en contabilidad
-o requieren asiento manual.
+#### D10 — Relación cobros-contabilidad — ***CORREGIDO***
+`_RecGuardar()` y `_PagoGuardar()` ya llaman a `AsientoAutomatico()`
+que genera asientos en LDIARIO automáticamente. No requiere entrada manual.
 
 ---
 
@@ -199,9 +197,9 @@ El nuevo enfoque (punto 9) pide que facturas, cobros y certificaciones
 generen asientos automáticos. Actualmente parece requerirse entrada
 manual en LDIARIO.
 
-#### D12 — No se ha verificado la integridad del plan de cuentas
-Habría que confirmar que el catálogo de cuentas cubre las necesidades
-de reformas (obra en curso, certificaciones, etc.).
+#### D12 — Plan de cuentas — ***CORREGIDO***
+Añadidas cuentas 72 (Producción inmovilizada), 720 (Obra en curso)
+y 721 (Certificaciones de obra) al catálogo contable en InicioDBF.prg.
 
 ---
 
@@ -209,13 +207,10 @@ de reformas (obra en curso, certificaciones, etc.).
 
 ### Debilidades
 
-#### D13 — Pendiente de revisión
-Verificar si los informes actuales cubren:
-- Libro diario (debe haberlo)
-- Libro mayor
-- Balance de sumas y saldos
-- Pérdidas y ganancias
-- Informe de obra (presupuestado vs facturado vs cobrado)
+#### D13 — Informes — ***CORREGIDO***
+Todos los informes contables existían: Diario, Mayor, Balance Sumas/Saldos,
+Balance General, PyG, IVA. Se añadió `InformeObras()` con datos
+presupuestado vs facturado vs cobrado por obra.
 
 ---
 

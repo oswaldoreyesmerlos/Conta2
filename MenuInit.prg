@@ -57,6 +57,7 @@ EXTERNAL PagoNuevo
 EXTERNAL InformeClientes
 EXTERNAL InformeFacturas
 EXTERNAL InformePresupuestos
+EXTERNAL InformeObras
 EXTERNAL InformeVencimientos
 EXTERNAL InformeProveedores
 EXTERNAL InformeDiario
@@ -214,6 +215,7 @@ FUNCTION Menu_Init()
     AAdd( aInform, { "Clientes",     {|| InformeClientes()     }, NIL, "Listado de clientes" } )
     AAdd( aInform, { "Facturas",     {|| InformeFacturas()     }, NIL, "Listado de facturas" } )
     AAdd( aInform, { "Presupuestos",  {|| InformePresupuestos()  }, NIL, "Listado de presupuestos" } )
+    AAdd( aInform, { "Obras",         {|| InformeObras()         }, NIL, "Estado economico de obras" } )
     AAdd( aInform, { "Vencimientos",  {|| InformeVencimientos()  }, NIL, "Cobros pendientes" } )
     AAdd( aInform, { "Proveedores",   {|| InformeProveedores()   }, NIL, "Listado de proveedores" } )
 

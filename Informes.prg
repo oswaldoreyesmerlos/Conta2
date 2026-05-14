@@ -1056,5 +1056,73 @@ RETURN aLineas
 
 
 // ============================================================================
+// InformeObras()
+// ============================================================================
+FUNCTION InformeObras()
+
+    LOCAL cTexto := ""
+    LOCAL nArea  := Select()
+    LOCAL aRes
+
+    IF !ABRIR_TABLA( "OBRAS", "OBR_IF", "OBR_ID" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "OBR_IF" )
+    OrdSetFocus( "OBR_ID" )
+    DbGoTop()
+
+    cTexto += PadC( "INFORME DE OBRA - PRESUPUESTADO VS FACTURADO VS COBRADO", 100 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+
+    cTexto += PadR( "OBRA", 14 ) + " "
+    cTexto += PadR( "CLIENTE", 10 ) + " "
+    cTexto += PadR( "DESCRIPCION", 20 ) + " "
+    cTexto += PadL( "TOTAL", 12 ) + " "
+    cTexto += PadL( "FACTURADO", 12 ) + " "
+    cTexto += PadL( "COBRADO", 12 ) + " "
+    cTexto += PadL( "PTE.FACT", 10 ) + " "
+    cTexto += PadL( "PTE.COBR", 10 ) + " "
+    cTexto += "ESTADO" + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+
+    DO WHILE !( OBR_IF->( Eof() ) )
+        IF !Deleted()
+            aRes := GetResumenObra( AllTrim( OBR_IF->ID ) )
+            cTexto += PadR( AllTrim( OBR_IF->ID ), 14 ) + " "
+            cTexto += PadR( AllTrim( OBR_IF->CLIENTE_ ), 10 ) + " "
+            cTexto += PadR( Left( AllTrim( OBR_IF->DESCRIP ), 20 ), 20 ) + " "
+            cTexto += PadL( Transform( aRes[1], "999,999.99" ), 12 ) + " "
+            cTexto += PadL( Transform( aRes[2], "999,999.99" ), 12 ) + " "
+            cTexto += PadL( Transform( aRes[3], "999,999.99" ), 12 ) + " "
+            cTexto += PadL( Transform( aRes[4], "999,999.99" ), 10 ) + " "
+            cTexto += PadL( Transform( aRes[5], "999,999.99" ), 10 ) + " "
+            cTexto += _ObraEstadoIF( DbFieldValue( "ESTADO", "" ) ) + hb_Eol()
+        ENDIF
+        OBR_IF->( DbSkip() )
+    ENDDO
+
+    OBR_IF->( DbCloseArea() )
+    Select( nArea )
+
+RETURN _MostrarInformeTexto( "INFORME DE OBRA", cTexto, "INFORME_OBRAS.TXT" )
+
+
+STATIC FUNCTION _ObraEstadoIF( cEstado )
+
+    DO CASE
+    CASE cEstado == "A" ; RETURN "Abierta"
+    CASE cEstado == "E" ; RETURN "En curso"
+    CASE cEstado == "F" ; RETURN "Finalizada"
+    CASE cEstado == "C" ; RETURN "Cancelada"
+    ENDCASE
+
+RETURN "Sin estado"
+
+
+// ============================================================================
 // FIN DE Informes.prg
 // ============================================================================
