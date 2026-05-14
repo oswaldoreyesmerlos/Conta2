@@ -332,7 +332,9 @@ STATIC FUNCTION _CertBuscarObra( oGet, cIdObra, aLins, nTotalObra, nIvaFijo, lIn
         oGrid:Paint()
     ENDIF
 
-    oGPorc:SetValue( 0 )
+    IF oGPorc != NIL
+        oGPorc:SetValue( 0 )
+    ENDIF
 
 RETURN .T.
 
