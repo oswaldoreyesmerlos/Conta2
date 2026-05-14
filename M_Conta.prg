@@ -29,6 +29,7 @@ FUNCTION PlanCuentasView()
 
     oGrid:aData    := aData
     oGrid:nSeekCol := 1
+    oGrid:bChange  := NIL
 
     oGrid:AddColumn( "Cuenta",      10, "@!",         { |a| a[1] } )
     oGrid:AddColumn( "Nombre",      40, "@!",         { |a| a[2] } )
