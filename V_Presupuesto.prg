@@ -197,8 +197,6 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL cPieDoc
     LOCAL lAnulada
     LOCAL lInv
-    LOCAL dFechaAce
-    LOCAL cAcepPor
     LOCAL aLineas
     LOCAL nBase
     LOCAL nIva
@@ -1282,12 +1280,12 @@ FUNCTION AceptarPresupuesto( cNumPre )
     LOCAL cAceptaPor
     LOCAL nArea
 
+    MEMVAR cUserID
+
     cEstado    := ""
     cIdObra    := ""
     cDesc      := ""
     cAceptaPor := ""
-
-    MEMVAR cUserID
 
     IF Empty( AllTrim( cNumPre ) )
         MsgStop( "Seleccione un presupuesto.", "Aceptar" )

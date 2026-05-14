@@ -70,4 +70,22 @@
 
 #command DEFAULT <v> TO <val> => IF <v> == NIL ; <v> := <val> ; ENDIF
 
+// ============================================================================
+// COMANDOS DE TRANSACCION (DBFCDX RDD)
+// ----------------------------------------------------------------------------
+// Harbour soporta transacciones atomicas via RDD_INFO_API.
+// Estos comandos envuelven las llamadas para que el codigo quede mas claro.
+// Uso: BEGIN TRANSACTION ... [ROLLBACK] ... END TRANSACTION
+// ============================================================================
+#ifndef RDDI_TRANSACTION_BEGIN
+#define RDDI_TRANSACTION_BEGIN    102
+#define RDDI_TRANSACTION_COMMIT   103
+#define RDDI_TRANSACTION_ROLLBACK 104
+#define HB_TRANSACTION_DBF         1
+#endif
+
+#xcommand BEGIN TRANSACTION => RddInfo( RDDI_TRANSACTION_BEGIN, HB_TRANSACTION_DBF )
+#xcommand END TRANSACTION => RddInfo( RDDI_TRANSACTION_COMMIT )
+#xcommand ROLLBACK => RddInfo( RDDI_TRANSACTION_ROLLBACK )
+
 #endif
