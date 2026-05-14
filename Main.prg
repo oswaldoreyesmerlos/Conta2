@@ -134,8 +134,9 @@ FUNCTION Main()
     // PASO 4b: TABLAS ESPECIFICAS DRYWALL
     //         InicioDrywall() crea las tablas del modulo de calculo
     //         de tabiqueria seca (OOPTRAMO).
+    //         Guardamos y restauramos el CWD para no afectar al resto.
     // ------------------------------------------------------------------
-    InicioDrywall()
+    //InicioDrywall()
 
     // ------------------------------------------------------------------
     // PASO 5: MENU PRINCIPAL

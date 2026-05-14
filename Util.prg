@@ -59,7 +59,7 @@ FUNCTION InitApp( nRows, nCols, cFont, nFontH, nFontW )
 
     // Activar eventos de raton (GTWVG)
     BEGIN SEQUENCE
-        SET EVENTMASK TO HB_INKEY_ALL
+        SET EVENTMASK TO ( INKEY_KEYBOARD + INKEY_LDOWN + INKEY_LUP + INKEY_RDOWN + INKEY_RUP )
         wvt_SetMouseMove( .T. )
     RECOVER
     END SEQUENCE
