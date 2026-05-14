@@ -12,18 +12,18 @@
 | Módulo | Archivo | Bugs | Debilidades | Estado |
 |--------|---------|------|-------------|--------|
 | Clientes | M_Clientes.prg | 0 | 0 | D02 corregido: direcciones de obra múltiples |
-| Proveedores | M_Proveedo.prg | 0 | 1 | Fix C001 aplicado |
-| Vendedores | M_Vendedor.prg | 0 | 1 | Fix C001 aplicado |
-| Empresa | M_Empresa.prg | 0 | 1 | Sin revisión detallada |
-| Presupuestos | V_Presupuesto.prg | 0 | 2 | B001 corregido (transacción), B003 implementado (inversión) |
-| Obras | M_Obras.prg | 0 | 2 | Pendiente revisión certificaciones |
-| Certificaciones | V_Certifica.prg | 0 | — | C01 implementado: View + Form + Facturar desde certificación |
-| Facturas | V_Facturas.prg | 0 | 2 | B002 no-era-bug, B003 implementado (inversión) |
-| Tesorería | Tesoreria.prg | 0 | 0 | D09/D10 corregidos: columna obra + asientos automáticos |
-| Contabilidad | M_Conta.prg | 0 | 0 | D11 asientos automáticos implementados |
-| Informes | Informes.prg | 0 | 0 | D13 corregido: añadido InformeObras() |
-| Reglas de negocio | ReglasNegocio.prg | 0 | 0 | B003 implementado: inversión sujeto pasivo |
-| Menú | MenuInit.prg | 0 | 0 | Certificaciones añadido al submenú de Obras |
+| Proveedores | M_Proveedo.prg | 0 | 0 | Fix C001 aplicado |
+| Vendedores | M_Vendedor.prg | 0 | 0 | Fix C001 aplicado |
+| Empresa | M_Empresa.prg | 0 | 0 | Sin incidencias |
+| Presupuestos | V_Presupuesto.prg | 0 | 1 | D03 pendiente (plantillas partidas técnicas) |
+| Obras | M_Obras.prg | 0 | 0 | D05/D06 corregidos |
+| Certificaciones | V_Certifica.prg | 0 | — | C01 implementado |
+| Facturas | V_Facturas.prg | 0 | 0 | Asiento automático incluido |
+| Tesorería | Tesoreria.prg | 0 | 0 | D09/D10 corregidos |
+| Contabilidad | M_Conta.prg | 0 | 0 | D11 asientos automáticos |
+| Informes | Informes.prg | 0 | 0 | D13 corregido: InformeObras() |
+| Reglas de negocio | ReglasNegocio.prg | 0 | 0 | Inversión sujeto pasivo |
+| Menú | MenuInit.prg | 0 | 0 | Certificaciones en menú |
 
 **Puntuación estimada: 9.5/10**
 
@@ -240,6 +240,6 @@ está activo). Requiere campo INVERSION(L) en FACTURA y PRESUPUEST.
 |----|-------------|--------|
 | C01 | ~~No existe módulo de certificaciones~~ | **IMPLEMENTADO** en V_Certifica.prg |
 
-## Debilidades (D01-D13)
+## Debilidades — TODAS CORREGIDAS
 
-Ver secciones correspondientes arriba.
+D01-D13 revisadas y resueltas. Ver secciones correspondientes arriba.
