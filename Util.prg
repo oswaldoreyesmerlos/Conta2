@@ -57,6 +57,12 @@ FUNCTION InitApp( nRows, nCols, cFont, nFontH, nFontW )
 
     GfxCursor( SC_NONE )
 
+    // Activar tracking de raton (GTWVG)
+    BEGIN SEQUENCE
+        wvt_SetMouseMove( .T. )
+    RECOVER
+    END SEQUENCE
+
 RETURN NIL
 
 

@@ -68,6 +68,15 @@
 #define SC_NONE         0
 #define SC_NORMAL       1
 
+// ============================================================================
+// CONSTANTES DE RATON
+// ============================================================================
+#define K_MOUSEMOVE      1001
+#define K_LBUTTONDOWN    1002
+#define K_LBUTTONUP      1003
+#define K_RBUTTONDOWN    1004
+#define K_RBUTTONUP      1005
+
 #command DEFAULT <v> TO <val> => IF <v> == NIL ; <v> := <val> ; ENDIF
 
 // ============================================================================

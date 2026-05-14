@@ -418,6 +418,9 @@ METHOD HandleKey( nKey ) CLASS TWindow
     CASE nKey == K_SH_TAB
         ::PrevFocus()
 
+    CASE nKey == K_LBUTTONDOWN
+        _WinMouseClick( Self, MRow(), MCol() )
+
     CASE nKey == K_UP .OR. nKey == K_DOWN
 
         // Las flechas verticales tienen DOBLE comportamiento:
@@ -591,3 +594,46 @@ METHOD Close() CLASS TWindow
     GfxCursor( SC_NONE )
     ::lExit := .T.
 RETURN Self
+
+
+// ============================================================================
+// MANEJADOR DE CLICK DE RATON
+// ----------------------------------------------------------------------------
+// Se llama desde HandleKey al recibir K_LBUTTONDOWN.
+// Busca el control en la posicion del click y le da foco.
+// Si el control es un TButton, ejecuta su accion.
+// ============================================================================
+STATIC FUNCTION _WinMouseClick( oWin, nRow, nCol )
+
+    LOCAL i, oCtrl, nFocus
+
+    // Recorrer controles en orden inverso (ultimo pintado = arriba)
+    FOR i := Len( oWin:aCtrls ) TO 1 STEP -1
+
+        oCtrl := oWin:aCtrls[ i ]
+
+        IF oCtrl:lVisible .AND. oCtrl:IsHit( nRow, nCol )
+
+            // Buscar indice del control en aCtrls
+            FOR nFocus := 1 TO Len( oWin:aCtrls )
+                IF oWin:aCtrls[ nFocus ] == oCtrl
+                    // Dar foco al control clickeado
+                    IF oCtrl:lEnabled .AND. oCtrl:lTabStop
+                        oWin:SetFocus( nFocus )
+                    ENDIF
+
+                    // Si el control tiene bAction (TButton, etc.), ejecutarlo
+                    BEGIN SEQUENCE
+                        IF oCtrl:bAction != NIL
+                            EvalSafe( oCtrl:bAction, "Click:Mouse", oCtrl )
+                        ENDIF
+                    RECOVER
+                    END SEQUENCE
+                    RETURN NIL
+                ENDIF
+            NEXT
+
+        ENDIF
+    NEXT
+
+RETURN NIL
