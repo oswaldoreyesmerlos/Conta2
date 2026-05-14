@@ -865,6 +865,19 @@ FUNCTION InicioDBF()
     AAdd( aIndices, { "IRF_COD", "CODIGO" } )
     AAdd( aTablas, { "TIPOSIRPF", aCampos, aIndices } )
 
+    // -- 36. PARTIDAS (catalogo de partidas tecnicas reutilizables) --
+    aCampos  := {}
+    aIndices := {}
+    AAdd( aCampos, { "CODIGO",   "C", 10, 0 } )
+    AAdd( aCampos, { "DESCRIP",  "C", 60, 0 } )
+    AAdd( aCampos, { "PRECIO",   "N", 12, 2 } )
+    AAdd( aCampos, { "PORC_IVA", "N",  5, 2 } )
+    AAdd( aCampos, { "UNIDAD",   "C",  3, 0 } )
+    AAdd( aCampos, { "BAJA",     "L",  1, 0 } )
+    AAdd( aIndices, { "PAR_COD", "CODIGO" } )
+    AAdd( aIndices, { "PAR_DES", "Upper(DESCRIP)" } )
+    AAdd( aTablas, { "PARTIDAS", aCampos, aIndices } )
+
     // =========================================================================
     // CREACION FISICA DE TABLAS E INDICES
     // =========================================================================
@@ -1471,6 +1484,8 @@ STATIC FUNCTION _GetTablasList()
     AAdd( aTablas, { "FAMILIAS",   { { "FAM_COD",  "CODIGO"                     }, ;
                                      { "FAM_NOM",  "Upper(DESCRIP)"             } } } )
     AAdd( aTablas, { "TIPOSIRPF",  { { "IRF_COD",  "CODIGO"                     } } } )
+    AAdd( aTablas, { "PARTIDAS",   { { "PAR_COD",  "CODIGO"                     }, ;
+                                      { "PAR_DES",  "Upper(DESCRIP)"             } } } )
 
 RETURN aTablas
 

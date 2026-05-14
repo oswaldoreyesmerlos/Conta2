@@ -823,6 +823,7 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     LOCAL oGDto
     LOCAL oGIva
     LOCAL oLImp
+    LOCAL oBtPar
     LOCAL oBtGua
     LOCAL oBtCan
     LOCAL bRecalc
@@ -852,8 +853,11 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     oWin:AddCtrl( TLabel():New( 6, 35, "IVA %       :", oWin ) )
     oWin:AddCtrl( TLabel():New( 8,  3, "IMPORTE     :", oWin ) )
 
-    oGDesc := TGet():New( 2, 17, cDesc, "@!", oWin )
+    oGDesc := TGet():New( 2, 17, cDesc, "@S38!", oWin )
     oGDesc:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
+
+    oBtPar := TButton():New( 2, 56, 2, 72, oWin, "BUSCAR PARTIDA", ;
+        {|| _PrePartidaLookup( oGDesc, oGPre, oGIva, bRecalc ) } )
 
     oGCant := TGet():New( 4, 17, nCant, "9,999.99", oWin )
     oGPre  := TGet():New( 4, 48, nPre,  "9,999.99", oWin )
@@ -885,6 +889,7 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     oWin:AddCtrl( oGPre  )
     oWin:AddCtrl( oGDto  )
     oWin:AddCtrl( oGIva  )
+    oWin:AddCtrl( oBtPar )
     oWin:AddCtrl( oBtGua )
     oWin:AddCtrl( oBtCan )
 
@@ -901,6 +906,45 @@ STATIC FUNCTION _PreFormLin( aLin, lNuevo )
     ENDIF
 
 RETURN lOK
+
+
+STATIC FUNCTION _PrePartidaLookup( oGDesc, oGPre, oGIva, bRecalc )
+
+    LOCAL cCod := ""
+    LOCAL nArea := Select()
+    LOCAL cDesc
+    LOCAL nPre
+    LOCAL nIva
+
+    cCod := PartidaLookup( cCod )
+
+    IF Empty( cCod )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    IF !ABRIR_TABLA( "PARTIDAS", "PAR_PL", "PAR_COD" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "PAR_PL" )
+    OrdSetFocus( "PAR_COD" )
+
+    IF DbSeek( PadR( cCod, 10 ) )
+        cDesc := AllTrim( PAR_PL->DESCRIP )
+        nPre  := PAR_PL->PRECIO
+        nIva  := PAR_PL->PORC_IVA
+        oGDesc:SetValue( PadR( cDesc, 60 ) )
+        oGPre:SetValue( nPre )
+        oGIva:SetValue( nIva )
+        Eval( bRecalc )
+    ENDIF
+
+    PAR_PL->( DbCloseArea() )
+    Select( nArea )
+
+RETURN NIL
 
 
 STATIC FUNCTION _PreGetNum( oGet )

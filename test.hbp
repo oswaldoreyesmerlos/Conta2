@@ -61,6 +61,7 @@ M_Auxiliar.prg
 # -- Maestros principales --
 M_Empresa.prg
 M_Clientes.prg
+M_Partidas.prg
 M_Proveedo.prg
 M_Vendedor.prg
 M_Usuarios.prg

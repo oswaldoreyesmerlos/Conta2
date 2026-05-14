@@ -27,6 +27,7 @@ EXTERNAL M_CCostes
 EXTERNAL Empresa
 EXTERNAL ClientesView
 EXTERNAL ClientesForm
+EXTERNAL PartidasView
 EXTERNAL ProveedView
 EXTERNAL ProveedForm
 EXTERNAL VendedoresView
@@ -131,6 +132,9 @@ FUNCTION Menu_Init()
     // Proveedores
     AAdd( aSubPro, { "Listado", {|| ProveedView()           }, NIL, "Ver proveedores" } )
     AAdd( aSubPro, { "Alta",    {|| ProveedForm( .T., "" )  }, NIL, "Nuevo proveedor" } )
+
+    // Partidas tecnicas
+    AAdd( aSubVen, { "Partidas",    {|| PartidasView()           }, NIL, "Catalogo de partidas tecnicas reutilizables" } )
 
     // Vendedores
     AAdd( aSubVen, { "Listado", {|| VendedoresView()            }, NIL, "Ver vendedores" } )

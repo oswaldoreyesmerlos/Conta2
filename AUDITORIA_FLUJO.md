@@ -15,7 +15,7 @@
 | Proveedores | M_Proveedo.prg | 0 | 0 | Fix C001 aplicado |
 | Vendedores | M_Vendedor.prg | 0 | 0 | Fix C001 aplicado |
 | Empresa | M_Empresa.prg | 0 | 0 | Sin incidencias |
-| Presupuestos | V_Presupuesto.prg | 0 | 1 | D03 pendiente (plantillas partidas técnicas) |
+| Presupuestos | V_Presupuesto.prg | 0 | 0 | D03 corregido: catálogo partidas técnicas |
 | Obras | M_Obras.prg | 0 | 0 | D05/D06 corregidos |
 | Certificaciones | V_Certifica.prg | 0 | — | C01 implementado |
 | Facturas | V_Facturas.prg | 0 | 0 | Asiento automático incluido |
@@ -25,7 +25,7 @@
 | Reglas de negocio | ReglasNegocio.prg | 0 | 0 | Inversión sujeto pasivo |
 | Menú | MenuInit.prg | 0 | 0 | Certificaciones en menú |
 
-**Puntuación estimada: 9.5/10**
+**Puntuación estimada: 10/10** — todos los puntos de la auditoría resueltos
 
 ---
 
@@ -92,10 +92,10 @@ cabecera, quedaban presupuestos huérfanos.
 
 ### Debilidades
 
-#### D03 — No reutiliza partidas técnicas como plantillas
-El nuevo enfoque (punto 4: Plantillas de obra) pide reutilizar
-estructuras completas de presupuestos. Actualmente no hay un catálogo
-de partidas técnicas reutilizables.
+#### D03 — No reutiliza partidas técnicas como plantillas — ***CORREGIDO***
+Creado catálogo de partidas técnicas reutilizables: tabla PARTIDAS,
+formulario de gestión (M_Partidas.prg) y botón "BUSCAR PARTIDA"
+en la edición de líneas de presupuesto.
 
 #### D04 — No hay condiciones generales ni firma — ***CORREGIDO***
 El nuevo enfoque (punto 2) pide condiciones generales y firma/aceptación
