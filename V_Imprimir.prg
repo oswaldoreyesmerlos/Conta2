@@ -170,6 +170,8 @@ STATIC FUNCTION _ImpCargarCab( cTipo, cNum )
         AAdd( aC, AllTrim( PRE_I->OBSERVA  ) )
         AAdd( aC, DToC( PRE_I->VALIDEZ ) )
         AAdd( aC, DbFieldValue( "INVERSION", .F. ) )
+        AAdd( aC, DbFieldValue( "FECHA_ACE", CToD( "" ) ) )
+        AAdd( aC, AllTrim( DbFieldValue( "ACEPTA_POR", "" ) ) )
         cCli := aC[3]
         DbSelectArea( cAlias )
         DbCloseArea()
@@ -462,6 +464,11 @@ STATIC FUNCTION _ImpGenHTML( cTitDoc, aEmp, aCab, aLins )
 
     IF !Empty( cPie )
         cH += '<div class="pie"><h3>CONDICIONES GENERALES Y FORMA DE PAGO</h3>' + cPie + '</div>' + Chr(10)
+    ENDIF
+
+    IF ValType( aCab[20] ) == "D" .AND. !Empty( aCab[20] )
+        cH += '<div style="margin-top:6px;padding:8px;border:1px solid #999;text-align:center;font-weight:bold;">'
+        cH += 'ACEPTADO: ' + DToC( aCab[20] ) + ' por ' + AllTrim( aCab[21] ) + '</div>' + Chr(10)
     ENDIF
 
     cH += '</div>' + Chr(10)

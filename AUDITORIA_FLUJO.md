@@ -97,9 +97,12 @@ El nuevo enfoque (punto 4: Plantillas de obra) pide reutilizar
 estructuras completas de presupuestos. Actualmente no hay un catálogo
 de partidas técnicas reutilizables.
 
-#### D04 — No hay condiciones generales ni firma
+#### D04 — No hay condiciones generales ni firma — ***CORREGIDO***
 El nuevo enfoque (punto 2) pide condiciones generales y firma/aceptación
-del presupuesto. No implementado.
+del presupuesto.
+*Fix aplicado:* popup con condiciones generales antes de aceptar,
+formulario "Aceptado por", campos FECHA_ACE y ACEPTA_POR en PRESUPUEST
+(mostrados en formulario y en impreso).
 
 ---
 

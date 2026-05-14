@@ -187,6 +187,8 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL cCliNom
     LOCAL cCliInfo
     LOCAL dFecha
+    LOCAL dFechaAce
+    LOCAL cAcepPor
     LOCAL dValidez
     LOCAL cFormPag
     LOCAL nDias
@@ -195,6 +197,8 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     LOCAL cPieDoc
     LOCAL lAnulada
     LOCAL lInv
+    LOCAL dFechaAce
+    LOCAL cAcepPor
     LOCAL aLineas
     LOCAL nBase
     LOCAL nIva
@@ -239,6 +243,8 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     cPieDoc  := ""
     lAnulada := .F.
     lInv     := .F.
+    dFechaAce := CToD( "" )
+    cAcepPor := ""
     aLineas  := {}
     nBase    := 0.00
     nIva     := 0.00
@@ -249,7 +255,8 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
 
     IF !lNuevo
         IF !_PreCargarCab( cNumero, @cCliID, @cCliNom, @cCliInfo, @dFecha, @dValidez, ;
-                             @cFormPag, @nDias, @nPorcRet, @cObserva, @lAnulada, @lInv )
+                             @cFormPag, @nDias, @nPorcRet, @cObserva, @lAnulada, @lInv, ;
+                             @dFechaAce, @cAcepPor )
             RETURN NIL
         ENDIF
         _PreCargarLins( cNumero, @aLineas )
@@ -271,6 +278,9 @@ STATIC FUNCTION _PreForm( cNumero, cNumFac )
     oWin:AddCtrl( TLabel():New(  6, 86, "Ret.IRPF %:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8,  2, "Observ.   :", oWin ) )
     oWin:AddCtrl( TLabel():New(  7, 86, "Inv.Suj.Pas:", oWin ) )
+    IF !Empty( dFechaAce )
+        oWin:AddCtrl( TLabel():New( 9, 40, "Aceptado: " + DToC( dFechaAce ) + " por " + AllTrim( cAcepPor ), oWin ) )
+    ENDIF
 
     oLNumero := TLabel():New( 2, 14, PadR( If( lNuevo, "(se asigna al grabar)", cNumero ), 24 ), oWin )
     oLNumero:cColor := "W+/B"
@@ -415,7 +425,8 @@ STATIC FUNCTION _PreCargarEmpPie( cPie )
 RETURN NIL
 
 
-STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, nRet, cObs, lAnu, lInv )
+STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, nRet, cObs, lAnu, lInv, ;
+                               dFecAce, cAcepPor )
 
     IF !ABRIR_TABLA( "PRESUPUEST", "PRE_C", "PRE_NUM" )
         RETURN .F.
@@ -438,7 +449,9 @@ STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, 
     cObs  := AllTrim( DbFieldValue( "OBSERVA", "" ) )
     lAnu  := ( DbFieldValue( "ESTADO", "P" ) == "A" .OR. ;
                DbFieldValue( "ESTADO", "P" ) == "F" )
-    lInv  := DbFieldValue( "INVERSION", .F. )
+    lInv      := DbFieldValue( "INVERSION", .F. )
+    dFecAce   := DbFieldValue( "FECHA_ACE", CToD( "" ) )
+    cAcepPor  := AllTrim( DbFieldValue( "ACEPTA_POR", "" ) )
 
     IF ABRIR_TABLA( "CLIENTES", "CLI_P", "CLI_ID" )
         IF CLI_P->( DbSeek( cCli ) )
@@ -730,6 +743,77 @@ STATIC FUNCTION _PreInvToggle( oInv, aLins, nPRet, nBase, nIva, nRet, nTotal, ;
     oLTotal:SetText( _FmtNP( nTotal ) )
 
 RETURN NIL
+
+
+STATIC FUNCTION _PreMostrarCondiciones( cNumPre )
+
+    LOCAL oWin
+    LOCAL oLbl
+    LOCAL oBtOk
+    LOCAL cCond
+
+    cCond := ""
+    IF ABRIR_TABLA( "EMPRESA", "EMP_CD", "" )
+        EMP_CD->( DbGoTop() )
+        IF !EMP_CD->( Eof() )
+            cCond := AllTrim( DbFieldValue( "PIE_DOC", "" ) )
+        ENDIF
+        EMP_CD->( DbCloseArea() )
+    ENDIF
+
+    IF Empty( cCond )
+        cCond := "CONDICIONES GENERALES" + Chr(13) + Chr(10) + Chr(13) + Chr(10) + ;
+                 "1. Validez: 15 dias desde la fecha del presupuesto." + Chr(13) + Chr(10) + ;
+                 "2. Forma de Pago: Segun condiciones pactadas." + Chr(13) + Chr(10) + ;
+                 "3. Los trabajos no especificados se facturaran aparte." + Chr(13) + Chr(10) + ;
+                 "4. No se incluyen tasas ni licencias municipales." + Chr(13) + Chr(10) + Chr(13) + Chr(10) + ;
+                 "Al aceptar este presupuesto, el cliente declara estar conforme" + Chr(13) + Chr(10) + ;
+                 "con las condiciones generales y el alcance descrito."
+    ENDIF
+
+    oWin := TWindow():New( 3, 6, 25, 122, "CONDICIONES GENERALES - " + AllTrim( cNumPre ) )
+    oLbl := TLabel():New( 2, 3, PadR( cCond, 115 ), oWin )
+    oWin:AddCtrl( oLbl )
+
+    oBtOk := TButton():New( 18, 50, 19, 72, oWin, "CONTINUAR", ;
+        {|| oWin:Close() } )
+    oWin:AddCtrl( oBtOk )
+
+    oWin:Run()
+
+RETURN NIL
+
+
+STATIC FUNCTION _PreFormAceptacion( cAceptaPor, cNumPre )
+
+    LOCAL oWin
+    LOCAL oGAcep
+    LOCAL oBtOk
+    LOCAL oBtCan
+    LOCAL lOK := .F.
+
+    oWin := TWindow():New( 12, 22, 24, 106, "ACEPTACION DEL PRESUPUESTO" )
+
+    oWin:AddCtrl( TLabel():New(  2,  3, "Presupuesto : " + AllTrim( cNumPre ), oWin ) )
+    oWin:AddCtrl( TLabel():New(  4,  3, "Fecha       : " + DToC( Date() ), oWin ) )
+    oWin:AddCtrl( TLabel():New(  6,  3, "Aceptado por:", oWin ) )
+
+    oGAcep := TGet():New( 6, 18, PadR( cAceptaPor, 30 ), "@!", oWin )
+    oGAcep:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
+
+    oBtOk := TButton():New( 10, 16, 11, 38, oWin, "ACEPTAR Y CREAR OBRA", ;
+        {|| lOK := .T., cAceptaPor := AllTrim( oGAcep:GetValue() ), oWin:Close() } )
+
+    oBtCan := TButton():New( 10, 42, 11, 64, oWin, "CANCELAR", ;
+        {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGAcep )
+    oWin:AddCtrl( oBtOk  )
+    oWin:AddCtrl( oBtCan )
+
+    oWin:Run()
+
+RETURN lOK
 
 
 STATIC FUNCTION _PreFormLin( aLin, lNuevo )
@@ -1195,10 +1279,15 @@ FUNCTION AceptarPresupuesto( cNumPre )
     LOCAL cEstado
     LOCAL cIdObra
     LOCAL cDesc
+    LOCAL cAceptaPor
+    LOCAL nArea
 
-    cEstado := ""
-    cIdObra := ""
-    cDesc   := ""
+    cEstado    := ""
+    cIdObra    := ""
+    cDesc      := ""
+    cAceptaPor := ""
+
+    MEMVAR cUserID
 
     IF Empty( AllTrim( cNumPre ) )
         MsgStop( "Seleccione un presupuesto.", "Aceptar" )
@@ -1233,14 +1322,31 @@ FUNCTION AceptarPresupuesto( cNumPre )
         RETURN .F.
     ENDCASE
 
-    IF !MsgYesNo( "Aceptar presupuesto " + AllTrim( cNumPre ) + ;
+    _PreMostrarCondiciones( cNumPre )
+
+    IF Type( "cUserID" ) == "C" .AND. !Empty( cUserID )
+        cAceptaPor := AllTrim( cUserID )
+    ELSE
+        cAceptaPor := "SISTEMA"
+    ENDIF
+
+    nArea := Select()
+
+    IF !_PreFormAceptacion( @cAceptaPor, cNumPre )
+        Select( nArea )
+        RETURN .F.
+    ENDIF
+
+    IF !MsgYesNo( "Confirmar aceptacion del presupuesto " + AllTrim( cNumPre ) + ;
                   " y crear la obra?", "Aceptar" )
+        Select( nArea )
         RETURN .F.
     ENDIF
 
     cDesc := _PreDescripcionObra( AllTrim( cNumPre ) )
 
     IF !ABRIR_TABLA( "PRESUPUEST", "PRE_AM", "PRE_NUM" )
+        Select( nArea )
         RETURN .F.
     ENDIF
 
@@ -1249,18 +1355,21 @@ FUNCTION AceptarPresupuesto( cNumPre )
 
     IF ( DbSeek( PadR( AllTrim( cNumPre ), 10 ) ) .OR. DbSeek( AllTrim( cNumPre ) ) ) .AND. NetRLock()
         DbFieldPutIf( "ESTADO", "A" )
+        DbFieldPutIf( "FECHA_ACE", Date() )
+        DbFieldPutIf( "ACEPTA_POR", PadR( cAceptaPor, 30 ) )
         DbCommit()
         DbUnlock()
     ELSE
         PRE_AM->( DbCloseArea() )
         MsgStop( "No se pudo marcar el presupuesto como aceptado.", "Aceptar" )
+        Select( nArea )
         RETURN .F.
     ENDIF
 
     PRE_AM->( DbCloseArea() )
 
     AuditLog( "ACEPTA", "PRESUPUEST", AllTrim( cNumPre ), ;
-              "Presupuesto aceptado para crear obra", .T. )
+              "Presupuesto aceptado por " + cAceptaPor, .T. )
 
     cIdObra := CrearObraDesdePresupuesto( AllTrim( cNumPre ), cDesc, "", Date(), CToD( "" ) )
 
