@@ -45,6 +45,7 @@ CLASS TGrid FROM TControl
     DATA nSeekCol       INIT 1       // Columna por la que se busca
     DATA cSeekBuf       INIT ""      // Buffer acumulado de busqueda
     DATA nSeekTime      INIT 0       // Marca de tiempo del ultimo caracter
+    DATA nSeekTimeout   INIT 1.5     // Timeout busqueda incremental (segundos)
 
     // Codeblocks de accion (todos opcionales)
     DATA bEnter                      // ENTER/F2 -> editar fila actual
@@ -627,8 +628,8 @@ METHOD SeekChar( cChar ) CLASS TGrid
     LOCAL i, xVal, cVal
     LOCAL nFound := 0
 
-    // Reset si pasaron mas de 1.5 seg desde la ultima tecla
-    IF nNow - ::nSeekTime > 1.5
+    // Reset si paso el timeout desde la ultima tecla
+    IF nNow - ::nSeekTime > ::nSeekTimeout
         ::cSeekBuf := ""
     ENDIF
 

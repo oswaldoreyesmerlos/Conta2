@@ -85,7 +85,7 @@ FUNCTION MsgBox( cMsg, cTit )
         Int( ( nWidth - 14 ) / 2 ) + 13, ;
         oWin, ;
         "ACEPTAR", ;
-        { || oWin:Close() } )
+        { || nRet := K_ENTER, oWin:Close() } )
 
     // ------------------------------------------------------------------------
     // Registrar controles

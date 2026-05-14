@@ -177,6 +177,10 @@ METHOD SetFocus( nPos ) CLASS TWindow
     LOCAL oOld
     LOCAL oNew
 
+    IF Empty( ::aCtrls )
+        RETURN NIL
+    ENDIF
+
     IF nPos < 1 .OR. nPos > Len( ::aCtrls )
         RETURN NIL
     ENDIF

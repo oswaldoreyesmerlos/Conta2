@@ -130,11 +130,13 @@ RETURN .F.
 
 
 METHOD GetValue() CLASS TControl
+    MsgStop( "GetValue() no implementado para " + ::ClassName(), "Error interno" )
 RETURN NIL
 
 
 METHOD SetValue( uValue ) CLASS TControl
     HB_SYMBOL_UNUSED( uValue )
+    MsgStop( "SetValue() no implementado para " + ::ClassName(), "Error interno" )
 RETURN Self
 
 

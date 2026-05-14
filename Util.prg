@@ -296,17 +296,19 @@ RETURN NIL
 // Abre DBF/CDX y fija tag si se pide. No reposiciona el cursor: el llamador
 // decide si necesita DbGoTop(), DbSeek(), etc.
 // ----------------------------------------------------------------------------
-FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice, aCdxAdicionales )
+FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice, aCdxAdicionales, lReabierta )
 
     LOCAL lReintentar := .T.
 
     DEFAULT cAlias TO cArchivo
+    DEFAULT lReabierta TO .F.
 
     IF DBUSED( cAlias )
         DbSelectArea( cAlias )
         IF !Empty( cIndice )
             OrdSetFocus( cIndice )
         ENDIF
+        lReabierta := .T.
         RETURN .T.
     ENDIF
 
@@ -317,6 +319,7 @@ FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice, aCdxAdicionales )
                          "Error de acceso" )
                 LOOP
             ELSE
+                lReabierta := .F.
                 RETURN .F.
             ENDIF
         ELSE
@@ -331,6 +334,8 @@ FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice, aCdxAdicionales )
     IF !Empty( cIndice )
         OrdSetFocus( cIndice )
     ENDIF
+
+    lReabierta := .F.
 
 RETURN .T.
 

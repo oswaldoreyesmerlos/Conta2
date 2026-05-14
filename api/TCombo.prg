@@ -148,6 +148,8 @@ METHOD SetValue( xValue ) CLASS TCombo
         ENDIF
     NEXT
 
+    ::Paint()
+
 RETURN Self
 
 

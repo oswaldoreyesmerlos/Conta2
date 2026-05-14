@@ -52,6 +52,7 @@ CLASS TMenu
     METHOD Run()    INLINE ::Activate()
     METHOD ProcKey( nKey )
     METHOD OpenPopup()
+    METHOD SetItems( aDef )
 
 ENDCLASS
 
@@ -175,6 +176,12 @@ METHOD ProcKey( nKey ) CLASS TMenu
     ENDCASE
 
 RETURN NIL
+
+
+METHOD SetItems( aDef ) CLASS TMenu
+    ::Build( aDef )
+    ::Paint()
+RETURN Self
 
 
 METHOD OpenPopup() CLASS TMenu
