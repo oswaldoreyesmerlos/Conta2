@@ -27,7 +27,7 @@ FUNCTION InicioDrywall()
     LOCAL i, nCdx
     LOCAL cDbf, cCdx
 
-    SET DEFAULT TO ".\DATA"
+    SET DEFAULT TO "C:\Users\ferna\Desktop\Prgs\GptWvg\GfxStack\DATA"
 
     // -- TMP_TRA (tramos/parametros de calculo) --
     aCampos  := {}
