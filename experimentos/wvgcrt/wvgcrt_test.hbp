@@ -1,0 +1,27 @@
+# WvgCrt + GfxStack experimento
+# Prueba de multiples GT con Harbour puro (hb_gtCreate)
+-w0
+-gui
+-i..\..\api
+-i..\..
+-iC:\HARBOUR32\include
+
+gtwvg.hbc
+hbct.hbc
+
+wvgcrt_test.prg
+..\..\api\Gfx.prg
+..\..\api\TControl.prg
+..\..\api\TLabel.prg
+..\..\api\TGet.prg
+..\..\api\TButton.prg
+..\..\api\TCheck.prg
+..\..\api\TCombo.prg
+..\..\api\TGrid.prg
+..\..\api\TWindow.prg
+..\..\api\TMenu.prg
+..\..\api\MsgBox.prg
+..\..\api\MsgYesNo.prg
+..\..\Util.prg
+..\..\M_Clientes.prg
+..\..\Seguridad.prg
