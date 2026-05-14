@@ -202,25 +202,19 @@ RETURN nTotalObra
 STATIC FUNCTION _CertAltaForm()
 
     LOCAL oWin
-    LOCAL oGIdObr
-    LOCAL oGFec
-    LOCAL oGPorc
-    LOCAL oGObs
-    LOCAL oGrid
-    LOCAL oLblObra
-    LOCAL oLTotalObra
-    LOCAL oLTotalCert
-    LOCAL oBtBus
+    LOCAL hCert := {=>}
     LOCAL oBtGua
     LOCAL oBtCan
-    LOCAL aLineas     := {}
-    LOCAL cIdObra     := Space( 12 )
-    LOCAL dFecha      := Date()
-    LOCAL nPorcentaje := 0.00
-    LOCAL nTotalObra  := 0.00
-    LOCAL nIvaFijo    := IVA_DEF
-    LOCAL cObs        := Space( 80 )
-    LOCAL lInv        := .F.
+
+    hCert["aLineas"]     := {}
+    hCert["cIdObra"]     := Space( 12 )
+    hCert["dFecha"]      := Date()
+    hCert["nPorcentaje"] := 0.00
+    hCert["nTotalObra"]  := 0.00
+    hCert["nIvaFijo"]    := IVA_DEF
+    hCert["cObs"]        := Space( 80 )
+    hCert["lInv"]        := .F.
+    hCert["oGrid"]       := NIL
 
     oWin := TWindow():New( 1, 2, 37, 129, "NUEVA CERTIFICACION" )
 
@@ -231,50 +225,47 @@ STATIC FUNCTION _CertAltaForm()
     oWin:AddCtrl( TLabel():New(  6, 60, "Total certif.:", oWin ) )
     oWin:AddCtrl( TLabel():New( 10,  2, "Observ.     :", oWin ) )
 
-    oLblObra := TLabel():New( 2, 16, Space( 60 ), oWin )
-    oWin:AddCtrl( oLblObra )
+    hCert["oLblObra"] := TLabel():New( 2, 16, Space( 60 ), oWin )
+    oWin:AddCtrl( hCert["oLblObra"] )
 
-    oLTotalObra := TLabel():New( 6, 16, Space( 16 ), oWin )
-    oLTotalObra:cColor := "W+/B"
-    oWin:AddCtrl( oLTotalObra )
+    hCert["oLTotalObra"] := TLabel():New( 6, 16, Space( 16 ), oWin )
+    hCert["oLTotalObra"]:cColor := "W+/B"
+    oWin:AddCtrl( hCert["oLTotalObra"] )
 
-    oLTotalCert := TLabel():New( 6, 74, Space( 16 ), oWin )
-    oLTotalCert:cColor := "W+/B"
-    oWin:AddCtrl( oLTotalCert )
+    hCert["oLTotalCert"] := TLabel():New( 6, 74, Space( 16 ), oWin )
+    hCert["oLTotalCert"]:cColor := "W+/B"
+    oWin:AddCtrl( hCert["oLTotalCert"] )
 
-    oGrid := TGrid():New( 12, 2, 26, 124, oWin )
-    oGrid:aData    := aLineas
-    oGrid:nSeekCol := 2
-    oGrid:AddColumn( "#",          3, "999",       { |a| a[LIN_C_NUM]  } )
-    oGrid:AddColumn( "Descripcion",53, "@!",        { |a| a[LIN_C_DESC] } )
-    oGrid:AddColumn( "Cantidad",   8, "9,999.99",  { |a| a[LIN_C_CANT] } )
-    oGrid:AddColumn( "Precio",    10, "9,999.99",  { |a| a[LIN_C_PRE]  } )
-    oGrid:AddColumn( "Importe",   12, "99,999.99", { |a| a[LIN_C_IMP]  } )
+    hCert["oGrid"] := TGrid():New( 12, 2, 26, 124, oWin )
+    hCert["oGrid"]:aData    := hCert["aLineas"]
+    hCert["oGrid"]:nSeekCol := 2
+    hCert["oGrid"]:AddColumn( "#",          3, "999",       { |a| a[LIN_C_NUM]  } )
+    hCert["oGrid"]:AddColumn( "Descripcion",53, "@!",        { |a| a[LIN_C_DESC] } )
+    hCert["oGrid"]:AddColumn( "Cantidad",   8, "9,999.99",  { |a| a[LIN_C_CANT] } )
+    hCert["oGrid"]:AddColumn( "Precio",    10, "9,999.99",  { |a| a[LIN_C_PRE]  } )
+    hCert["oGrid"]:AddColumn( "Importe",   12, "99,999.99", { |a| a[LIN_C_IMP]  } )
+    oWin:AddCtrl( hCert["oGrid"] )
 
-    oGPorc := TGet():New( 4, 56, nPorcentaje, "99.99", oWin )
-    oGPorc:bValid := {| o | _CertCalcPorc( o, @aLineas, nTotalObra, @nPorcentaje, ;
-                                            oLTotalCert, oGrid ) }
+    hCert["oGPorc"] := TGet():New( 4, 56, hCert["nPorcentaje"], "99.99", oWin )
+    hCert["oGPorc"]:bValid := {| o | _CertCalcPorc( o, hCert ) }
 
-    oGFec := TGet():New( 4, 16, dFecha, "99/99/9999", oWin )
-    oGObs := TGet():New( 10, 16, cObs, "@S60!", oWin )
+    hCert["oGFec"] := TGet():New( 4, 16, hCert["dFecha"], "99/99/9999", oWin )
+    hCert["oGObs"] := TGet():New( 10, 16, hCert["cObs"], "@S60!", oWin )
 
-    oGIdObr := TGet():New( 2, 16, cIdObra, "@!", oWin )
-    oWin:AddCtrl( oGrid )
-    oBtBus := TButton():New( 2, 56, 2, 72, oWin, "BUSCAR OBRA", ;
-        {|| _CertBuscarObra( oGIdObr, @cIdObra, @aLineas, @nTotalObra, @nIvaFijo, @lInv, ;
-                             oLblObra, oLTotalObra, oGrid, oGPorc ) } )
+    hCert["oGIdObr"] := TGet():New( 2, 16, hCert["cIdObra"], "@!", oWin )
+    oWin:AddCtrl( hCert["oGIdObr"] )
+    oWin:AddCtrl( TButton():New( 2, 56, 2, 72, oWin, "BUSCAR OBRA", ;
+        {|| _CertBuscarObra( hCert ) } ) )
 
     oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
-        {|| _CertGuardar( oGIdObr, oGFec, oGPorc, oGObs, aLineas, nIvaFijo, oWin ) } )
+        {|| _CertGuardar( hCert, oWin ) } )
 
     oBtCan := TButton():New( 33,108, 34,124, oWin, "CERRAR", ;
         {|| oWin:Close() } )
 
-    oWin:AddCtrl( oGIdObr )
-    oWin:AddCtrl( oBtBus  )
-    oWin:AddCtrl( oGFec   )
-    oWin:AddCtrl( oGPorc  )
-    oWin:AddCtrl( oGObs   )
+    oWin:AddCtrl( hCert["oGFec"]  )
+    oWin:AddCtrl( hCert["oGPorc"] )
+    oWin:AddCtrl( hCert["oGObs"]  )
     oWin:AddCtrl( oBtGua  )
     oWin:AddCtrl( oBtCan  )
 
@@ -283,10 +274,9 @@ STATIC FUNCTION _CertAltaForm()
 RETURN NIL
 
 
-STATIC FUNCTION _CertBuscarObra( oGet, cIdObra, aLins, nTotalObra, nIvaFijo, lInv, ;
-                                  oLblObra, oLTotalObra, oGrid, oGPorc )
+STATIC FUNCTION _CertBuscarObra( hCert )
 
-    LOCAL cId  := AllTrim( oGet:GetValue() )
+    LOCAL cId  := AllTrim( hCert["oGIdObr"]:GetValue() )
     LOCAL nArea := Select()
     LOCAL cDesc := ""
     LOCAL cNumPre := ""
@@ -294,11 +284,12 @@ STATIC FUNCTION _CertBuscarObra( oGet, cIdObra, aLins, nTotalObra, nIvaFijo, lIn
     LOCAL lInvObra := .F.
 
     IF Empty( cId )
-        RETURN .T.
+        RETURN NIL
     ENDIF
 
     IF !ABRIR_TABLA( "OBRAS", "OBR_CE", "OBR_ID" )
-        RETURN .F.
+        Select( nArea )
+        RETURN NIL
     ENDIF
 
     DbSelectArea( "OBR_CE" )
@@ -308,38 +299,38 @@ STATIC FUNCTION _CertBuscarObra( oGet, cIdObra, aLins, nTotalObra, nIvaFijo, lIn
         OBR_CE->( DbCloseArea() )
         MsgStop( "Obra no encontrada.", "Certificacion" )
         Select( nArea )
-        RETURN .F.
+        RETURN NIL
     ENDIF
 
-    cIdObra := AllTrim( OBR_CE->ID )
+    hCert["cIdObra"] := AllTrim( OBR_CE->ID )
     cDesc   := AllTrim( OBR_CE->DESCRIP )
     cNumPre := AllTrim( DbFieldValue( "NUM_PRE", "" ) )
 
     OBR_CE->( DbCloseArea() )
     Select( nArea )
 
-    oLblObra:SetText( PadR( cIdObra + " - " + cDesc, 60 ) )
+    hCert["oLblObra"]:SetText( PadR( hCert["cIdObra"] + " - " + cDesc, 60 ) )
 
-    aLins := {}
-    nTotalObra := _CertCargarLinesObra( cIdObra, @aLins )
-    oLTotalObra:SetText( Transform( nTotalObra, "999,999.99" ) )
+    hCert["aLineas"] := {}
+    hCert["nTotalObra"] := _CertCargarLinesObra( hCert["cIdObra"], @hCert["aLineas"] )
+    hCert["oLTotalObra"]:SetText( Transform( hCert["nTotalObra"], "999,999.99" ) )
 
     IF !Empty( cNumPre )
         _CertIvaPresupuesto( cNumPre, @nIva, @lInvObra )
     ENDIF
-    nIvaFijo := nIva
-    lInv     := lInvObra
+    hCert["nIvaFijo"] := nIva
+    hCert["lInv"]     := lInvObra
 
-    IF oGrid != NIL
-        oGrid:aData := aLins
-        oGrid:Paint()
+    IF hCert["oGrid"] != NIL
+        hCert["oGrid"]:aData := hCert["aLineas"]
+        hCert["oGrid"]:Paint()
     ENDIF
 
-    IF oGPorc != NIL
-        oGPorc:SetValue( 0 )
+    IF hCert["oGPorc"] != NIL
+        hCert["oGPorc"]:SetValue( 0 )
     ENDIF
 
-RETURN .T.
+RETURN NIL
 
 
 STATIC FUNCTION _CertIvaPresupuesto( cNumPre, nIva, lInv )
@@ -367,39 +358,41 @@ STATIC FUNCTION _CertIvaPresupuesto( cNumPre, nIva, lInv )
 RETURN NIL
 
 
-STATIC FUNCTION _CertCalcPorc( oGet, aLins, nTotalObra, nPorcentaje, oLTotalCert, oGrid )
+STATIC FUNCTION _CertCalcPorc( oGet, hCert )
 
     LOCAL i
     LOCAL nTotalCert := 0
+    LOCAL aLins := hCert["aLineas"]
 
-    nPorcentaje := oGet:GetValue()
+    hCert["nPorcentaje"] := oGet:GetValue()
 
-    IF nPorcentaje <= 0 .OR. nPorcentaje > 100
+    IF hCert["nPorcentaje"] <= 0 .OR. hCert["nPorcentaje"] > 100
         MsgStop( "El % debe estar entre 1 y 100.", "Certificacion" )
         RETURN .F.
     ENDIF
 
     FOR i := 1 TO Len( aLins )
-        aLins[i, LIN_C_IMP] := Round( aLins[i, LIN_C_CANT] * aLins[i, LIN_C_PRE] * nPorcentaje / 100, 2 )
+        aLins[i, LIN_C_IMP] := Round( aLins[i, LIN_C_CANT] * aLins[i, LIN_C_PRE] * hCert["nPorcentaje"] / 100, 2 )
         nTotalCert += aLins[i, LIN_C_IMP]
     NEXT
 
-    oGrid:aData := aLins
-    oGrid:Paint()
-    oLTotalCert:SetText( Transform( nTotalCert, "999,999.99" ) )
+    hCert["oGrid"]:aData := aLins
+    hCert["oGrid"]:Paint()
+    hCert["oLTotalCert"]:SetText( Transform( nTotalCert, "999,999.99" ) )
 
-    nPorcentaje := oGet:GetValue()
+    hCert["nPorcentaje"] := oGet:GetValue()
 
 RETURN .T.
 
 
-STATIC FUNCTION _CertGuardar( oGIdObr, oGFec, oGPorc, oGObs, aLins, nIvaFijo, oWin )
+STATIC FUNCTION _CertGuardar( hCert, oWin )
 
     LOCAL cIdCert   := ""
-    LOCAL cIdObra   := AllTrim( oGIdObr:GetValue() )
-    LOCAL dFecha    := oGFec:GetValue()
-    LOCAL nPorc     := oGPorc:GetValue()
-    LOCAL cObs      := AllTrim( oGObs:GetValue() )
+    LOCAL cIdObra   := AllTrim( hCert["oGIdObr"]:GetValue() )
+    LOCAL dFecha    := hCert["oGFec"]:GetValue()
+    LOCAL nPorc     := hCert["oGPorc"]:GetValue()
+    LOCAL cObs      := AllTrim( hCert["oGObs"]:GetValue() )
+    LOCAL aLins     := hCert["aLineas"]
     LOCAL nBase     := 0
     LOCAL nIva      := 0
     LOCAL nTotal    := 0
@@ -432,10 +425,10 @@ STATIC FUNCTION _CertGuardar( oGIdObr, oGFec, oGPorc, oGObs, aLins, nIvaFijo, oW
     FOR i := 1 TO Len( aLins )
         nBase += aLins[i, LIN_C_IMP]
     NEXT
-    nIva   := Round( nBase * nIvaFijo / 100, 2 )
+    nIva   := Round( nBase * hCert["nIvaFijo"] / 100, 2 )
     nTotal := nBase + nIva
 
-    IF !_CertDBCrear( cIdCert, cIdObra, dFecha, nPorc, nBase, nIva, nIvaFijo, nTotal, cObs )
+    IF !_CertDBCrear( cIdCert, cIdObra, dFecha, nPorc, nBase, nIva, hCert["nIvaFijo"], nTotal, cObs )
         RETURN NIL
     ENDIF
 
