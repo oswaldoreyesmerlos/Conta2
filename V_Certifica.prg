@@ -50,11 +50,7 @@ FUNCTION CertificacionesView()
         "ENTER: ver detalle   F5: nueva certificacion   F2: facturar desde certificacion", oWin )
 
     oBtNvo := TButton():New( 33,  2, 34, 22, oWin, "NUEVA (F5)", ;
-        {|| _CertAltaForm(), ;
-            aData := _CertCargar(), ;
-            oGrid:aData := aData, ;
-            oGrid:nCurRow := Len( aData ), ;
-            oGrid:Paint() } )
+        {|| _CertAltaForm(), aData := _CertCargar(), oGrid:aData := aData, oGrid:nCurRow := Len( aData ), oGrid:Paint() } )
 
     oBtFac := TButton():New( 33, 24, 34, 44, oWin, "FACTURAR (F2)", ;
         {|| If( oGrid:CurrentRow() != NIL, ;
@@ -245,27 +241,25 @@ STATIC FUNCTION _CertAltaForm()
     oLTotalCert:cColor := "W+/B"
     oWin:AddCtrl( oLTotalCert )
 
-    oGIdObr := TGet():New( 2, 16, cIdObra, "@!", oWin )
-    oGIdObr:bValid := {| o | _CertBuscarObra( o, @cIdObra, @aLineas, @nTotalObra, @nIvaFijo, @lInv, ;
-                                               oLblObra, oLTotalObra, oGrid, oGPorc ) }
-
-    oGFec := TGet():New( 4, 16, dFecha, "99/99/9999", oWin )
-
-    oGPorc := TGet():New( 4, 56, nPorcentaje, "99.99", oWin )
-    oGPorc:bValid := {| o | _CertCalcPorc( o, @aLineas, nTotalObra, @nPorcentaje, ;
-                                            oLTotalCert, oGrid ) }
-
-    oGObs := TGet():New( 10, 16, cObs, "@S60!", oWin )
-
     oGrid := TGrid():New( 12, 2, 26, 124, oWin )
     oGrid:aData    := aLineas
     oGrid:nSeekCol := 2
-
     oGrid:AddColumn( "#",          3, "999",       { |a| a[LIN_C_NUM]  } )
     oGrid:AddColumn( "Descripcion",53, "@!",        { |a| a[LIN_C_DESC] } )
     oGrid:AddColumn( "Cantidad",   8, "9,999.99",  { |a| a[LIN_C_CANT] } )
     oGrid:AddColumn( "Precio",    10, "9,999.99",  { |a| a[LIN_C_PRE]  } )
     oGrid:AddColumn( "Importe",   12, "99,999.99", { |a| a[LIN_C_IMP]  } )
+
+    oGPorc := TGet():New( 4, 56, nPorcentaje, "99.99", oWin )
+    oGPorc:bValid := {| o | _CertCalcPorc( o, @aLineas, nTotalObra, @nPorcentaje, ;
+                                            oLTotalCert, oGrid ) }
+
+    oGFec := TGet():New( 4, 16, dFecha, "99/99/9999", oWin )
+    oGObs := TGet():New( 10, 16, cObs, "@S60!", oWin )
+
+    oGIdObr := TGet():New( 2, 16, cIdObra, "@!", oWin )
+    oGIdObr:bValid := {| o | _CertBuscarObra( o, @cIdObra, @aLineas, @nTotalObra, @nIvaFijo, @lInv, ;
+                                               oLblObra, oLTotalObra, oGrid, oGPorc ) }
     oWin:AddCtrl( oGrid )
 
     oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
