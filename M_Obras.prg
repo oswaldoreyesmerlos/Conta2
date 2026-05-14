@@ -155,7 +155,9 @@ FUNCTION GetResumenObra( cIdObra )
    LOCAL nArea      := Select()
    LOCAL nTotal     := GetTotalObra( cIdObra )
    LOCAL nFacturado := GetFacturadoObra( cIdObra )
+   LOCAL nCobrado   := GetCobradoObra( cIdObra )
    LOCAL nPendiente := nTotal - nFacturado
+   LOCAL nPteCobrar := nFacturado - nCobrado
    LOCAL cEstado    := ""
 
    IF ABRIR_TABLA( "OBRAS", "OBR_RES", "OBR_ID" )
@@ -169,7 +171,7 @@ FUNCTION GetResumenObra( cIdObra )
 
    Select( nArea )
 
-RETURN { nTotal, nFacturado, nPendiente, cEstado }
+RETURN { nTotal, nFacturado, nCobrado, nPendiente, nPteCobrar, cEstado }
 
 
 // ============================================================================
@@ -875,7 +877,7 @@ STATIC FUNCTION _ObrasCargar()
             _ObraEstadoTexto( DbFieldValue( "ESTADO", "" ) ), ;
             aRes[1], ;
             aRes[2], ;
-            aRes[3], ;
+            aRes[4], ;
             AllTrim( DbFieldValue( "NUM_PRE", "" ) ) } )
       ENDIF
       OBR->( DbSkip() )
@@ -1057,7 +1059,7 @@ STATIC FUNCTION _ObraFacturaForm( cIdObra, cTipoFac )
 
    LOCAL oWin
    LOCAL aRes      := GetResumenObra( cIdObra )
-   LOCAL nImporte  := If( cTipoFac == "F", aRes[3], 0.00 )
+   LOCAL nImporte  := If( cTipoFac == "F", aRes[4], 0.00 )
    LOCAL nIva      := 21.00
    LOCAL cCliente  := ""
    LOCAL cNumPre   := ""
@@ -1177,7 +1179,7 @@ STATIC FUNCTION _ObraFacturaGuardar( cIdObra, cTipoFac, oGFec, oGImp, oGIva, oGC
 
    cMsg := "Emitir " + Lower( _ObraTituloTipo( cTipoFac ) ) + "?" + Chr(13) + ;
            "Obra      : " + AllTrim( cIdObra ) + Chr(13) + ;
-           "Pendiente : " + Transform( aRes[3], "999,999,999.99" ) + Chr(13) + ;
+            "Pendiente : " + Transform( aRes[4], "999,999,999.99" ) + Chr(13) + ;
            "Fecha     : " + DToC( dFecha ) + Chr(13) + ;
            "Base      : " + Transform( nBase, "999,999,999.99" ) + Chr(13) + ;
            "IVA       : " + Transform( nCuotaIva, "999,999,999.99" ) + Chr(13) + ;
@@ -1222,14 +1224,16 @@ STATIC FUNCTION _ObraEstadoForm( cIdObra )
    Select( nArea )
 
    oWin  := TWindow():New( 3, 6, 35, 126, "ESTADO ECONOMICO DE OBRA" )
-   oGrid := TGrid():New( 8, 2, 28, 116, oWin )
+   oGrid := TGrid():New( 11, 2, 28, 116, oWin )
 
    oWin:AddCtrl( TLabel():New(  2,  2, "Obra       : " + AllTrim( cIdObra ), oWin ) )
    oWin:AddCtrl( TLabel():New(  3,  2, "Presupuesto: " + If( Empty( cNumPre ), "(manual)", cNumPre ), oWin ) )
    oWin:AddCtrl( TLabel():New(  4,  2, "Total obra : " + Transform( aRes[1], "999,999,999.99" ), oWin ) )
    oWin:AddCtrl( TLabel():New(  5,  2, "Facturado  : " + Transform( aRes[2], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  6,  2, "Pendiente  : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
-   oWin:AddCtrl( TLabel():New(  7,  2, "Estado     : " + _ObraEstadoTexto( aRes[4] ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  6,  2, "Cobrado    : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  7,  2, "Pte.cobro  : " + Transform( aRes[5], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  8,  2, "Pte.factura: " + Transform( aRes[4], "999,999,999.99" ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  9,  2, "Estado     : " + _ObraEstadoTexto( aRes[6] ), oWin ) )
    oWin:AddCtrl( TLabel():New( 30,  2, "ENTER: detalle del movimiento   ESC/CERRAR: volver a obras", oWin ) )
 
    oGrid:aData    := aMov

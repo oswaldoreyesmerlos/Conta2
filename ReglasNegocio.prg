@@ -477,6 +477,39 @@ RETURN nFacturado
 
 
 // ============================================================================
+// GetCobradoObra()
+// Suma cobrado de facturas no anuladas vinculadas a ID_OBRA.
+// ============================================================================
+FUNCTION GetCobradoObra( cIdObra )
+
+   LOCAL nCobrado := 0
+
+   IF Empty( cIdObra )
+      RETURN 0
+   ENDIF
+
+   IF !ABRIR_TABLA( "FACTURA", "FAC_CB", "FAC_OBR" )
+      RETURN 0
+   ENDIF
+
+   DbSelectArea( "FAC_CB" )
+   OrdSetFocus( "FAC_OBR" )
+   DbGoTop()
+
+   DO WHILE !Eof()
+      IF !Deleted() .AND. !DbFieldValue( "ANULADA", .F. ) .AND. ;
+         AllTrim( DbFieldValue( "ID_OBRA", "" ) ) == AllTrim( cIdObra )
+         nCobrado += DbFieldValue( "COBRADO", 0.00 )
+      ENDIF
+      FAC_CB->( DbSkip() )
+   ENDDO
+
+   FAC_CB->( DbCloseArea() )
+
+RETURN nCobrado
+
+
+// ============================================================================
 // GetPendienteObra()
 // ============================================================================
 FUNCTION GetPendienteObra( cIdObra )
