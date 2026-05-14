@@ -41,7 +41,8 @@ FUNCTION CertificacionesView()
     oGrid:AddColumn( "Estado",      8, "@!",         { |a| a[8] } )
     oGrid:AddColumn( "Factura",    10, "@!",         { |a| a[9] } )
 
-    oGrid:bEnter := {| g | _CertViewDetalle( g:CurrentRow()[1] ), ;
+    oGrid:bEnter := {| g | If( g:CurrentRow() != NIL, ;
+                           _CertViewDetalle( g:CurrentRow()[1] ), NIL ), ;
                            aData := _CertCargar(), ;
                            g:aData := aData, ;
                            g:Paint() }
