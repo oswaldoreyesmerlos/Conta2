@@ -18,118 +18,302 @@
 
 FUNCTION InicioDrywall()
 
-    LOCAL aTablas   := {}
-    LOCAL aCampos
-    LOCAL aIndices
-    LOCAL aCamposR
-    LOCAL aIndicesR
+    LOCAL aAllDefs  := {}
+    LOCAL aCampos   := {}
+    LOCAL aIndices  := {}
+    LOCAL aCamposR  := {}
+    LOCAL aIndicesR := {}
     LOCAL tmp
     LOCAL i, nCdx
     LOCAL cDbf, cCdx
 
     SET DEFAULT TO "C:\Users\ferna\Desktop\Prgs\GptWvg\GfxStack\DATA"
 
-    // -- TMP_TRA (tramos/parametros de calculo) --
-    aCampos  := {}
-    aIndices := {}
-    AAdd( aCampos, { "NUMERO",    "C", 10, 0 } )
-    AAdd( aCampos, { "ID_LINEA",  "N",  4, 0 } )
-    AAdd( aCampos, { "TIPO_OBRA", "C", 12, 0 } )
-    AAdd( aCampos, { "CONCEPTO",  "C", 30, 0 } )
-    AAdd( aCampos, { "LARGO",     "N",  7, 2 } )
-    AAdd( aCampos, { "ALTO",      "N",  7, 2 } )
-    AAdd( aCampos, { "MODUL",     "N",  5, 2 } )
-    AAdd( aCampos, { "SEP_PRIM",  "N",  5, 2 } )
-    AAdd( aCampos, { "PLAC_CARA", "N",  1, 0 } )
-    AAdd( aCampos, { "CARAS",     "N",  1, 0 } )
-    AAdd( aCampos, { "ID_PER_VER","C", 15, 0 } )
-    AAdd( aCampos, { "ID_PER_HOR","C", 15, 0 } )
-    AAdd( aCampos, { "ID_PER_PER","C", 15, 0 } )
-    AAdd( aCampos, { "ID_PERF_VERT","C",15, 0 } )
-    AAdd( aCampos, { "ID_PERF_HOR","C",15, 0 } )
-    AAdd( aCampos, { "ID_PLACA_A","C", 15, 0 } )
-    AAdd( aCampos, { "ID_PLACA_B","C", 15, 0 } )
-    AAdd( aCampos, { "ID_AISLANT","C", 15, 0 } )
-    AAdd( aCampos, { "ID_ANCLAJE","C", 15, 0 } )
-    AAdd( aCampos, { "L_AISLANT", "L",  1, 0 } )
-    AAdd( aCampos, { "L_BANDA",   "L",  1, 0 } )
-    AAdd( aIndices, { "TRA_ID", "NUMERO+Str(ID_LINEA,4)" } )
-    AAdd( aTablas, { "TMP_TRA", aCampos, aIndices } )
+    // =========================================================
+        // 1. ARTICULO
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "CODIGO",   "C", 15, 0 } )
+        AAdd( aFlds, { "DESCRIP",  "C", 60, 0 } )
+        AAdd( aFlds, { "FAMILIA",  "C", 10, 0 } )
+        AAdd( aFlds, { "TIPO",     "C", 10, 0 } )
+        AAdd( aFlds, { "UNIDAD",   "C",  5, 0 } )
+        AAdd( aFlds, { "ESPESOR",  "N",  6, 2 } )
+        AAdd( aFlds, { "LARGO",    "N",  6, 2 } )
+        AAdd( aFlds, { "ANCHO",    "N",  6, 2 } )
+        AAdd( aFlds, { "PESO_UNI", "N", 10, 3 } )
+        AAdd( aFlds, { "PRECIO",   "N", 10, 2 } )
 
-    // -- TMP_MAT (materiales calculados) --
-    aCampos  := {}
-    aIndices := {}
-    AAdd( aCampos, { "NUMERO",    "C", 10, 0 } )
-    AAdd( aCampos, { "ID_LINEA",  "N",  4, 0 } )
-    AAdd( aCampos, { "FAMILIA",   "C", 10, 0 } )
-    AAdd( aCampos, { "CODIGO",    "C", 15, 0 } )
-    AAdd( aCampos, { "DESCRIP",   "C", 40, 0 } )
-    AAdd( aCampos, { "UNIDAD",    "C",  3, 0 } )
-    AAdd( aCampos, { "CANTIDAD",  "N", 10, 2 } )
-    AAdd( aCampos, { "PRECIO",    "N",  8, 2 } )
-    AAdd( aCampos, { "IMPORTE",   "N", 10, 2 } )
-    AAdd( aCampos, { "PESO_TOT",  "N",  8, 2 } )
-    AAdd( aCampos, { "DETALLE",   "C", 40, 0 } )
-    AAdd( aCampos, { "L_MANUAL",  "L",  1, 0 } )
-    AAdd( aIndices, { "MAT_ID",  "NUMERO+Str(ID_LINEA,4)" } )
-    AAdd( aTablas, { "TMP_MAT", aCampos, aIndices } )
+        aInds := {}
+        AAdd( aInds, { "ART_ID",  "CODIGO" } )
+        AAdd( aInds, { "ART_DES", "Upper(DESCRIP)" } )
+        AAdd( aInds, { "ART_FAM", "FAMILIA + DESCRIP" } )
 
-    // -- TMP_RES (resumen valorado) --
-    aCampos  := {}
-    aIndices := {}
-    AAdd( aCampos, { "NUMERO",    "C", 10, 0 } )
-    AAdd( aCampos, { "ID_LINEA",  "N",  4, 0 } )
-    AAdd( aCampos, { "CONCEPTO",  "C", 30, 0 } )
-    AAdd( aCampos, { "IMP_TOT",   "N", 10, 2 } )
-    AAdd( aIndices, { "RES_ID",  "NUMERO+Str(ID_LINEA,4)" } )
-    AAdd( aTablas, { "TMP_RES", aCampos, aIndices } )
+        AAdd( aAllDefs, { "ARTICULO", aFlds, aInds} )
 
-    // -- TMP_CAB (cabecera temporal) --
-    aCampos  := {}
-    aIndices := {}
-    AAdd( aCampos, { "NUMERO",    "C", 10, 0 } )
-    AAdd( aCampos, { "L_SUCIO",   "L",  1, 0 } )
-    AAdd( aCampos, { "FECHA",     "D",  8, 0 } )
-    AAdd( aCampos, { "CLIENTE",   "C", 10, 0 } )
-    AAdd( aCampos, { "TOTAL",     "N", 10, 2 } )
-    AAdd( aIndices, { "CAB_NUM", "NUMERO" } )
-    AAdd( aTablas, { "TMP_CAB", aCampos, aIndices } )
+    // =========================================================
+        // 4. TMP_CAB
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",     "C",  6, 0 } )
+        AAdd( aFlds, { "FECHA",      "D",  8, 0 } )
+        AAdd( aFlds, { "TITULO",     "C", 60, 0 } )
+        AAdd( aFlds, { "ID_CLIENTE", "C", 15, 0 } )
+        AAdd( aFlds, { "ESTADO",     "C",  1, 0 } )
+		AAdd( aFlds, { "MARGEN",     "N",  5, 2 } )  //% utilidad a ese cliente
+        AAdd( aFlds, { "OBSERV",     "C",200, 0 } )
+        AAdd( aFlds, { "L_SUCIO",    "L",  1, 0 } )
 
-    // -- ARTICULO (catalogo de materiales Drywall) --
-    aCampos  := {}
-    aIndices := {}
-    AAdd( aCampos, { "CODIGO",    "C", 15, 0 } )
-    AAdd( aCampos, { "DESCRIP",   "C", 40, 0 } )
-    AAdd( aCampos, { "FAMILIA",   "C", 10, 0 } )
-    AAdd( aCampos, { "PRECIO",    "N",  8, 2 } )
-    AAdd( aCampos, { "UNIDAD",    "C",  3, 0 } )
-    AAdd( aCampos, { "PESO_UNI",  "N",  8, 2 } )
-    AAdd( aCampos, { "BAJA",      "L",  1, 0 } )
-    AAdd( aIndices, { "ART_COD", "CODIGO" } )
-    AAdd( aIndices, { "ART_FAM", "FAMILIA+CODIGO" } )
-    AAdd( aTablas, { "ARTICULO", aCampos, aIndices } )
+        aInds := {}
 
-    // -- TABLAS_AUX (catalogo auxiliar: familias, perfiles, placas...) --
-    aCampos  := {}
-    aIndices := {}
-    AAdd( aCampos, { "FAMILIA",   "C", 10, 0 } )
-    AAdd( aCampos, { "CODIGO",    "C", 15, 0 } )
-    AAdd( aCampos, { "DESCRIP",   "C", 40, 0 } )
-    AAdd( aCampos, { "UNIDAD",    "C",  3, 0 } )
-    AAdd( aCampos, { "PRECIO",    "N",  8, 2 } )
-    AAdd( aCampos, { "BAJA",      "L",  1, 0 } )
-    AAdd( aIndices, { "AUX_FAM", "FAMILIA+CODIGO" } )
-    AAdd( aTablas, { "TABLAS_AUX", aCampos, aIndices } )
+        AAdd( aAllDefs, { "TMP_CAB", aFlds, aInds, .T. } )
+
+        
+        // =========================================================
+		// 5. TMP_TRA (TABLA MAESTRA DE TRAMOS)
+		// =========================================================
+		aFlds := {}
+		// --- Identificación ---
+		AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
+		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
+		AAdd( aFlds, { "TIPO_OBRA",     "C", 10, 0 } ) // TABIQUE, TECHO, TRAS_SEM...
+		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
+		
+		// --- Geometría ---
+		AAdd( aFlds, { "LARGO",         "N",  6, 2 } ) 
+		AAdd( aFlds, { "ALTO",          "N",  6, 2 } ) 
+		AAdd( aFlds, { "MODUL",         "N",  5, 2 } ) // Separación Perfil VERTICAL (Placa)
+		AAdd( aFlds, { "SEP_PRIM",      "N",  5, 2 } ) // Separación Perfil HORIZ (Estructura) - Solo Techos
+
+		// --- Configuración Capas ---
+		AAdd( aFlds, { "CARAS",         "N",  1, 0 } ) // 1 o 2 (Auto según sistema)
+		AAdd( aFlds, { "PLAC_CARA",     "N",  1, 0 } ) // Nº Capas por cara (1, 2, 3...)
+
+		// --- Materiales Principales ---
+		AAdd( aFlds, { "ID_PER_VER",    "C", 15, 0 } )
+		AAdd( aFlds, { "ID_PER_HOR",    "C", 15, 0 } )
+		AAdd( aFlds, { "ID_PER_PER",    "C", 15, 0 } )
+		AAdd( aFlds, { "ID_AISLAN",     "C", 15, 0 } )
+
+		// --- Placas (Asimetría soportada) ---
+		AAdd( aFlds, { "ID_PLACA_A",    "C", 15, 0 } ) // Cara Vista / Base
+		AAdd( aFlds, { "ID_PLACA_B",    "C", 15, 0 } ) // Cara Oculta / Reverso (Si CARAS=2)
+
+		// --- Aislamiento ---
+		AAdd( aFlds, { "L_AISLANT",     "L",  1, 0 } ) 
+		AAdd( aFlds, { "ID_AISLANT",    "C", 15, 0 } )
+
+		// --- Accesorios y Detalles (NUEVOS) ---
+		AAdd( aFlds, { "ID_ANCLAJE",    "C", 15, 0 } ) // "Varilla", "Nonius"... (Solo Techos)
+		AAdd( aFlds, { "L_BANDA",       "L",  1, 0 } ) // Banda Acústica bajo perfiles?
+
+		// --- Resultado ---
+		AAdd( aFlds, { "METROS",        "N", 10, 2 } ) 
+
+        aInds := {}
+        AAdd( aInds, { "TTRA_ORD", "NUMERO + Str(ID_LINEA,4)" } )
+        AAdd( aAllDefs, { "TMP_TRA", aFlds, aInds, .T. } )
+
+        // =========================================================
+        // 6. TMP_MAT
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",    "C",  6, 0 } ) 
+        AAdd( aFlds, { "ID_LINEA",  "N",  4, 0 } ) 
+		
+		// --- Control (OPTIMIZADO) ---
+		// .T. = Introducido manual (Proteger)
+		// .F. = Calculado auto (Borrar al recalcular)
+		AAdd( aFlds, { "L_MANUAL", "L",  1, 0 } )
+		
+        AAdd( aFlds, { "ORIGEN",    "C",  4, 0 } ) // 'AUTO' / 'MAN'
+        AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) 
+        
+        AAdd( aFlds, { "CODIGO",    "C", 15, 0 } ) 
+        AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) 
+        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        
+        // --- LOGISTICA ---
+        AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Peso Total Línea (Kg)
+		
+		AAdd( aFlds, { "RENDIM",    "N",  8, 4 } ) 
+        AAdd( aFlds, { "CANTIDAD",  "N", 12, 3 } ) 
+        AAdd( aFlds, { "PRECIO",    "N", 10, 2 } ) 
+        AAdd( aFlds, { "IMPORTE",   "N", 12, 2 } ) 
+        AAdd( aFlds, { "DETALLE",   "C", 30, 0 } )
+		
+        aInds := {}
+        AAdd( aInds, { "MAT_NUM", "NUMERO" } )
+        AAdd( aInds, { "MAT_LIN", "NUMERO + Str(ID_LINEA,4)" } )
+        AAdd( aInds, { "MAT_COD", "CODIGO" } )
+
+        AAdd( aAllDefs, { "TMP_MAT", aFlds, aInds, .T. } )
+
+
+        // =========================================================
+        // 7. TMP_RES   (Resumen del proyecto temporal)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",    "C",  6, 0 } ) 
+        AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) 
+        AAdd( aFlds, { "CODIGO",    "C", 15, 0 } ) 
+        AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) 
+        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        AAdd( aFlds, { "CANT_TOT",  "N", 12, 3 } )
+		
+		// --- LOGISTICA ---
+        AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Peso Total Agrupado (Kg)
+		
+        AAdd( aFlds, { "PRECIO",    "N", 10, 2 } ) 
+        AAdd( aFlds, { "IMP_TOT",   "N", 12, 2 } )
+
+        aInds := {}
+        AAdd( aInds, { "RES_PK", "NUMERO + CODIGO" } )
+
+        AAdd( aAllDefs, { "TMP_RES", aFlds, aInds, .T. } )
+
+        // =========================================================
+        // 8. HIS_CAB   (Cabecera histórica)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",      "C",  6, 0 } )
+        AAdd( aFlds, { "FECHA",       "D",  8, 0 } )
+        AAdd( aFlds, { "TITULO",      "C", 60, 0 } )
+        AAdd( aFlds, { "ID_CLIENTE",  "C", 15, 0 } )
+        AAdd( aFlds, { "ESTADO",      "C",  1, 0 } )
+		AAdd( aFlds, { "MARGEN",     "N",  5, 2 } )
+        AAdd( aFlds, { "OBSERV",      "C",200, 0 } )
+
+        aInds := {}
+        AAdd( aInds, { "HIS_NUM", "NUMERO" } )
+        AAdd( aInds, { "HIS_CLI", "ID_CLIENTE" } )
+
+        AAdd( aAllDefs, { "HIS_CAB", aFlds, aInds } )
+
+        // =========================================================
+        // 9. HIS_TRA   (Tramos históricos — espejo de TMP_TRA)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
+		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
+		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
+		AAdd( aFlds, { "TIPO_OBRA",     "C", 10, 0 } ) // TABIQUE, TECHO, TRAS_SEM...
+
+		// --- Geometría ---
+		AAdd( aFlds, { "LARGO",         "N",  6, 2 } ) 
+		AAdd( aFlds, { "ALTO",          "N",  6, 2 } ) 
+		AAdd( aFlds, { "MODUL",         "N",  5, 2 } ) // Separación Perfil VERTICAL (Placa)
+		AAdd( aFlds, { "SEP_PRIM",      "N",  5, 2 } ) // Separación Perfil HORIZ (Estructura) - Solo Techos
+
+		// --- Configuración Capas ---
+		AAdd( aFlds, { "CARAS",         "N",  1, 0 } ) // 1 o 2 (Auto según sistema)
+		AAdd( aFlds, { "PLAC_CARA",     "N",  1, 0 } ) // Nº Capas por cara (1, 2, 3...)
+
+		// --- Materiales Principales ---
+		AAdd( aFlds, { "ID_PER_VER",    "C", 15, 0 } )
+		AAdd( aFlds, { "ID_PER_HOR",    "C", 15, 0 } )
+		AAdd( aFlds, { "ID_PER_PER",    "C", 15, 0 } )
+		AAdd( aFlds, { "ID_AISLAN",     "C", 15, 0 } )
+
+		// --- Placas (Asimetría soportada) ---
+		AAdd( aFlds, { "ID_PLACA_A",    "C", 15, 0 } ) // Cara Vista / Base
+		AAdd( aFlds, { "ID_PLACA_B",    "C", 15, 0 } ) // Cara Oculta / Reverso (Si CARAS=2)
+
+		// --- Aislamiento ---
+		AAdd( aFlds, { "L_AISLANT",     "L",  1, 0 } ) 
+		AAdd( aFlds, { "ID_AISLANT",    "C", 15, 0 } )
+
+		// --- Accesorios y Detalles (NUEVOS) ---
+		AAdd( aFlds, { "ID_ANCLAJE",    "C", 15, 0 } ) // "Varilla", "Nonius"... (Solo Techos)
+		AAdd( aFlds, { "L_BANDA",       "L",  1, 0 } ) // Banda Acústica bajo perfiles?
+
+		// --- Resultado ---
+		AAdd( aFlds, { "METROS",        "N", 10, 2 } )
+
+        aInds := {}
+        AAdd( aInds, { "HTRA_NUM", "NUMERO + Str(ID_LINEA,4)" } )
+
+        AAdd( aAllDefs, { "HIS_TRA", aFlds, aInds } )
+
+
+        // =========================================================
+        // 10. HIS_MAT   (Material histórico — espejo de TMP_MAT)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",    "C",  6, 0 } ) 
+        AAdd( aFlds, { "ID_LINEA",  "N",  4, 0 } ) 
+		
+		// --- Control (OPTIMIZADO) ---
+		// .T. = Introducido manual (Proteger)
+		// .F. = Calculado auto (Borrar al recalcular)
+		AAdd( aFlds, { "L_MANUAL", "L",  1, 0 } )
+		
+        AAdd( aFlds, { "ORIGEN",    "C",  4, 0 } ) // 'AUTO' / 'MAN'
+        AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) 
+        
+        AAdd( aFlds, { "CODIGO",    "C", 15, 0 } ) 
+        AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) 
+        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        
+        // --- LOGISTICA ---
+        AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Peso Total Línea (Kg)
+		
+		AAdd( aFlds, { "RENDIM",    "N",  8, 4 } ) 
+        AAdd( aFlds, { "CANTIDAD",  "N", 12, 3 } ) 
+        AAdd( aFlds, { "PRECIO",    "N", 10, 2 } ) 
+        AAdd( aFlds, { "IMPORTE",   "N", 12, 2 } ) 
+        AAdd( aFlds, { "DETALLE",   "C", 30, 0 } )
+
+        aInds := {}
+        AAdd( aInds, { "HMAT_NUM", "NUMERO" } )
+        AAdd( aInds, { "HMAT_LIN", "NUMERO + Str(ID_LINEA,4)" } )
+
+        AAdd( aAllDefs, { "HIS_MAT", aFlds, aInds } )
+
+        // =========================================================
+        // 11. HIS_RES   (Resumen histórico — espejo de TMP_RES)
+        // =========================================================
+        aFlds := {}
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",    "C",  6, 0 } )
+        AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) // Antes faltaba
+        AAdd( aFlds, { "CODIGO",    "C", 15, 0 } )
+        AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) // Antes 60, ahora 40 (igual que TMP)
+        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        
+        // Nombres unificados
+        AAdd( aFlds, { "CANT_TOT",  "N", 12, 3 } ) // Antes CANT_T
+        AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Antes PESO_T
+        AAdd( aFlds, { "PRECIO",    "N", 10, 2 } ) 
+        AAdd( aFlds, { "IMP_TOT",   "N", 12, 2 } ) // Antes IMPORT
+
+        aInds := {}
+        AAdd( aInds, { "HRES_PK", "NUMERO + CODIGO" } )
+
+        AAdd( aAllDefs, { "HIS_RES", aFlds, aInds } )
+
+        // =========================================================
+        // 12. TABLAS_AUX   (Maestro de listas auxiliares)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "TIPO",    "C", 10, 0 } )
+        AAdd( aFlds, { "CODIGO",  "C", 10, 0 } )
+        AAdd( aFlds, { "DESCRIP", "C", 40, 0 } )
+
+        aInds := {}
+        AAdd( aInds, { "AUX_PK", "Upper(TIPO) + Upper(CODIGO)" } )
+
+        AAdd( aAllDefs, { "TABLAS_AUX", aFlds, aInds } )
 
     // =========================================================================
     // CREACION FISICA DE TABLAS E INDICES
     // =========================================================================
 
-    FOR i := 1 TO Len( aTablas )
+    FOR i := 1 TO Len( aAllDefs )
 
-        cDbf := aTablas[i, 1]
-        aCamposR := aTablas[i, 2]
-        aIndicesR := aTablas[i, 3]
+        cDbf        := aAllDefs[i, 1]
+        aCamposR    := aAllDefs[i, 2]
+        aIndicesR   := aAllDefs[i, 3]
 
         IF !File( cDbf + ".DBF" )
             DbCreate( cDbf, aCamposR, "DBFCDX", .T., "DRYWALL" )
