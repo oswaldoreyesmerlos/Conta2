@@ -311,14 +311,14 @@ STATIC FUNCTION _CertLookupObra( hCert )
     ENDIF
 
     FOR i := 1 TO Len( aData )
-        AAdd( aCombo, { i, aData[i, 1] + " - " + aData[i, 3] + " (" + aData[i, 4] + ")" } )
+        AAdd( aCombo, { aData[i, 1], aData[i, 1] + " - " + aData[i, 3] + " (" + aData[i, 4] + ")" } )
     NEXT
 
-    i := PopupSelect( "SELECCIONAR OBRA", aCombo, ;
-                       { { "Obra", 72, "@!", 2 } }, 1 )
+    cId := PopupSelect( "SELECCIONAR OBRA", aCombo, ;
+                         { { "Obra", 72, "@!", 2 } }, 1 )
 
-    IF i > 0 .AND. i <= Len( aData )
-        hCert["oGIdObr"]:SetValue( PadR( aData[i, 1], 12 ) )
+    IF !Empty( cId )
+        hCert["oGIdObr"]:SetValue( PadR( cId, 12 ) )
         _CertBuscarObra( hCert )
     ENDIF
 

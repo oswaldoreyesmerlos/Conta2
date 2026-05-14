@@ -1609,7 +1609,7 @@ STATIC FUNCTION _ObraDirLookup( aDirs )
     LOCAL i
 
     FOR i := 1 TO Len( aDirs )
-        AAdd( aCombo, { i, AllTrim( aDirs[i, 2] ) + " - " + AllTrim( aDirs[i, 3] ) + ;
+        AAdd( aCombo, { AllTrim( aDirs[i, 2] ), AllTrim( aDirs[i, 2] ) + " - " + AllTrim( aDirs[i, 3] ) + ;
                             ", " + AllTrim( aDirs[i, 4] ) } )
     NEXT
 
