@@ -38,4 +38,12 @@ InicioDrywall.prg
 OOPTRAMO.prg
 FuncAux.prg
 CALC_ADD.prg
+CALC_EDIT.prg
+CALC_MOD.prg
+EDIT_MOD.prg
+MAT_EDIT.prg
+PRES_MOD.prg
+REPT_MOD.prg
+TARE_MOD.prg
+VAL_MOD.prg
 drywall_main.prg
