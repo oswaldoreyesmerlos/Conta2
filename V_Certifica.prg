@@ -240,22 +240,19 @@ STATIC FUNCTION _CertAltaForm()
     hCert["oGrid"]:aData    := hCert["aLineas"]
     hCert["oGrid"]:nSeekCol := 2
     hCert["oGrid"]:AddColumn( "#",          3, "999",       { |a| a[LIN_C_NUM]  } )
-    hCert["oGrid"]:AddColumn( "Descripcion",53, "@!",        { |a| a[LIN_C_DESC] } )
+    hCert["oGrid"]:AddColumn( "Descripcion",53, "@!",       { |a| a[LIN_C_DESC] } )
     hCert["oGrid"]:AddColumn( "Cantidad",   8, "9,999.99",  { |a| a[LIN_C_CANT] } )
     hCert["oGrid"]:AddColumn( "Precio",    10, "9,999.99",  { |a| a[LIN_C_PRE]  } )
     hCert["oGrid"]:AddColumn( "Importe",   12, "99,999.99", { |a| a[LIN_C_IMP]  } )
-    oWin:AddCtrl( hCert["oGrid"] )
-
-    hCert["oGPorc"] := TGet():New( 4, 56, hCert["nPorcentaje"], "99.99", oWin )
-    hCert["oGPorc"]:bValid := {| o | _CertCalcPorc( o, hCert ) }
-
-    hCert["oGFec"] := TGet():New( 4, 16, hCert["dFecha"], "99/99/9999", oWin )
-    hCert["oGObs"] := TGet():New( 10, 16, hCert["cObs"], "@S60!", oWin )
 
     hCert["oGIdObr"] := TGet():New( 2, 16, hCert["cIdObra"], "@!", oWin )
-    oWin:AddCtrl( hCert["oGIdObr"] )
-    oWin:AddCtrl( TButton():New( 2, 56, 2, 72, oWin, "BUSCAR OBRA", ;
-        {|| _CertBuscarObra( hCert ) } ) )
+    oBtBus := TButton():New( 2, 56, 2, 72, oWin, "BUSCAR OBRA", ;
+        {|| _CertBuscarObra( hCert ) } )
+
+    hCert["oGFec"] := TGet():New( 4, 16, hCert["dFecha"], "99/99/9999", oWin )
+    hCert["oGPorc"] := TGet():New( 4, 56, hCert["nPorcentaje"], "99.99", oWin )
+    hCert["oGPorc"]:bValid := {| o | _CertCalcPorc( o, hCert ) }
+    hCert["oGObs"] := TGet():New( 10, 16, hCert["cObs"], "@S60!", oWin )
 
     oBtGua := TButton():New( 33,  2, 34, 18, oWin, "GUARDAR", ;
         {|| _CertGuardar( hCert, oWin ) } )
@@ -263,11 +260,14 @@ STATIC FUNCTION _CertAltaForm()
     oBtCan := TButton():New( 33,108, 34,124, oWin, "CERRAR", ;
         {|| oWin:Close() } )
 
-    oWin:AddCtrl( hCert["oGFec"]  )
-    oWin:AddCtrl( hCert["oGPorc"] )
-    oWin:AddCtrl( hCert["oGObs"]  )
-    oWin:AddCtrl( oBtGua  )
-    oWin:AddCtrl( oBtCan  )
+    oWin:AddCtrl( hCert["oGIdObr"] )     // 1er foco
+    oWin:AddCtrl( oBtBus  )               // 2o (boton)
+    oWin:AddCtrl( hCert["oGFec"]  )       // 3o
+    oWin:AddCtrl( hCert["oGPorc"] )       // 4o
+    oWin:AddCtrl( hCert["oGObs"]  )       // 5o
+    oWin:AddCtrl( hCert["oGrid"] )        // 6o (grid)
+    oWin:AddCtrl( oBtGua  )               // 7o
+    oWin:AddCtrl( oBtCan  )               // 8o
 
     oWin:Run()
 
