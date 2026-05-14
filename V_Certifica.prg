@@ -613,6 +613,7 @@ STATIC FUNCTION _CertFacturar( cIdCert )
     _ObraActualizarEstado( cIdObra )
 
     _CertMarcarFacturada( cIdCert, cNumFac )
+    AsientoAutomatico( "CER", cIdCert )
 
     AuditLog( "FACTURA", "CERTIFICA", cIdCert, ;
               "Factura " + cNumFac + " desde certificacion " + cIdCert, .T. )

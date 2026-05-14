@@ -910,6 +910,8 @@ FUNCTION AsientoAutomatico( cTipo, cNumDoc )
         lOK := _AsiRecibo( cNumDoc_ )
     CASE cTipo_ == "PAG"
         lOK := _AsiPago( cNumDoc_ )
+    CASE cTipo_ == "CER"
+        lOK := _AsiCertificacion( cNumDoc_ )
     OTHERWISE
         MsgStop( "Tipo de documento desconocido: " + cTipo_, "Asiento" )
     ENDCASE
@@ -1047,6 +1049,152 @@ STATIC FUNCTION _AsiFactura( cNumFac )
     ENDIF
 
     MsgInfo( "Asiento " + cAsi + " generado para factura " + cNumFac, "Asiento" )
+
+RETURN .T.
+
+
+STATIC FUNCTION _AsiCertificacion( cIdCert )
+
+   LOCAL cAsi
+   LOCAL dFec
+   LOCAL cCli
+   LOCAL cCtaCli
+   LOCAL nBase
+   LOCAL nIva
+   LOCAL nTotal
+   LOCAL cConc
+   LOCAL lAsientoOK
+   LOCAL cIdObra
+   LOCAL nArea := Select()
+
+   IF !ABRIR_TABLA( "CERTIFICA", "CER_AS", "CERT_NUM" )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   DbSelectArea( "CER_AS" )
+   OrdSetFocus( "CERT_NUM" )
+
+   IF !( DbSeek( PadR( AllTrim( cIdCert ), 12 ) ) .OR. DbSeek( AllTrim( cIdCert ) ) )
+      CER_AS->( DbCloseArea() )
+      MsgStop( "Certificacion " + cIdCert + " no encontrada.", "Asiento" )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   IF !Empty( AllTrim( DbFieldValue( "ASIENTO", "" ) ) )
+      CER_AS->( DbCloseArea() )
+      MsgStop( "Certificacion " + cIdCert + " ya tiene asiento.", "Asiento" )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   dFec    := CER_AS->FECHA
+   nBase   := CER_AS->BASE
+   nIva    := CER_AS->IVA
+   nTotal  := CER_AS->TOTAL
+   cIdObra := AllTrim( CER_AS->ID_OBRA )
+
+   CER_AS->( DbCloseArea() )
+   Select( nArea )
+
+   cCli := ""
+   IF ABRIR_TABLA( "OBRAS", "OBR_AS", "OBR_ID" )
+      DbSelectArea( "OBR_AS" )
+      OrdSetFocus( "OBR_ID" )
+      IF DbSeek( PadR( cIdObra, 12 ) ) .OR. DbSeek( cIdObra )
+         cCli := AllTrim( OBR_AS->CLIENTE_ )
+      ENDIF
+      OBR_AS->( DbCloseArea() )
+   ENDIF
+
+   cCtaCli := "430"
+   IF !Empty( cCli ) .AND. ABRIR_TABLA( "CLIENTES", "CLI_AC", "CLI_ID" )
+      DbSelectArea( "CLI_AC" )
+      OrdSetFocus( "CLI_ID" )
+      IF CLI_AC->( DbSeek( cCli ) ) .AND. !Empty( AllTrim( CLI_AC->CTA_CONT ) )
+         cCtaCli := AllTrim( CLI_AC->CTA_CONT )
+      ENDIF
+      CLI_AC->( DbCloseArea() )
+   ENDIF
+
+   cAsi := GetNextNum( "ASI" + AllTrim( Str( Year( Date() ) ) ), "Asientos" )
+   IF Empty( cAsi )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   cConc := "Certificacion " + cIdCert + " / " + cCli
+   lAsientoOK := .F.
+
+   IF !ABRIR_TABLA( "LDIARIO", "DIA_AC", "DIA_ASI" )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   DbSelectArea( "DIA_AC" )
+
+   IF NetFLock()
+      DbAppend()
+      REPLACE DIA_AC->D_ASIENT WITH cAsi
+      REPLACE DIA_AC->D_LINEA  WITH 1
+      REPLACE DIA_AC->D_FECHA  WITH dFec
+      REPLACE DIA_AC->D_CUENTA WITH PadR( cCtaCli, 10 )
+      REPLACE DIA_AC->D_DEBE   WITH nTotal
+      REPLACE DIA_AC->D_HABER  WITH 0.00
+      REPLACE DIA_AC->D_DESCRI WITH cConc
+      REPLACE DIA_AC->TIP_ORIG WITH "CER"
+      REPLACE DIA_AC->DOC_ORIG WITH cIdCert
+
+      DbAppend()
+      REPLACE DIA_AC->D_ASIENT WITH cAsi
+      REPLACE DIA_AC->D_LINEA  WITH 2
+      REPLACE DIA_AC->D_FECHA  WITH dFec
+      REPLACE DIA_AC->D_CUENTA WITH "7050000"
+      REPLACE DIA_AC->D_DEBE   WITH 0.00
+      REPLACE DIA_AC->D_HABER  WITH nBase
+      REPLACE DIA_AC->D_DESCRI WITH cConc
+      REPLACE DIA_AC->TIP_ORIG WITH "CER"
+      REPLACE DIA_AC->DOC_ORIG WITH cIdCert
+
+      IF nIva > 0
+         DbAppend()
+         REPLACE DIA_AC->D_ASIENT WITH cAsi
+         REPLACE DIA_AC->D_LINEA  WITH 3
+         REPLACE DIA_AC->D_FECHA  WITH dFec
+         REPLACE DIA_AC->D_CUENTA WITH "4770000"
+         REPLACE DIA_AC->D_DEBE   WITH 0.00
+         REPLACE DIA_AC->D_HABER  WITH nIva
+         REPLACE DIA_AC->D_DESCRI WITH cConc
+         REPLACE DIA_AC->TIP_ORIG WITH "CER"
+         REPLACE DIA_AC->DOC_ORIG WITH cIdCert
+      ENDIF
+
+      DbCommit()
+      DbUnlock()
+      lAsientoOK := .T.
+   ENDIF
+
+   DIA_AC->( DbCloseArea() )
+
+   IF !lAsientoOK
+      MsgStop( "No se pudo bloquear el diario.", "Asiento" )
+      Select( nArea )
+      RETURN .F.
+   ENDIF
+
+   IF ABRIR_TABLA( "CERTIFICA", "CER_AU", "CERT_NUM" )
+      DbSelectArea( "CER_AU" )
+      OrdSetFocus( "CERT_NUM" )
+      IF DbSeek( PadR( AllTrim( cIdCert ), 12 ) ) .AND. NetRLock()
+         REPLACE CER_AU->ASIENTO WITH cAsi
+         DbUnlock()
+      ENDIF
+      CER_AU->( DbCloseArea() )
+   ENDIF
+
+   MsgInfo( "Asiento " + cAsi + " generado para certificacion " + cIdCert, "Asiento" )
+   Select( nArea )
 
 RETURN .T.
 

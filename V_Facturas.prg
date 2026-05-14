@@ -913,6 +913,8 @@ STATIC FUNCTION _FacGuardarForm( hFac, aLins, lNuevo, cNumero, oLNumero, oWin )
         RETURN NIL
     ENDIF
 
+    AsientoAutomatico( "FAC", cNum )
+
     oLNumero:SetText( PadR( cNum, 24 ) )
     cNumero := cNum
 

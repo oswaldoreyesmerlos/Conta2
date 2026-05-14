@@ -258,6 +258,7 @@ FUNCTION FacturarObra( cIdObra, nImporte, cTipoFac, nPorcIva, cConcepto, dFecha 
 
    _ObraGenVencimiento( cSerie, cNumFac, cCliente, dVto, nTotal, cIdObra )
    _ObraActualizarEstado( cIdObra )
+   AsientoAutomatico( "FAC", cNumFac )
 
    AuditLog( "FACTURA", "OBRAS", AllTrim( cIdObra ), ;
              "Factura " + cNumFac + " tipo " + cTipoFac, .T. )
