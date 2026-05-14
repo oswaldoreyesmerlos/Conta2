@@ -247,7 +247,7 @@ STATIC FUNCTION _CertAltaForm()
 
     hCert["oGIdObr"] := TGet():New( 2, 16, hCert["cIdObra"], "@!", oWin )
     oBtBus := TButton():New( 2, 56, 2, 72, oWin, "BUSCAR OBRA", ;
-        {|| _CertBuscarObra( hCert ) } )
+        {|| _CertLookupObra( hCert ) } )
 
     hCert["oGFec"] := TGet():New( 4, 16, hCert["dFecha"], "99/99/9999", oWin )
     hCert["oGPorc"] := TGet():New( 4, 56, hCert["nPorcentaje"], "99.99", oWin )
@@ -272,6 +272,68 @@ STATIC FUNCTION _CertAltaForm()
     oWin:Run()
 
 RETURN NIL
+
+
+STATIC FUNCTION _CertLookupObra( hCert )
+
+    LOCAL aData := {}
+    LOCAL aCombo := {}
+    LOCAL i, cId
+    LOCAL nArea := Select()
+
+    IF !ABRIR_TABLA( "OBRAS", "OBR_LK", "OBR_ID" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "OBR_LK" )
+    OrdSetFocus( "OBR_ID" )
+    DbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted()
+            AAdd( aData, { ;
+                AllTrim( OBR_LK->ID ), ;
+                AllTrim( OBR_LK->CLIENTE_ ), ;
+                AllTrim( OBR_LK->DESCRIP ), ;
+                _CertEstadoTexto( DbFieldValue( "ESTADO", "" ) ) } )
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    OBR_LK->( DbCloseArea() )
+    Select( nArea )
+
+    IF Empty( aData )
+        MsgInfo( "No hay obras registradas.", "Certificacion" )
+        RETURN NIL
+    ENDIF
+
+    FOR i := 1 TO Len( aData )
+        AAdd( aCombo, { i, aData[i, 1] + " - " + aData[i, 3] + " (" + aData[i, 4] + ")" } )
+    NEXT
+
+    i := PopupSelect( "SELECCIONAR OBRA", aCombo, ;
+                       { { "Obra", 72, "@!", 2 } }, 1 )
+
+    IF i > 0 .AND. i <= Len( aData )
+        hCert["oGIdObr"]:SetValue( PadR( aData[i, 1], 12 ) )
+        _CertBuscarObra( hCert )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _CertEstadoTexto( cEstado )
+
+    DO CASE
+    CASE cEstado == "A" ; RETURN "Abierta"
+    CASE cEstado == "E" ; RETURN "En curso"
+    CASE cEstado == "F" ; RETURN "Finalizada"
+    CASE cEstado == "C" ; RETURN "Cancelada"
+    ENDCASE
+
+RETURN "Sin estado"
 
 
 STATIC FUNCTION _CertBuscarObra( hCert )
