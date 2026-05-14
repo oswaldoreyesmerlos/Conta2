@@ -517,62 +517,25 @@ RETURN cPref
 FUNCTION EvalSafe( bBlock, cContext, xArg1, xArg2, xArg3 )
 
     LOCAL xRet := NIL
-    LOCAL oErr
-    LOCAL bOld
-    LOCAL cMsg
 
-    DEFAULT cContext TO "callback"
+    HB_SYMBOL_UNUSED( cContext )
 
     IF ValType( bBlock ) != "B"
         RETURN NIL
     ENDIF
 
-    bOld := ErrorBlock( {| e | Break( e ) } )
-
-    BEGIN SEQUENCE
-        DO CASE
-        CASE PCount() <= 2
-            xRet := Eval( bBlock )
-        CASE PCount() == 3
-            xRet := Eval( bBlock, xArg1 )
-        CASE PCount() == 4
-            xRet := Eval( bBlock, xArg1, xArg2 )
-        OTHERWISE
-            xRet := Eval( bBlock, xArg1, xArg2, xArg3 )
-        ENDCASE
-    RECOVER USING oErr
-        cMsg := "Error en " + cContext + hb_Eol()
-        cMsg += "Subsistema  : " + hb_ValToStr( oErr:SubSystem )   + hb_Eol()
-        cMsg += "Codigo      : " + hb_ValToStr( oErr:SubCode )     + hb_Eol()
-        cMsg += "Operacion   : " + hb_ValToStr( oErr:Operation )   + hb_Eol()
-        cMsg += "Descripcion : " + hb_ValToStr( oErr:Description ) + hb_Eol()
-        cMsg += _EvalSafeStack()
-        ErrorLogAppend( cMsg )
-        MsgStop( "Error en " + cContext + ": " + hb_ValToStr( oErr:Description ), "Error" )
-        xRet := NIL
-    END SEQUENCE
-
-    ErrorBlock( bOld )
+    DO CASE
+    CASE PCount() <= 2
+        xRet := Eval( bBlock )
+    CASE PCount() == 3
+        xRet := Eval( bBlock, xArg1 )
+    CASE PCount() == 4
+        xRet := Eval( bBlock, xArg1, xArg2 )
+    OTHERWISE
+        xRet := Eval( bBlock, xArg1, xArg2, xArg3 )
+    ENDCASE
 
 RETURN xRet
-
-
-STATIC FUNCTION _EvalSafeStack()
-
-    LOCAL cStack := "Pila de llamadas:" + hb_Eol()
-    LOCAL nI := 2
-
-    DO WHILE !Empty( ProcName( nI ) )
-        cStack += "  " + PadR( ProcFile( nI ), 24 ) + ;
-                  " -> " + PadR( ProcName( nI ), 30 ) + ;
-                  " (linea " + AllTrim( Str( ProcLine( nI ) ) ) + ")" + hb_Eol()
-        nI++
-        IF nI > 50
-            EXIT
-        ENDIF
-    ENDDO
-
-RETURN cStack
 
 
 // ============================================================================
