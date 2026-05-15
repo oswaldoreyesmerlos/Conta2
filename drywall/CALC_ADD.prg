@@ -342,8 +342,6 @@ FUNCTION Add_Generico( cTit )
     oWin:AddCtrl( oGLar )
     oWin:AddCtrl( oGAlt )
     oWin:AddCtrl( oGMat )
-    oWin:AddCtrl( oBtGua )
-    oWin:AddCtrl( oBtCan )
 
     oWin:Run()
 
