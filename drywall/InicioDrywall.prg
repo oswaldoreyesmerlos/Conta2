@@ -27,7 +27,7 @@ FUNCTION InicioDrywall()
     LOCAL i, nCdx
     LOCAL cDbf, cCdx
 
-    DirChange( hb_DirBase() + "DATA" )
+    SET DEFAULT TO ( hb_DirBase() + "DATA" )
 
     // =========================================================
         // 1. ARTICULO

@@ -19,6 +19,7 @@ FUNCTION Main()
     CLS
     GfxCursor( SC_NONE )
 
+    SET DEFAULT TO ( hb_DirBase() + "DATA" )
     IF !InicioDrywall()
         MsgStop( "Error creando tablas Drywall", "Inicio" )
         RETURN 1
