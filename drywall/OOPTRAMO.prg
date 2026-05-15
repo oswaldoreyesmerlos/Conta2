@@ -22,9 +22,10 @@ CLASS OOPTRAMO
       METHOD LimpiarLinea( nIdLin )
       METHOD Calc_Tabique()
       METHOD Calc_Techo()
-      METHOD Calc_Trasdos()
-      METHOD AddMat( cFam, cCod, nCant, cDet )
-      METHOD DesgloseAnclaje( cIdAnc, nArea, nSepPrim )
+       METHOD Calc_Trasdos()
+       METHOD Calc_Generico()
+       METHOD AddMat( cFam, cCod, nCant, cDet )
+       METHOD DesgloseAnclaje( cIdAnc, nArea, nSepPrim )
 
 ENDCLASS
 
@@ -65,8 +66,10 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
          CASE AllTrim( FIELD->TIPO_OBRA ) == "TECHO"
             ::Calc_Techo()
             
-         CASE "TRAS" $ AllTrim( FIELD->TIPO_OBRA )
-            ::Calc_Trasdos()
+      CASE "TRAS" $ AllTrim( FIELD->TIPO_OBRA )
+         ::Calc_Trasdos()
+      CASE AllTrim( FIELD->TIPO_OBRA ) == "GENERICO"
+         ::Calc_Generico()
       ENDCASE
 
       dbSkip()
@@ -230,6 +233,24 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    ENDIF
 
 RETURN NIL
+
+METHOD Calc_Generico() CLASS OOPTRAMO
+
+   LOCAL nLargo := FIELD->LARGO
+   LOCAL nAlto  := FIELD->ALTO
+   LOCAL nArea  := nLargo * nAlto
+   LOCAL cMat   := FIELD->ID_PLACA_A
+
+   IF !Empty( cMat )
+      ::AddMat( "GENERICO", cMat, nArea * K_DESP_PLA, "Material base" )
+   ENDIF
+
+   IF FIELD->L_AISLANT
+      ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Aislamiento" )
+   ENDIF
+
+RETURN NIL
+
 
 METHOD DesgloseAnclaje( cIdAnc, nArea, nSepPrim ) CLASS OOPTRAMO
    

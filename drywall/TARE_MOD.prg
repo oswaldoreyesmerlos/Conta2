@@ -129,6 +129,8 @@ STATIC FUNCTION _OnAppend( oGrid )
         Add_Techo( "Nuevo techo" )
     CASE "TRAS" $ cTipo
         Add_Trasdosado( cTipo, "Nuevo trasdosado" )
+    CASE cTipo == "GENERICO"
+        Add_Generico( "Material generico" )
     ENDCASE
 
 RETURN NIL
@@ -180,7 +182,7 @@ RETURN NIL
 
 STATIC FUNCTION _PickTipoObra()
 
-    LOCAL aData := { {"TABIQUE","Tabique" }, {"TECHO","Techo"}, {"TRASDOSADO","Trasdosado"}, {"TRASDOSADO_DIR","Trasdosado Directo"}, {"TRASDOSADO_AUT","Trasdosado Autoportante"} }
+    LOCAL aData := { {"TABIQUE","Tabique pladur"}, {"TECHO","Techo pladur"}, {"TRASDOSADO","Trasdosado"}, {"TRASDOSADO_DIR","Trasdosado Directo"}, {"TRASDOSADO_AUT","Trasdosado Autoportante"}, {"GENERICO","Material generico (m2)"} }
     LOCAL aCombo := {}
     LOCAL i
 

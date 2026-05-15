@@ -307,7 +307,61 @@ RETURN .F.
 
 
 // ============================================================================
-// FUNCIONES DE APOYO (sin cambios - migradas de Drywall original)
+// 4. ALTA GENERICA (material por m2: ladrillo, bloque, etc.)
+// ============================================================================
+FUNCTION Add_Generico( cTit )
+
+    LOCAL oWin, hData
+    LOCAL oGCon, oGLar, oGAlt
+    LOCAL oGMat, oGAis, oGAisCod
+    LOCAL lSave := .F.
+
+    hData := _InitData( "GENERICO", cTit )
+    hData["MODUL"] := 0.00
+
+    oWin := TWindow():New( 2, 5, 20, 95, "MATERIAL GENERICO (m2)" )
+
+    oWin:AddCtrl( TLabel():New(  2,  2, "Concepto..:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4,  2, "Largo (m).:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4, 30, "Alto (m)..:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6,  2, "Material..:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  8,  2, "Aislante..:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  8, 40, "Mat.Aislan:", oWin ) )
+
+    oGCon := TGet():New( 2, 16, hData["CONCEPTO"], "@!",     oWin )
+    oGLar := TGet():New( 4, 16, hData["LARGO"],    "999.99", oWin )
+    oGAlt := TGet():New( 4, 43, hData["ALTO"],     "999.99", oWin )
+
+    oGMat := TGet():New( 6, 16, hData["ID_PLACA_A"], "@!", oWin )
+    oGMat:bValid := {|| _ValPick( hData, "ID_PLACA_A", "GENERICO" ) }
+
+    oWin:AddCtrl( TButton():New( 16, 30, 17, 49, oWin, "GUARDAR", {|| lSave := .T., oWin:Close() } ) )
+    oWin:AddCtrl( TButton():New( 16, 52, 17, 71, oWin, "CANCELAR", {|| oWin:Close() } ) )
+
+    oWin:AddCtrl( oGCon )
+    oWin:AddCtrl( oGLar )
+    oWin:AddCtrl( oGAlt )
+    oWin:AddCtrl( oGMat )
+    oWin:AddCtrl( oBtGua )
+    oWin:AddCtrl( oBtCan )
+
+    oWin:Run()
+
+    IF lSave
+        hData["CONCEPTO"]  := oGCon:GetValue()
+        hData["LARGO"]     := oGLar:GetValue()
+        hData["ALTO"]      := oGAlt:GetValue()
+        hData["ID_PLACA_A"] := oGMat:GetValue()
+        hData["CARAS_REALES"] := 1
+        _CoreSave( hData )
+        RETURN .T.
+    ENDIF
+
+RETURN .F.
+
+
+// ============================================================================
+// FUNCIONES DE APOYO
 // ============================================================================
 STATIC FUNCTION _InitData( cTipo, cTit )
 
