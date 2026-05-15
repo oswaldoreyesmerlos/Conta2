@@ -1,99 +1,54 @@
 /*
-------------------------------------------------------------------------------
- PROYECTO    : Sistema de Gestión Integral
- ARCHIVO     : VAL_MOD.PRG
- DESCRIPCION : Valoración Económica (Edición de precios en el resumen).
-               Implementación OOP con estrategia Boy Scout y WVG.
-------------------------------------------------------------------------------
-*/
+ * ARCHIVO  : VAL_MOD.prg
+ * PROPOSITO: Valoracion Economica (Edicion de precios en el resumen).
+ * MIGRADO A: GfxStack API
+ */
 
-#include "inkey.ch"
+#include "OOp.ch"
 
-// ============================================================================
-// FUNCION: Valorar
-// Descripción: Permite editar los precios unitarios del resumen de materiales.
-// ============================================================================
 FUNCTION Valorar()
-    // --- REGLA DEL BOY SCOUT: VARIABLES DE ESTADO LOCAL ---
-    LOCAL nAreaAnt
-    LOCAL nOrdAnt
-    
-    // --- VARIABLES DE INTERFAZ ---
-    LOCAL oWin
-    LOCAL oGrd
-    LOCAL nTop
-    LOCAL nLft
-    LOCAL nBot
-    LOCAL nRgt
-    
-    // --- VARIABLES DE NEGOCIO ---
-    LOCAL nTot := 0
 
-    // 1. GUARDAMOS EL ESTADO ACTUAL (BOY SCOUT)
-    nAreaAnt := Select()
-    nOrdAnt := IndexOrd()
+    LOCAL nAreaAnt := Select()
+    LOCAL nOrdAnt  := IndexOrd()
+    LOCAL oWin, oGrid, aData
 
-    // 2. VALIDACIONES DE DATOS CON WVG
     IF !IsDbUsed( "TMP_RES" )
         MsgStop( "No existe el resumen de materiales. Debe calcular primero.", "Atencion" )
         RETURN NIL
     ENDIF
 
     dbSelectArea( "TMP_RES" )
-    
-    IF RecCount() == 0
+    IF LastRec() == 0
         MsgInfo( "El resumen esta vacio. No hay materiales que valorar.", "Aviso" )
         RETURN NIL
     ENDIF
 
-    // 3. CONFIGURACIÓN DE GEOMETRÍA (Una línea por instrucción)
-    nTop := 4
-    nLft := 4
-    nBot := MaxRow() - 4
-    nRgt := MaxCol() - 4
-    
-    // 4. CREACIÓN DE LA VENTANA PROFESIONAL (OOP)
-    oWin := TWindow():New( nTop, nLft, nBot, nRgt )
-    oWin:SetTitle( " VALORACION ECONOMICA (Edicion de Precios) " )
-    oWin:SetColor( "N/W" ) 
-    oWin:Open()
+    aData := _ValCargar()
 
-    // Indicaciones para el usuario
-    oWin:Say( 0, 2, " [ENTER]: Editar Precio | [ESC]: Salir y Totalizar ", "W+/W" )
+    oWin := TWindow():New( 4, 4, GfxMaxRow() - 4, GfxMaxCol() - 4, "VALORACION ECONOMICA" )
 
-    // 5. CONFIGURACIÓN DEL GRID DE VALORACIÓN
-    oGrd := TGrid():New( nTop + 2, nLft + 1, nBot - 2, nRgt - 1 )
-    oGrd:SetAlias( "TMP_RES" )
-    
-    // Definición de columnas (Regla de Oro)
-    oGrd:AddColumn( "CODIGO", 12, {|| TMP_RES->CODIGO }, "@!", "RES_PK" )
-    oGrd:AddColumn( "DESCRIPCION", 30, {|| TMP_RES->DESCRIP }, "@!", NIL )
-    oGrd:AddColumn( "CANTIDAD", 10, {|| TMP_RES->CANT_TOT }, "999,999.99", NIL )
-    oGrd:AddColumn( "UNIDAD", 6, {|| TMP_RES->UNIDAD }, "@!", NIL )
-    
-    // Columna de Precio (La que el usuario editará)
-    oGrd:AddColumn( "PRECIO", 10, {|| TMP_RES->PRECIO }, "@E 999.99", NIL )
-    oGrd:AddColumn( "IMPORTE", 12, {|| TMP_RES->IMP_TOT }, "@E 9,999,999.99", NIL )
+    oWin:AddCtrl( TLabel():New( 0, 2, "[ENTER] Editar Precio   [ESC] Salir", oWin ) )
 
-    // 6. ASIGNACIÓN DE EVENTOS
-    // Al pulsar ENTER, llamamos a la función de edición
-    oGrd:MapKey( K_ENTER, {|| _GestionarEdicion( oGrd ) } ) 
-    
-    // 7. EJECUCIÓN DEL MÓDULO
-    oWin:AddControl( oGrd )
+    oGrid := TGrid():New( 2, 1, GfxMaxRow() - 6, GfxMaxCol() - 6, oWin )
+    oGrid:aData    := aData
+    oGrid:nSeekCol := 2
+
+    oGrid:AddColumn( "CODIGO",      15, "@!",          { |a| a[1] } )
+    oGrid:AddColumn( "DESCRIPCION", 40, "@!",          { |a| a[2] } )
+    oGrid:AddColumn( "UNIDAD",      6,  "@!",          { |a| a[3] } )
+    oGrid:AddColumn( "CANTIDAD",    10, "999,999.999", { |a| a[4] } )
+    oGrid:AddColumn( "PRECIO",      10, "999,999.99",  { |a| a[5] } )
+    oGrid:AddColumn( "IMPORTE",     14, "999,999.99",  { |a| a[6] } )
+
+    oGrid:bEnter := {|| _ValEditarPrecio( oGrid, @aData ), oGrid:aData := aData, oGrid:Paint() }
+
+    oWin:AddCtrl( oGrid )
     oWin:Run()
-    
-    // 8. TOTALIZACIÓN FINAL
-    // Calculamos el importe total después de las ediciones
-    dbSelectArea( "TMP_RES" )
-    SUM Field->IMP_TOT TO nTot
-    
-    oWin:Close()
-    
-    // Notificación final con diálogo nativo
-    MsgInfo( "Total del Presupuesto Valorizado: " + Transform( nTot, "@E 9,999,999.99" ), "Valoracion" )
 
-    // 9. REGLA DEL BOY SCOUT: RESTAURACIÓN
+    _ValGuardar( aData )
+
+    MsgInfo( "Valoracion completada.", "Valoracion" )
+
     IF nAreaAnt > 0
         dbSelectArea( nAreaAnt )
         dbSetOrder( nOrdAnt )
@@ -101,94 +56,85 @@ FUNCTION Valorar()
 
 RETURN NIL
 
-// ============================================================================
-// FUNCION: _GestionarEdicion
-// Descripción: Lógica de edición en línea (Inline Edit) del precio.
-// ============================================================================
-STATIC FUNCTION _GestionarEdicion( oGrd )
-    LOCAL nNuevoVal
-    LOCAL nCant
 
-    // 1. BLOQUEO DE REGISTRO SEGURO
-    IF !NetRLock()
-        MsgStop( "El registro esta siendo usado por otro proceso.", "Bloqueo" )
+STATIC FUNCTION _ValCargar()
+
+    LOCAL aData := {}
+
+    dbSelectArea( "TMP_RES" )
+    dbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted()
+            AAdd( aData, { ;
+                AllTrim( FIELD->CODIGO ), ;
+                AllTrim( FIELD->DESCRIP ), ;
+                AllTrim( FIELD->UNIDAD ), ;
+                FIELD->CANT_TOT, ;
+                FIELD->PRECIO, ;
+                FIELD->IMP_TOT } )
+        ENDIF
+        dbSkip()
+    ENDDO
+
+RETURN aData
+
+
+STATIC FUNCTION _ValEditarPrecio( oGrid, aData )
+
+    LOCAL aRow := oGrid:CurrentRow()
+    LOCAL oWin, oGPre, oBtOk, oBtCan
+    LOCAL nNuevo := 0
+    LOCAL lOk := .F.
+
+    IF aRow == NIL
         RETURN NIL
     ENDIF
 
-    // 2. LLAMADA AL METODO DE EDICIÓN DEL GRID
-    // El método EditInline detiene el flujo, pone un GET y devuelve el valor
-    nNuevoVal := oGrd:EditInline()
+    nNuevo := aRow[5]
 
-    // 3. PERSISTENCIA DE DATOS
-    IF nNuevoVal != NIL
-        nCant := TMP_RES->CANT_TOT
-        
-        // Actualizamos precio e importe total de la línea
-        REPLACE Field->PRECIO  WITH nNuevoVal
-        REPLACE Field->IMP_TOT WITH ( nCant * nNuevoVal )
-        
-        // Refrescamos la línea en el grid para ver el nuevo importe calculado
-        oGrd:Refresh()
+    oWin := TWindow():New( 12, 30, 20, 90, "EDITAR PRECIO" )
+
+    oWin:AddCtrl( TLabel():New( 2, 3, "Articulo : " + aRow[1] + " - " + aRow[2], oWin ) )
+    oWin:AddCtrl( TLabel():New( 4, 3, "Precio actual: " + Transform( aRow[5], "999,999.99" ), oWin ) )
+    oWin:AddCtrl( TLabel():New( 6, 3, "Nuevo precio:", oWin ) )
+
+    oGPre := TGet():New( 6, 18, nNuevo, "999,999.99", oWin )
+
+    oBtOk := TButton():New( 8, 10, 9, 26, oWin, "ACEPTAR", {|| lOk := .T., nNuevo := oGPre:GetValue(), oWin:Close() } )
+    oBtCan := TButton():New( 8, 28, 9, 44, oWin, "CANCELAR", {|| oWin:Close() } )
+
+    oWin:AddCtrl( oGPre )
+    oWin:AddCtrl( oBtOk )
+    oWin:AddCtrl( oBtCan )
+
+    oWin:Run()
+
+    IF lOk
+        aRow[5] := nNuevo
+        aRow[6] := aRow[4] * nNuevo
     ENDIF
-
-    dbUnlock()
 
 RETURN NIL
 
 
-// ============================================================================
-// FUNCION: _ClientesSave
-// Descripción: Valida y persiste los datos del búfer en la tabla CLIENTES.
-//              Gestiona el alta (dbAppend) o modificación según lNew.
-// ============================================================================
-FUNCTION _ClientesSave( lNew, cCod, cNom, cCif, nDto, cDir, cCiu, cPro, cC_P, cTel, cEma )
-    LOCAL lOk := .F.
+STATIC FUNCTION _ValGuardar( aData )
 
-    // 1. VALIDACIÓN DE NEGOCIO (Diálogo WVG)
-    IF Empty( AllTrim( cNom ) )
-        MsgStop( "El Nombre o Razón Social es obligatorio para continuar.", "Validación" )
-        RETURN .F.
-    ENDIF
+    LOCAL i
 
-    // 2. CONFIRMACIÓN FINAL
-    IF !MsgYesNo( "¿Desea guardar los cambios en la ficha del cliente?", "Confirmar" )
-        RETURN .F.
-    ENDIF
+    dbSelectArea( "TMP_RES" )
+    dbGoTop()
 
-    // 3. OPERACIÓN DE ESCRITURA
-    IF lNew
-        // Si es un registro nuevo, creamos el hueco
-        dbAppend()
-        IF NetErr()
-            MsgStop( "Error al intentar crear un nuevo registro de cliente.", "Error de Red" )
-            RETURN .F.
+    FOR i := 1 TO Len( aData )
+        IF !Eof()
+            IF NetRLock()
+                REPLACE FIELD->PRECIO  WITH aData[i, 5]
+                REPLACE FIELD->IMP_TOT WITH aData[i, 6]
+                dbCommit()
+                dbUnlock()
+            ENDIF
+            dbSkip()
         ENDIF
-    ENDIF
+    NEXT
 
-    // Bloqueamos el registro (nuevo o existente) con nuestro estándar unificado
-    IF NetRLock()
-        
-        // Regla de Oro: Un REPLACE por línea para facilitar el debug
-        REPLACE Field->CODIGO    WITH cCod
-        REPLACE Field->NOMBRE    WITH cNom
-        REPLACE Field->CIF       WITH cCif
-        REPLACE Field->DTO       WITH nDto
-        REPLACE Field->DIRECCION WITH cDir
-        REPLACE Field->CIUDAD    WITH cCiu
-        REPLACE Field->PROVINCIA WITH cPro
-        REPLACE Field->CP        WITH cC_P
-        REPLACE Field->TELEFONO  WITH cTel
-        REPLACE Field->EMAIL     WITH cEma
-        
-        // Forzamos el volcado a disco y liberamos
-        dbCommit()
-        dbUnlock()
-        
-        MsgInfo( "Los datos del cliente se han guardado correctamente.", "Éxito" )
-        lOk := .T.
-    ELSE
-        // El mensaje de error ya lo lanza NetRLock() internamente
-        lOk := .F.
-    ENDIF
-
-RETURN lOk
+RETURN NIL
