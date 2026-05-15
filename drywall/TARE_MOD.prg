@@ -39,7 +39,7 @@ FUNCTION VerTareas( cTipo )
 
     aData := _TareCargar()
 
-    oWin := TWindow():New( 2, 2, 24, 98, "GESTION DEL PROYECTO - " + AllTrim( cNum ) )
+    oWin := TWindow():New( 2, 2, 27, 105, "GESTION DEL PROYECTO - " + AllTrim( cNum ) )
 
     oWin:AddCtrl( TLabel():New( 1,  2, "TITULO...:", oWin ) )
     oGTit := TGet():New( 1, 14, cTit, "@S40!", oWin )
@@ -47,17 +47,17 @@ FUNCTION VerTareas( cTipo )
     oWin:AddCtrl( TLabel():New( 1, 60, "NUM:", oWin ) )
     oWin:AddCtrl( TLabel():New( 1, 65, AllTrim( cNum ), oWin ) )
 
-    oWin:AddCtrl( TLabel():New( 2,  2, "CLIENTE..:", oWin ) )
-    oGCli := TGet():New( 2, 14, cCli, "@S15!", oWin )
+    oWin:AddCtrl( TLabel():New( 3,  2, "CLIENTE..:", oWin ) )
+    oGCli := TGet():New( 3, 14, cCli, "@S15!", oWin )
     oGCli:bValid := {| o | _ValidarCli( @cCli ) }
 
-    oWin:AddCtrl( TLabel():New( 2, 60, "FEC:", oWin ) )
-    oGFec := TGet():New( 2, 65, dFec, "99/99/9999", oWin )
+    oWin:AddCtrl( TLabel():New( 3, 60, "FEC:", oWin ) )
+    oGFec := TGet():New( 3, 65, dFec, "99/99/9999", oWin )
 
-    oWin:AddCtrl( TLabel():New( 3,  2, "NOTAS....:", oWin ) )
-    oGObs := TGet():New( 3, 14, cObs, "@S60!", oWin )
+    oWin:AddCtrl( TLabel():New( 5,  2, "NOTAS....:", oWin ) )
+    oGObs := TGet():New( 5, 14, cObs, "@S60!", oWin )
 
-    oGrid := TGrid():New( 5, 1, 17, 93, oWin )
+    oGrid := TGrid():New( 7, 1, 20, 100, oWin )
     oGrid:aData    := aData
     oGrid:nSeekCol := 2
     oGrid:AddColumn( "CODIGO",     10, "@!",     { |a| a[1] } )
@@ -70,16 +70,16 @@ FUNCTION VerTareas( cTipo )
 
     // Controles de cabecera primero (foco inicial)
     oWin:AddCtrl( oGTit )
-    oWin:AddCtrl( TButton():New( 1, 56, 1, 70, oWin, "BUSCAR CLI", {|| _BuscarCli( oGCli ) } ) )
     oWin:AddCtrl( oGCli )
+    oWin:AddCtrl( TButton():New( 3, 33, 3, 47, oWin, "BUSCAR CLI", {|| _BuscarCli( oGCli ) } ) )
     oWin:AddCtrl( oGFec )
     oWin:AddCtrl( oGObs )
     // Luego el grid y botones de accion
     oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TLabel():New( 19, 2, "[F5] Nuevo [ENTER] Editar [DEL] Borrar", oWin ) )
-    oWin:AddCtrl( TButton():New( 20,  2, 21, 18, oWin, "NUEVO (F5)", {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
-    oWin:AddCtrl( TButton():New( 20, 20, 21, 38, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
-    oWin:AddCtrl( TButton():New( 20, 78, 21, 94, oWin, "CERRAR", {|| oWin:Close() } ) )
+    oWin:AddCtrl( TLabel():New( 22, 2, "[F5] Nuevo [ENTER] Editar [DEL] Borrar", oWin ) )
+    oWin:AddCtrl( TButton():New( 23,  2, 24, 18, oWin, "NUEVO (F5)", {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( 23, 20, 24, 38, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( 23, 85, 24, 101, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()
 
