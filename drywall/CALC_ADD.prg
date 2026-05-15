@@ -17,100 +17,167 @@
 // ============================================================================
 FUNCTION Add_Tabique( cTit )
 
-    LOCAL oWin
-    LOCAL hData
+    LOCAL oWin, hData
     LOCAL oGCon, oGLar, oGAlt, oGMod
-    LOCAL oGPer1, oGPer2
-    LOCAL oGPla1, oGPla2, oGNumP
-    LOCAL oGAis, oGAisCod
-    LOCAL oChk, oGBand
-    LOCAL oBtGua, oBtCan
-    LOCAL lSave := .F.
-    LOCAL nRowBtn
+    LOCAL oGSis, oGPer1, oGPer2, oGPla1, oGPla2, oGNumP
+    LOCAL oChkSame, oChkAis, oChkBand
+    LOCAL oBtBusP1, oBtBusP2, oBtBusA, oBtBusB, oBtBusAis
+    LOCAL oBtGua, oBtCan, lSave := .F.
 
     hData := _InitData( "TABIQUE", cTit )
     hData["MODUL"]      := 0.60
     hData["NUM_PLACAS"] := 1
     hData["SAME_B"]     := "S"
+    hData["AIS"]        := "N"
+    hData["BANDA"]      := "N"
+    hData["SISTEMA"]    := "48"
 
-    oWin := TWindow():New( 2, 5, 25, 95, "NUEVO TABIQUE" )
+    oWin := TWindow():New( 2, 5, 27, 105, "NUEVO TABIQUE" )
 
-    oWin:AddCtrl( TLabel():New(  2,  2, "Concepto.....:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  4,  2, "Largo (m)....:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  4, 30, "Alto (m).....:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  6,  2, "Modulacion...:", oWin ) )
+    // -- FILA 1: Concepto --
+    oWin:AddCtrl( TLabel():New( 1,  2, "Concepto..:", oWin ) )
+    oGCon := TGet():New( 1, 16, hData["CONCEPTO"], "@!", oWin )
 
-    oWin:AddCtrl( TLabel():New(  8,  2, "Montante.....:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  8, 40, "Canal........:", oWin ) )
+    // -- FILA 2: Largo, Alto --
+    oWin:AddCtrl( TLabel():New( 3,  2, "Largo (m).:", oWin ) )
+    oGLar := TGet():New( 3, 16, hData["LARGO"],   "999.99", oWin )
+    oWin:AddCtrl( TLabel():New( 3, 32, "Alto (m)..:", oWin ) )
+    oGAlt := TGet():New( 3, 46, hData["ALTO"],    "999.99", oWin )
 
-    oWin:AddCtrl( TLabel():New( 11,  2, "Placa A......:", oWin ) )
-    oWin:AddCtrl( TLabel():New( 11, 40, "Capas p/cara.:", oWin ) )
+    // -- FILA 4: Modulacion, Sistema --
+    oWin:AddCtrl( TLabel():New( 5,  2, "Modulacion:", oWin ) )
+    oGMod := TGet():New( 5, 16, hData["MODUL"],  "9.99", oWin )
+    oWin:AddCtrl( TLabel():New( 5, 32, "Sistema mm:", oWin ) )
+    oGSis := TGet():New( 5, 46, hData["SISTEMA"], "99", oWin )
+    oGSis:bValid := {|o| Val(o:cBuffer) $ {48,70,90} .OR. (MsgStop("Sistema: 48, 70 o 90","Validacion"),.F.) }
 
-    oWin:AddCtrl( TLabel():New( 13,  2, "Igual Cara B?:", oWin ) )
-    oWin:AddCtrl( TLabel():New( 13, 40, "Placa B......:", oWin ) )
+    // -- FILA 6: Montante + buscar, Canal + buscar --
+    oWin:AddCtrl( TLabel():New( 7,  2, "Montante..:", oWin ) )
+    oGPer1 := TGet():New( 7, 16, hData["ID_PERFIL"], "@!", oWin )
+    oBtBusP1 := TButton():New( 7, 48, 7, 62, oWin, "BUSCAR", {|| _BtnPick(oGPer1,hData,"ID_PERFIL","PERFIL") } )
+    oWin:AddCtrl( TLabel():New( 8,  2, "Canal.....:", oWin ) )
+    oGPer2 := TGet():New( 8, 16, hData["ID_PERFIL2"], "@!", oWin )
+    oBtBusP2 := TButton():New( 8, 48, 8, 62, oWin, "BUSCAR", {|| _BtnPick(oGPer2,hData,"ID_PERFIL2","PERFIL") } )
 
-    oWin:AddCtrl( TLabel():New( 15,  2, "Lleva Aislan?:", oWin ) )
-    oWin:AddCtrl( TLabel():New( 15, 40, "Mat. Aislante:", oWin ) )
+    // -- FILA 10: Placa A + buscar, Capas --
+    oWin:AddCtrl( TLabel():New( 10, 2, "Placa A...:", oWin ) )
+    oGPla1 := TGet():New( 10,16, hData["ID_PLACA_A"], "@!", oWin )
+    oBtBusA := TButton():New( 10,48, 10,62, oWin, "BUSCAR", {|| _BtnPick(oGPla1,hData,"ID_PLACA_A","PLACA") } )
+    oWin:AddCtrl( TLabel():New( 10,66, "Capas:", oWin ) )
+    oGNumP := TGet():New( 10,74, hData["NUM_PLACAS"], "9", oWin )
+    oGNumP:bValid := {|o| o:uVar >=1 .AND. o:uVar <=5 .OR. (MsgStop("Maximo 5 capas","Validacion"),.F.) }
 
-    oWin:AddCtrl( TLabel():New( 17,  2, "Banda Acust..:", oWin ) )
+    // -- FILA 12: Igual Cara B (checkbox) --
+    oChkSame := TCheck():New( 12,16, "Igual Cara B", .T., oWin )
+    oChkSame:bChange := {|| _TabqToggleSame( oChkSame, oGPla2, oBtBusB, hData ) }
+    oWin:AddCtrl( oChkSame )
 
-    oGCon := TGet():New( 2, 18, hData["CONCEPTO"], "@!", oWin )
-    oGLar := TGet():New( 4, 18, hData["LARGO"],   "999.99", oWin )
-    oGAlt := TGet():New( 4, 43, hData["ALTO"],    "999.99", oWin )
-    oGMod := TGet():New( 6, 18, hData["MODUL"],   "9.99",   oWin )
+    // -- FILA 13: Placa B + buscar (deshabilitado si Same B) --
+    oWin:AddCtrl( TLabel():New( 13, 2, "Placa B...:", oWin ) )
+    oGPla2 := TGet():New( 13,16, hData["ID_PLACA_B"], "@!", oWin )
+    oGPla2:lEnabled := .F.
+    oBtBusB := TButton():New( 13,48, 13,62, oWin, "BUSCAR", {|| _BtnPick(oGPla2,hData,"ID_PLACA_B","PLACA") } )
+    oBtBusB:lEnabled := .F.
 
-    oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"],   "@!", oWin )
-    oGPer1:bValid := {|| _ValPick( hData, "ID_PERFIL", "PERFIL" ) }
+    // -- FILA 15: Lleva Aislan (checkbox) --
+    oChkAis := TCheck():New( 15,16, "Lleva Aislante", .F., oWin )
+    oChkAis:bChange := {|| _TabqToggleAis( oChkAis, oGAisCod, oBtBusAis, hData ) }
+    oWin:AddCtrl( oChkAis )
 
-    oGPer2 := TGet():New( 8, 56, hData["ID_PERFIL2"],   "@!", oWin )
-    oGPer2:bValid := {|| _ValPick( hData, "ID_PERFIL2", "PERFIL" ) }
+    // -- FILA 16: Mat Aislante + buscar (deshabilitado si no Ais) --
+    oWin:AddCtrl( TLabel():New( 16, 2, "Aislante..:", oWin ) )
+    oGAisCod := TGet():New( 16,16, hData["ID_AISLAN"], "@!", oWin )
+    oGAisCod:lEnabled := .F.
+    oBtBusAis := TButton():New( 16,48, 16,62, oWin, "BUSCAR", {|| _BtnPick(oGAisCod,hData,"ID_AISLAN","AISLAN") } )
+    oBtBusAis:lEnabled := .F.
 
-    oGPla1 := TGet():New( 11, 18, hData["ID_PLACA_A"],   "@!", oWin )
-    oGPla1:bValid := {|| _ValPick( hData, "ID_PLACA_A", "PLACA" ) }
+    // -- FILA 18: Banda Acustica (checkbox) --
+    oChkBand := TCheck():New( 18,16, "Banda Acustica", .F., oWin )
+    oChkBand:bChange := {|| hData["BANDA"] := If( oChkBand:GetValue(), "S", "N" ) }
+    oWin:AddCtrl( oChkBand )
 
-    oGNumP := TGet():New( 11, 56, hData["NUM_PLACAS"], "9", oWin )
+    // -- Botones --
+    oBtGua := TButton():New( 23,30, 24,49, oWin, "GUARDAR", {|| lSave := .T., oWin:Close() } )
+    oBtCan := TButton():New( 23,52, 24,71, oWin, "CANCELAR", {|| oWin:Close() } )
 
-    oChk := TCheck():New( 17, 18, "Banda Acustica", hData["BANDA"] == "S", oWin )
-    oChk:bChange := {|| hData["BANDA"] := If( hData["BANDA"] == "S", "N", "S" ) }
-    oWin:AddCtrl( oChk )
-
-    // FIXME: Falta logica SAME_B e ID_AISLANT interactivos
-    // Por ahora valores por defecto
-
-    nRowBtn := 23
-
-    oBtGua := TButton():New( nRowBtn, 30, nRowBtn+1, 49, oWin, "GUARDAR", {|| lSave := .T., oWin:Close() } )
-    oBtCan := TButton():New( nRowBtn, 52, nRowBtn+1, 71, oWin, "CANCELAR", {|| oWin:Close() } )
-
-    oWin:AddCtrl( oGCon  )
-    oWin:AddCtrl( oGLar  )
-    oWin:AddCtrl( oGAlt  )
-    oWin:AddCtrl( oGMod  )
+    // -- AddCtrl ordenado para foco correcto --
+    oWin:AddCtrl( oGCon )
+    oWin:AddCtrl( oGLar )
+    oWin:AddCtrl( oGAlt )
+    oWin:AddCtrl( oGMod )
+    oWin:AddCtrl( oGSis )
     oWin:AddCtrl( oGPer1 )
+    oWin:AddCtrl( oBtBusP1 )
     oWin:AddCtrl( oGPer2 )
+    oWin:AddCtrl( oBtBusP2 )
     oWin:AddCtrl( oGPla1 )
+    oWin:AddCtrl( oBtBusA )
     oWin:AddCtrl( oGNumP )
+    oWin:AddCtrl( oGPla2 )
+    oWin:AddCtrl( oBtBusB )
+    oWin:AddCtrl( oGAisCod )
+    oWin:AddCtrl( oBtBusAis )
     oWin:AddCtrl( oBtGua )
     oWin:AddCtrl( oBtCan )
 
     oWin:Run()
 
     IF lSave
-        hData["CONCEPTO"] := oGCon:GetValue()
-        hData["LARGO"]    := oGLar:GetValue()
-        hData["ALTO"]     := oGAlt:GetValue()
-        hData["MODUL"]    := oGMod:GetValue()
+        hData["CONCEPTO"]    := oGCon:GetValue()
+        hData["LARGO"]       := oGLar:GetValue()
+        hData["ALTO"]        := oGAlt:GetValue()
+        hData["MODUL"]       := oGMod:GetValue()
+        hData["SISTEMA"]     := AllTrim(oGSis:GetValue())
         hData["ID_PERFIL"]   := oGPer1:GetValue()
         hData["ID_PERFIL2"]  := oGPer2:GetValue()
         hData["ID_PLACA_A"]  := oGPla1:GetValue()
         hData["NUM_PLACAS"]  := oGNumP:GetValue()
+        IF oChkSame:GetValue()
+            hData["ID_PLACA_B"] := hData["ID_PLACA_A"]
+        ELSE
+            hData["ID_PLACA_B"] := oGPla2:GetValue()
+        ENDIF
         hData["CARAS_REALES"] := 2
-
         _CoreSave( hData )
         RETURN .T.
     ENDIF
 
 RETURN .F.
+
+
+STATIC FUNCTION _TabqToggleSame( oChk, oGPlB, oBtnB, hData )
+    LOCAL lSame := oChk:GetValue()
+    oGPlB:lEnabled := !lSame
+    oBtnB:lEnabled := !lSame
+    IF lSame
+        oGPlB:SetValue( Space(15) )
+    ENDIF
+    hData["SAME_B"] := If( lSame, "S", "N" )
+RETURN NIL
+
+
+STATIC FUNCTION _TabqToggleAis( oChk, oGAisCod, oBtnAis, hData )
+    LOCAL lAis := oChk:GetValue()
+    oGAisCod:lEnabled := lAis
+    oBtnAis:lEnabled := lAis
+    IF !lAis
+        oGAisCod:SetValue( Space(15) )
+    ENDIF
+    hData["AIS"] := If( lAis, "S", "N" )
+RETURN NIL
+
+
+STATIC FUNCTION _BtnPick( oGet, hData, cKey, cFam )
+    LOCAL cCod := AllTrim( oGet:GetValue() )
+    LOCAL cRet
+    IF Empty( cCod )
+        cRet := _PickArt( cFam )
+        IF !Empty( cRet )
+            hData[ cKey ] := cRet
+            oGet:SetValue( PadR( cRet, 15 ) )
+        ENDIF
+    ENDIF
+RETURN NIL
 
 
 // ============================================================================
