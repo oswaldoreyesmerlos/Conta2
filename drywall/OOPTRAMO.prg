@@ -298,32 +298,26 @@ METHOD AddMat( cFam, cCod, nCant, cDet ) CLASS OOPTRAMO
    
    nAreaArt := Select()
    
-   IF Select( "ARTICULO" ) > 0
-      dbSelectArea( "ARTICULO" )
-      dbSetOrder( 1 )
-      
-      IF dbSeek( Upper( AllTrim( cCod ) ) )
-         // --- EXITO ---
-         nPrecio := ARTICULO->PRECIO
-         nPesoU  := ARTICULO->PESO_UNI
-         cDesc   := ARTICULO->DESCRIP
-         cUni    := ARTICULO->UNIDAD
-         cFam    := ARTICULO->FAMILIA 
-      ELSE
-         // --- ERROR: ARTICULO NO ENCONTRADO ---
-         ::nErrores++
-         
-         cDesc   := "ERROR: ART. NO EXISTE"
-         cMsgErr := "Lin " + AllTrim(Str(TMP_TRA->ID_LINEA)) + ": Articulo [" + cCod + "] no existe."
-         
-         AAdd( ::aLog, cMsgErr )
-         
-      ENDIF
-   ELSE
-       // Error grave: Tabla no abierta
-       Alert("Error Critico: Tabla ARTICULO no abierta")
-       RETURN NIL
-   ENDIF
+    IF Select( "ARTICULOS" ) > 0
+       dbSelectArea( "ARTICULOS" )
+       dbSetOrder( 1 )
+       
+       IF dbSeek( Upper( AllTrim( cCod ) ) )
+          nPrecio := ARTICULOS->PRECIO
+          nPesoU  := ARTICULOS->PESO_UNI
+          cDesc   := ARTICULOS->DESCRIP
+          cUni    := ARTICULOS->UNIDAD
+          cFam    := ARTICULOS->FAMILIA 
+       ELSE
+          ::nErrores++
+          cDesc   := "ERROR: ART. NO EXISTE"
+          cMsgErr := "Lin " + AllTrim(Str(TMP_TRA->ID_LINEA)) + ": Articulo [" + cCod + "] no existe."
+          AAdd( ::aLog, cMsgErr )
+       ENDIF
+    ELSE
+        Alert("Error Critico: Tabla ARTICULOS no abierta")
+        RETURN NIL
+    ENDIF
    
    dbSelectArea( "TMP_MAT" )
    APPEND BLANK

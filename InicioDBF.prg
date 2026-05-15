@@ -156,20 +156,25 @@ FUNCTION InicioDBF()
     AAdd( aIndices, { "PRV_CIU", "Upper(CIUDAD)" } )
     AAdd( aTablas, { "PROVEED", aCampos, aIndices } )
 
-    // -- 04. ARTICULOS --
+    // -- 04. ARTICULOS (unificado con campos Drywall) --
     aCampos  := {}
     aIndices := {}
     AAdd( aCampos, { "CODIGO",   "C", 10, 0 } )
     AAdd( aCampos, { "DESCRIP",  "C", 60, 0 } )
-    AAdd( aCampos, { "FAMILIA",  "C",  3, 0 } )
+    AAdd( aCampos, { "FAMILIA",  "C", 10, 0 } )
+    AAdd( aCampos, { "TIPO",     "C", 10, 0 } )
     AAdd( aCampos, { "PROVEEDO", "C", 10, 0 } )
     AAdd( aCampos, { "COD_BARR", "C", 15, 0 } )
     AAdd( aCampos, { "QR_DATA",  "C", 80, 0 } )
     AAdd( aCampos, { "STOCK",    "N", 12, 4 } )
     AAdd( aCampos, { "STO_MIN",  "N", 10, 4 } )
     AAdd( aCampos, { "STO_MAX",  "N", 10, 4 } )
-    AAdd( aCampos, { "UNIDAD",   "C",  3, 0 } )
+    AAdd( aCampos, { "UNIDAD",   "C",  5, 0 } )
     AAdd( aCampos, { "ES_SERV",  "L",  1, 0 } )
+    AAdd( aCampos, { "ESPESOR",  "N",  6, 2 } )
+    AAdd( aCampos, { "LARGO",    "N",  6, 2 } )
+    AAdd( aCampos, { "ANCHO",    "N",  6, 2 } )
+    AAdd( aCampos, { "PESO_UNI", "N", 10, 3 } )
     AAdd( aCampos, { "CTA_VTA",  "C", 10, 0 } )
     AAdd( aCampos, { "CTA_COM",  "C", 10, 0 } )
     AAdd( aCampos, { "COSTO_PR", "N", 12, 4 } )

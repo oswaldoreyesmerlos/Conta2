@@ -371,8 +371,8 @@ STATIC FUNCTION _InitData( cTipo, cTit )
         USE TMP_TRA NEW SHARED VIA "DBFCDX"
     ENDIF
 
-    IF Select("ARTICULO") == 0
-        USE ARTICULO NEW SHARED VIA "DBFCDX"
+    IF Select("ARTICULOS") == 0
+        USE ARTICULOS NEW SHARED VIA "DBFCDX"
     ENDIF
 
     hData["TIPO"]       := cTipo

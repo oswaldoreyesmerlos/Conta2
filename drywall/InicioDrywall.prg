@@ -34,28 +34,6 @@ FUNCTION InicioDrywall()
     ENDIF
 
     // =========================================================
-        // 1. ARTICULO
-        // =========================================================
-        aFlds := {}
-        AAdd( aFlds, { "CODIGO",   "C", 15, 0 } )
-        AAdd( aFlds, { "DESCRIP",  "C", 60, 0 } )
-        AAdd( aFlds, { "FAMILIA",  "C", 10, 0 } )
-        AAdd( aFlds, { "TIPO",     "C", 10, 0 } )
-        AAdd( aFlds, { "UNIDAD",   "C",  5, 0 } )
-        AAdd( aFlds, { "ESPESOR",  "N",  6, 2 } )
-        AAdd( aFlds, { "LARGO",    "N",  6, 2 } )
-        AAdd( aFlds, { "ANCHO",    "N",  6, 2 } )
-        AAdd( aFlds, { "PESO_UNI", "N", 10, 3 } )
-        AAdd( aFlds, { "PRECIO",   "N", 10, 2 } )
-
-        aInds := {}
-        AAdd( aInds, { "ART_ID",  "CODIGO" } )
-        AAdd( aInds, { "ART_DES", "Upper(DESCRIP)" } )
-        AAdd( aInds, { "ART_FAM", "FAMILIA + DESCRIP" } )
-
-        AAdd( aAllDefs, { "ARTICULO", aFlds, aInds} )
-
-    // =========================================================
         // 4. TMP_CAB
         // =========================================================
         aFlds := {}

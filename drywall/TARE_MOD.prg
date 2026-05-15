@@ -196,7 +196,7 @@ RETURN PopupSelect( "SELECCIONAR TIPO", aCombo, { { "Tipo", 20, "@!", 2 } }, 1 )
 STATIC FUNCTION _AbrirTablas()
 
     LOCAL lOk := .T.
-    LOCAL aTabs := { "TMP_TRA", "TMP_MAT", "TMP_RES", "TMP_CAB", "ARTICULO", "TABLAS_AUX" }
+    LOCAL aTabs := { "TMP_TRA", "TMP_MAT", "TMP_RES", "TMP_CAB", "TABLAS_AUX" }
     LOCAL i
 
     FOR i := 1 TO Len( aTabs )
