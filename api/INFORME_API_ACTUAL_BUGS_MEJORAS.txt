@@ -1,0 +1,914 @@
+INFORME DE REVISION - API GFXSTACK ACTUAL
+=========================================
+
+Fecha de revision: 14/05/2026
+Contexto: revision de la API actual subida en esta sesion.
+
+Actualizacion 15/05/2026:
+
+- Corregido el click de raton sobre TButton para no ejecutar acciones si falla
+  la validacion del control con foco.
+- Agregado TButton:lSkipValid para botones especiales como Cancelar, Cerrar o
+  Salir.
+- Corregido TGet con picture @Sxx para respetar el ancho visible aunque el
+  valor inicial sea vacio o corto.
+- Corregido TGet:SetValue() para ampliar nBufLen cuando recibe una cadena mas
+  larga.
+
+Archivos considerados como version actual:
+
+- OOp.ch
+- Gfx.prg
+- TControl.prg
+- TWindow.prg
+- TGet.prg
+- TButton.prg
+- TCheck.prg
+- TCombo.prg
+- TGrid.prg
+- TLabel.prg
+- TMenu.prg
+- TTable.prg
+- MsgBox.prg
+- MsgYesNo.prg
+- GfxManual.md
+
+NOTA IMPORTANTE
+---------------
+
+En esta revision NO se consideran versiones anteriores de la API ni el antiguo
+TForm. El analisis se basa en la API actual subida ahora.
+
+Confirmacion importante:
+
+- TControl declara GetValue() y SetValue().
+- TGet implementa GetValue() y SetValue().
+- TCheck implementa GetValue() y SetValue().
+- TCombo implementa GetValue() y SetValue().
+
+Por tanto, la API uniforme de valores ya esta iniciada correctamente.
+
+
+RESUMEN EJECUTIVO
+-----------------
+
+La API esta bastante bien estructurada. La separacion entre Gfx.prg y los
+controles es correcta, TWindow ya gestiona foco con validacion, y TGet/TCheck/
+TCombo tienen una base comun de lectura/escritura de valores.
+
+Los puntos mas importantes detectados fueron:
+
+1. El click de raton sobre botones puede ejecutar la accion aunque falle la
+   validacion del control actual. CORREGIDO 15/05/2026.
+2. TGet no calcula correctamente el ancho visible cuando se usa picture @Sxx
+   con cadenas vacias o cortas. CORREGIDO 15/05/2026.
+3. TGet:SetValue() no aumenta nBufLen si se asigna una cadena mas larga.
+   CORREGIDO 15/05/2026.
+4. TGrid no tiene todavia gestion de raton para seleccionar fila.
+5. TGrid documenta bDelete en el manual, pero la clase actual no lo implementa.
+6. TCombo:Open() puede calcular coordenadas negativas si se despliega arriba
+   cerca del borde superior.
+7. TMenuPop usa GfxSave/GfxRestore con relieves WVG, pero no invalida la zona
+   al cerrar; puede dejar restos graficos.
+8. TTable no reutiliza alias ya abiertos y puede chocar con el criterio general
+   de apertura segura de tablas.
+
+
+PRIORIDAD 1 - BUGS A CORREGIR PRIMERO
+=====================================
+
+
+1. BUG: click de raton ejecuta TButton aunque SetFocus() falle [CORREGIDO]
+-------------------------------------------------------------
+
+Archivo:
+
+    TWindow.prg
+
+Zona:
+
+    STATIC FUNCTION _WinMouseClick( oWin, nRow, nCol )
+
+Problema:
+
+Cuando se pincha un boton, el codigo intenta dar foco al control clickeado:
+
+    IF oCtrl:lEnabled .AND. oCtrl:lTabStop
+        oWin:SetFocus( nFocus )
+    ENDIF
+
+pero despues ejecuta el boton igualmente:
+
+    IF Upper( oCtrl:ClassName() ) == "TBUTTON"
+        oCtrl:Click()
+    ENDIF
+
+Si el foco actual esta en un TGet con bValid que falla, oWin:SetFocus() devuelve
+NIL, pero el boton se ejecuta de todas formas.
+
+Efecto posible:
+
+- Guardar formularios con datos invalidos.
+- Ejecutar CANCELAR, GUARDAR, IMPRIMIR o BORRAR aunque el campo actual no haya
+  validado.
+- Estados inconsistentes en formularios.
+
+Correccion recomendada:
+
+    IF oCtrl:lVisible .AND. oCtrl:IsHit( nRow, nCol )
+
+        IF ! oCtrl:lEnabled
+            RETURN NIL
+        ENDIF
+
+        IF oCtrl:lTabStop
+            IF oWin:SetFocus( nFocus ) == NIL
+                RETURN NIL
+            ENDIF
+        ELSE
+            IF oWin:oFocus != NIL
+                IF oWin:oFocus:KillFocus() == NIL
+                    RETURN NIL
+                ENDIF
+            ENDIF
+        ENDIF
+
+        IF Upper( oCtrl:ClassName() ) == "TBUTTON"
+            oCtrl:Click()
+        ENDIF
+
+        RETURN NIL
+
+    ENDIF
+
+Decision UX pendiente:
+
+- Opcion A: un solo click valida y ejecuta si todo esta bien.
+- Opcion B: primer click solo cambia foco; segundo click ejecuta.
+
+Para una aplicacion de gestion, la opcion A es mas rapida, pero debe cancelar la
+accion si la validacion falla.
+
+
+2. BUG: TGet con picture @Sxx no respeta ancho visible si el texto inicial es corto [CORREGIDO]
+----------------------------------------------------------------------------------
+
+Archivo:
+
+    TGet.prg
+
+Zona:
+
+    METHOD New()
+
+Problema:
+
+Actualmente, para cadenas se calcula:
+
+    ::nLen := Max( Len( uValue ), 10 )
+    IF nScroll > 0
+        ::nLen := Min( nScroll, ::nLen )
+    ENDIF
+
+Ejemplo:
+
+    TGet():New( 10, 14, "", "@S50", oWin )
+
+Resultado actual probable:
+
+    nLen = 10
+
+Resultado esperado:
+
+    nLen = 50
+
+Porque @S50 indica ancho visible de 50 caracteres.
+
+Efecto posible:
+
+- Campos largos definidos como @S50 se ven de 10 columnas si el valor inicial
+  esta vacio.
+- Formularios quedan visualmente mal alineados.
+- El usuario no puede editar comodamente textos largos.
+
+Correccion recomendada:
+
+    CASE ::cType == "C"
+        IF nScroll > 0
+            ::nLen := nScroll
+        ELSE
+            ::nLen := Max( Len( uValue ), 10 )
+        ENDIF
+
+Y para buffer:
+
+    IF ::cType == "C"
+        ::nBufLen := Max( Len( uValue ), ::nLen )
+    ELSE
+        ::nBufLen := ::nLen
+    ENDIF
+
+
+3. BUG/RIESGO: TGet:SetValue() no aumenta nBufLen para cadenas largas [CORREGIDO]
+---------------------------------------------------------------------
+
+Archivo:
+
+    TGet.prg
+
+Zona:
+
+    METHOD SetValue( uValue )
+
+Problema:
+
+Si se crea un TGet con buffer corto y despues se llama:
+
+    oGet:SetValue( cTextoLargo )
+
+el metodo no recalcula nBufLen. Usa el buffer anterior:
+
+    ::cBuffer := PadR( hb_CStr( uValue ), ::nBufLen )
+
+Efecto posible:
+
+- Texto truncado.
+- El campo no permite navegar por todo el nuevo valor.
+- Datos cargados por SetValue() pueden perderse visualmente.
+
+Correccion recomendada:
+
+    CASE ::cType == "C"
+        ::nBufLen := Max( ::nBufLen, Len( hb_CStr( uValue ) ), ::nLen )
+        ::cBuffer := PadR( hb_CStr( uValue ), ::nBufLen )
+        ::nPos    := Min( ::nPos, ::nBufLen )
+
+Tambien conviene validar que nOffset quede dentro de rango despues del cambio.
+
+
+4. BUG/RIESGO: TCombo:Open() puede generar coordenadas negativas arriba
+-----------------------------------------------------------------------
+
+Archivo:
+
+    TCombo.prg
+
+Zona:
+
+    METHOD Open()
+
+Problema:
+
+Si la lista no cabe debajo, se intenta abrir arriba:
+
+    nB := ::nTop - 1
+    nT := nB - nVisible + 1
+
+Si el combo esta cerca de la parte superior y nVisible es grande, nT puede ser
+negativo.
+
+Efecto posible:
+
+- GfxClear/GfxRecessed con coordenadas negativas.
+- Error de runtime o pintado roto.
+
+Correccion recomendada:
+
+    IF nB >= GfxMaxRow() - 1
+        nB := ::nTop - 1
+        nT := Max( 0, nB - nVisible + 1 )
+        nVisible := nB - nT + 1
+    ENDIF
+
+Y despues validar:
+
+    IF nVisible <= 0
+        RETURN Self
+    ENDIF
+
+
+5. BUG/RIESGO: TMenuPop puede dejar restos graficos WVG al cerrar
+-----------------------------------------------------------------
+
+Archivo:
+
+    TMenu.prg
+
+Zona:
+
+    METHOD Close() CLASS TMenuPop
+
+Problema:
+
+TMenuPop pinta con:
+
+    GfxRaised()
+
+pero al cerrar solo hace:
+
+    GfxRestore()
+
+En la propia API ya se ha detectado que Save/Restore no siempre limpia relieves
+WVG. TCombo:Open() ya usa GfxInvalidate() y repintado del padre por este motivo.
+
+Efecto posible:
+
+- Restos de bordes o sombras de popups.
+- Artefactos visuales al navegar menus.
+
+Correccion recomendada:
+
+Despues de GfxRestore(), invalidar la zona ampliada:
+
+    GfxInvalidate( ;
+        Max( 0,           ::nTop    - PADWIN ), ;
+        Max( 0,           ::nLeft   - PADWIN ), ;
+        Min( GfxMaxRow(), ::nBottom + PADWIN ), ;
+        Min( GfxMaxCol(), ::nRight  + PADWIN ) )
+
+Y luego repintar el stack de popups activo:
+
+    _RedrawStack()
+
+Hay que probar el orden exacto para no repintar un popup ya cerrado.
+
+
+PRIORIDAD 2 - INCONSISTENCIAS DE API / DOCUMENTACION
+====================================================
+
+
+6. TGrid: el manual menciona bDelete, pero la clase actual no lo tiene
+----------------------------------------------------------------------
+
+Archivo:
+
+    TGrid.prg
+    GfxManual.md
+
+Problema:
+
+El manual documenta:
+
+    oGrid:bDelete := { |g| EliminarLinea( g:nCurRow ) }
+
+pero TGrid.prg actual no declara DATA bDelete ni procesa K_DEL para borrar.
+
+Efecto posible:
+
+- Codigo de formularios que intente usar bDelete no funcionara.
+- La API documentada y la API real no coinciden.
+
+Opciones:
+
+A) Implementar bDelete:
+
+    DATA bDelete
+
+    CASE nKey == K_DEL
+        IF ::bDelete != NIL .AND. ::nCurRow >= 1 .AND. ::nCurRow <= Len( ::aData )
+            EvalSafe( ::bDelete, "TGrid:bDelete", Self )
+            ::Paint()
+        ENDIF
+
+B) Quitar bDelete del manual hasta que exista.
+
+Recomendacion:
+
+Implementarlo. Para formularios de lineas de presupuesto/factura/certificacion
+es muy natural poder borrar desde el grid.
+
+
+7. TGrid no tiene gestion propia de raton para seleccionar fila
+--------------------------------------------------------------
+
+Archivo:
+
+    TGrid.prg
+    TWindow.prg
+
+Situacion actual:
+
+TWindow detecta el control clickeado y le da foco. Pero si se pincha dentro de
+un TGrid, no se calcula la fila clickeada.
+
+Efecto:
+
+- El grid recibe foco, pero la fila seleccionada puede no coincidir con la fila
+  bajo el raton.
+- Un boton EDITAR posterior puede actuar sobre otra fila.
+
+Mejora recomendada:
+
+Agregar en TGrid:
+
+    METHOD MouseClick( nRow, nCol )
+
+Logica sugerida:
+
+    IF nRow >= ::nTop + 2 .AND. nRow <= ::nBottom - 1
+        nNew := ::nTopRow + ( nRow - ( ::nTop + 2 ) )
+        IF nNew >= 1 .AND. nNew <= Len( ::aData )
+            ::nCurRow := nNew
+            ::Paint()
+            IF ::bChange != NIL
+                EvalSafe( ::bChange, "TGrid:bChange", Self )
+            ENDIF
+        ENDIF
+    ENDIF
+
+Y en TWindow:_WinMouseClick(), despues de SetFocus correcto:
+
+    IF __objHasMethod( oCtrl, "MOUSECLICK" )
+        oCtrl:MouseClick( nRow, nCol )
+    ENDIF
+
+Si no se quiere usar __objHasMethod, se puede despachar por ClassName.
+
+
+8. TGrid no distingue click simple de doble click
+------------------------------------------------
+
+Archivos:
+
+    TGrid.prg
+    TWindow.prg
+
+Mejora futura:
+
+- Click simple: selecciona fila.
+- Doble click o ENTER: ejecuta bEnter.
+
+Esto daria un comportamiento mas profesional y parecido a interfaces clasicas.
+No es urgente, pero encaja muy bien con el soporte de raton que estas agregando.
+
+
+9. TControl:Enable() / Disable() no repintan
+--------------------------------------------
+
+Archivo:
+
+    TControl.prg
+
+Situacion actual:
+
+    METHOD Enable()
+        ::lEnabled := .T.
+    RETURN Self
+
+    METHOD Disable()
+        ::lEnabled := .F.
+    RETURN Self
+
+Efecto:
+
+- El control queda activado/desactivado internamente, pero no hay feedback
+  visual inmediato.
+- Puede quedar un control deshabilitado con apariencia normal.
+
+Mejora recomendada:
+
+    METHOD Enable() CLASS TControl
+        ::lEnabled := .T.
+        IF ::lVisible
+            ::Paint()
+        ENDIF
+    RETURN Self
+
+    METHOD Disable() CLASS TControl
+        ::lEnabled := .F.
+        ::lFocused := .F.
+        IF ::lVisible
+            ::Paint()
+        ENDIF
+    RETURN Self
+
+Tambien se deberia definir un color de deshabilitado en OOp.ch, por ejemplo:
+
+    #define CLR_DISABLED "N/W*"
+
+
+10. TLabel:SetText() puede dejar restos si el texto nuevo es mas corto
+----------------------------------------------------------------------
+
+Archivo:
+
+    TLabel.prg
+
+Problema:
+
+SetText cambia cCaption, ajusta nRight y pinta. Si el texto anterior era mas
+largo que el nuevo, la zona sobrante puede quedar visible si no se limpia antes.
+
+Ejemplo:
+
+    "Cliente muy largo"
+    "OK"
+
+Puede quedar:
+
+    "OKiente muy largo"
+
+Dependera de si el llamador pasa PadR() manualmente. En muchos lugares ya lo
+haces, pero el control deberia ser robusto por si solo.
+
+Correccion recomendada:
+
+Guardar ancho anterior y limpiar antes de ajustar:
+
+    LOCAL nOldRight := ::nRight
+
+    GfxClear( ::nTop, ::nLeft, ::nBottom, nOldRight, ::cColor )
+    ::cCaption := cNew
+    ::nRight := ::nLeft + Max( Len( cNew ), 1 ) - 1
+    ::Paint()
+
+
+PRIORIDAD 3 - ROBUSTEZ GENERAL
+==============================
+
+
+11. TWindow:Run() no tiene bloque de recuperacion para restaurar pantalla si hay error
+------------------------------------------------------------------------------------
+
+Archivo:
+
+    TWindow.prg
+
+Situacion actual:
+
+TWindow hace Push, Save, Paint y entra en bucle. Si ocurre un error no atrapado
+dentro del loop, puede no ejecutarse Restore/Pop y la pantalla puede quedar
+rota.
+
+Muchas acciones ya usan EvalSafe, lo cual ayuda mucho. Pero errores de pintado,
+metodos de controles o codigo no protegido pueden escaparse.
+
+Mejora futura:
+
+Encapsular el cuerpo de Run() en BEGIN SEQUENCE y asegurar limpieza en RECOVER.
+En Harbour no hay finally como tal, pero se puede reestructurar para que el
+bloque de cierre se ejecute desde un helper privado.
+
+Ejemplo conceptual:
+
+    BEGIN SEQUENCE
+        // push/save/paint/loop
+    RECOVER USING oErr
+        // guardar error
+    END SEQUENCE
+
+    // limpieza comun: foco, restore, pop, current window, cursor
+
+No es urgente si EvalSafe cubre la mayor parte, pero para una libreria open
+source seria es recomendable.
+
+
+12. TTable no reutiliza alias ya abiertos
+-----------------------------------------
+
+Archivo:
+
+    TTable.prg
+
+Problema:
+
+Open() llama directamente a:
+
+    dbUseArea( .T., "DBFCDX", ::cFile, ::cAlias, .T., .F. )
+
+Si ese alias ya esta abierto por otro modulo o por otra instancia, puede haber
+conflicto.
+
+Esto choca con el criterio general del proyecto:
+
+- Si una tabla ya esta abierta, seleccionarla y reutilizarla.
+- No abrir dos veces con el mismo alias.
+
+Mejora recomendada:
+
+Al inicio de Open():
+
+    IF Select( ::cAlias ) > 0
+        dbSelectArea( ::cAlias )
+        ::lOpen := .T.
+        RETURN .T.
+    ENDIF
+
+Ademas seria ideal guardar si TTable es propietario del area:
+
+    DATA lOwner
+
+Para que Close() solo cierre si la clase abrio realmente la tabla.
+
+
+13. TTable crea CDX en modo compartido
+--------------------------------------
+
+Archivo:
+
+    TTable.prg
+
+Problema:
+
+Si el CDX no existe, TTable intenta crearlo despues de abrir la tabla en modo
+compartido:
+
+    dbUseArea( .T., "DBFCDX", ::cFile, ::cAlias, .T., .F. )
+    OrdCreate(...)
+
+Crear indices suele ser una operacion delicada y deberia hacerse con control
+exclusivo o durante inicializacion/mantenimiento, no en apertura normal de uso.
+
+Mejora recomendada:
+
+- No crear CDX automaticamente en TTable: dejarlo para InicioDBF.prg.
+- O crear solo si se puede abrir en exclusivo.
+- O lanzar aviso claro y cancelar.
+
+Para APPGESTION, InicioDBF.prg ya es el lugar correcto para crear/recrear
+indices.
+
+
+14. TTable:FieldPut() no bloquea registro
+-----------------------------------------
+
+Archivo:
+
+    TTable.prg
+
+Problema:
+
+FieldPut() escribe directamente:
+
+    FieldPut( nPos, uValue )
+
+sin NetRLock(), commit ni control de error.
+
+Mejora recomendada:
+
+Para evitar mal uso, una de dos:
+
+A) Documentar TTable como lectura/navegacion y no usar FieldPut() todavia.
+B) Implementar Write seguro con bloqueo:
+
+    METHOD FieldPutSafe( cName, uValue )
+
+que haga lock, FieldPut, DbCommit y unlock.
+
+
+15. MsgBox y MsgYesNo no gestionan texto multilinea real
+--------------------------------------------------------
+
+Archivos:
+
+    MsgBox.prg
+    MsgYesNo.prg
+
+Situacion actual:
+
+Calculan ancho por Len( cMsg ) y crean una sola TLabel. Si cMsg contiene
+Chr(13)+Chr(10), se trata como parte del string.
+
+Efecto:
+
+- Mensajes largos o multilinea pueden verse mal.
+- Confirmaciones fiscales o avisos largos quedan poco claros.
+
+Mejora recomendada:
+
+Crear helper:
+
+    MsgLines( cMsg ) -> array de lineas
+
+Y pintar una TLabel por linea, ajustando alto de ventana.
+
+
+16. TCombo:SetValue() no informa si no encuentra el valor
+---------------------------------------------------------
+
+Archivo:
+
+    TCombo.prg
+
+Situacion actual:
+
+Si SetValue() no encuentra xValue, repinta y deja la seleccion anterior.
+
+Esto puede ser correcto, pero puede ocultar errores de datos.
+
+Mejora posible:
+
+Agregar retorno logico o metodo TrySetValue():
+
+    METHOD SetValue( xValue )       // mantiene contrato actual
+    METHOD TrySetValue( xValue )    // devuelve .T./.F.
+
+O usar una DATA lStrict para modo estricto.
+
+
+17. TCombo:SetIndex() ejecuta bChange tambien en cambios programaticos
+-----------------------------------------------------------------------
+
+Archivo:
+
+    TCombo.prg
+
+Situacion actual:
+
+SetIndex() siempre ejecuta bChange.
+
+Esto es util cuando el usuario cambia seleccion, pero puede ser molesto cuando
+se cargan datos desde BD o se inicializa un formulario.
+
+Mejora posible:
+
+Permitir notificacion opcional:
+
+    METHOD SetIndex( nIdx, lNotify )
+
+Con:
+
+    DEFAULT lNotify TO .T.
+
+Y en SetValue() permitir tambien lNotify.
+
+No es bug critico, pero mejora la limpieza de formularios.
+
+
+18. TGet:GetValue() ejecuta Validate()
+--------------------------------------
+
+Archivo:
+
+    TGet.prg
+
+Situacion actual:
+
+    METHOD GetValue()
+        ::Validate()
+    RETURN ::uVar
+
+Esto asegura valor actualizado, pero tambien ejecuta bValid si existe.
+
+Efecto posible:
+
+- Leer un valor puede disparar validaciones con mensajes.
+- FormToHash() podria mostrar avisos si simplemente lee controles.
+
+Mejora recomendada:
+
+Separar lectura simple de validacion:
+
+    METHOD GetValue()       // solo sincroniza buffer basico sin bValid
+    METHOD Validate()       // ejecuta bValid
+    METHOD CommitValue()    // sincroniza buffer y devuelve valor
+
+No hay que tocarlo de inmediato si ya funciona, pero antes de crear FormToHash()
+conviene decidir este contrato.
+
+
+PRIORIDAD 4 - MEJORAS DE INTERFAZ SERIA
+=======================================
+
+
+19. Mouse en controles generales
+--------------------------------
+
+Objetivo:
+
+Que todos los controles puedan tener un metodo comun opcional:
+
+    MouseDown( nRow, nCol )
+    MouseUp( nRow, nCol )
+    DblClick( nRow, nCol )
+
+TWindow solo haria routing. Cada control decide que hacer.
+
+Ejemplo:
+
+- TButton: click.
+- TGrid: seleccionar fila; doble click = bEnter.
+- TCombo: abrir lista.
+- TCheck: alternar.
+- TGet: posicionar cursor aproximado dentro del campo.
+
+Esto haria la API mas profesional sin romper el enfoque keyboard-first.
+
+
+20. Politica clara de botones con validacion
+--------------------------------------------
+
+Decidir y documentar:
+
+- GUARDAR: debe validar control actual antes de ejecutar.
+- CANCELAR: puede cerrar sin validar.
+- CERRAR: si es formulario de consulta, no valida.
+- IMPRIMIR: debe validar si usa datos editados no guardados.
+- BUSCAR: normalmente debe validar salida del campo actual si cambia foco.
+
+Esto puede resolverse con una propiedad futura de TButton:
+
+    DATA lValidateBeforeClick
+
+Por defecto:
+
+    .T. para botones normales.
+    .F. para CANCELAR/CERRAR.
+
+
+21. Colores de control deshabilitado
+------------------------------------
+
+Agregar constantes:
+
+    #define CLR_DISABLED     "N/W*"
+    #define CLR_DISABLED_TXT "N+/W"
+
+Y usar en:
+
+- TGet
+- TButton
+- TCheck
+- TCombo
+- TGrid
+
+Ayuda mucho a que la interfaz se vea seria.
+
+
+22. TGet: posicionar cursor con mouse
+-------------------------------------
+
+Ahora el click solo pasa foco. Para TGet seria muy util que el click coloque el
+cursor cerca de la columna clickeada.
+
+Logica:
+
+    nLocal := nCol - ::nLeft + 1
+    ::nPos := Max( 1, Min( ::nOffset + nLocal, ::nBufLen ) )
+    ::Paint()
+
+Esto haria que el mouse se sienta natural.
+
+
+23. TCombo: abrir con click
+---------------------------
+
+Al pinchar en un combo, despues de validar foco actual:
+
+- Dar foco al combo.
+- Abrir lista si se pincha sobre el propio control.
+
+Esto es lo esperable para usuario de raton.
+
+
+24. TCheck: alternar con click
+------------------------------
+
+Al pinchar en un check:
+
+- Validar foco actual.
+- Dar foco al check.
+- Toggle().
+
+Opcionalmente, primer click solo enfoca y segundo alterna. Para productividad,
+lo normal seria alternar en un solo click si la validacion previa pasa.
+
+
+25. TGrid: barra visual de ayuda
+--------------------------------
+
+Para grids de listados, una barra inferior tipo:
+
+    ENTER Editar | F5 Nuevo | DEL Borrar | ESC Salir
+
+podria ser generica o responsabilidad de cada formulario. No es bug, pero ayuda
+a dar sensacion de aplicacion profesional.
+
+
+ORDEN RECOMENDADO DE IMPLEMENTACION
+===================================
+
+1. Corregir TCombo:Open() para evitar coordenadas negativas.
+2. Agregar bDelete real a TGrid o eliminarlo del manual.
+3. Agregar TGrid:MouseClick() para seleccionar fila con raton.
+4. Revisar TMenuPop:Close() con GfxInvalidate para evitar restos WVG.
+5. Mejorar TLabel:SetText() limpiando el ancho anterior.
+6. Repintar en Enable()/Disable() y definir color disabled.
+7. Decidir contrato de GetValue(): lectura simple vs validacion.
+8. Revisar TTable para alias reutilizable y ownership de cierre.
+9. Mejorar MsgBox/MsgYesNo para multilinea.
+
+
+CONCLUSION
+==========
+
+La API actual ya esta en buen punto. No hay que rehacerla. Lo correcto es pulir
+estos detalles uno a uno.
+
+Los bugs mas urgentes de mouse sobre botones y TGet @Sxx ya estan corregidos
+en el arbol de trabajo. El siguiente bloque recomendable es pulir TCombo,
+TGrid, TMenuPop y los pequenos detalles visuales de controles para que la API
+gane solidez en uso diario.
+
+Con esas correcciones, la libreria ganara mucha solidez para una interfaz seria,
+teclado-first pero tambien usable con raton.

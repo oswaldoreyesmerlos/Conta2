@@ -24,6 +24,7 @@ scripts/
 logs/
 INFORME/
 Test/
+experimentos/
 admin_recovery.hbp
 seed_*.hbp
 

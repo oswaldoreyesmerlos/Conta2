@@ -56,9 +56,10 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 		::nLen := Len( cPic )
 
 	CASE ::cType == "C"
-		::nLen := Max( Len( uValue ), 10 )
         IF nScroll > 0
-            ::nLen := Min( nScroll, ::nLen )
+            ::nLen := nScroll
+        ELSE
+            ::nLen := Max( Len( uValue ), 10 )
         ENDIF
 
 	CASE ::cType == "N"
@@ -94,7 +95,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 
     DO CASE
     CASE ::cType == "C"
-        ::cBuffer := PadR( hb_CStr( uValue ), ::nLen )
+        ::cBuffer := PadR( hb_CStr( uValue ), ::nBufLen )
 
     CASE ::cType == "N"
         ::cBuffer := _TGetFormatNum( uValue, ::cPicture, ::nLen )
@@ -387,6 +388,7 @@ METHOD SetValue( uValue ) CLASS TGet
 
     DO CASE
     CASE ::cType == "C"
+        ::nBufLen := Max( Max( ::nBufLen, Len( hb_CStr( uValue ) ) ), ::nLen )
         ::cBuffer := PadR( hb_CStr( uValue ), ::nBufLen )
 
     CASE ::cType == "N"

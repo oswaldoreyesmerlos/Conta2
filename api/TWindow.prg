@@ -600,37 +600,98 @@ RETURN Self
 // MANEJADOR DE CLICK DE RATON
 // ----------------------------------------------------------------------------
 // Se llama desde HandleKey al recibir K_LBUTTONDOWN.
-// Busca el control en la posicion del click y le da foco.
-// Si el control es un TButton, ejecuta su accion.
+//
+// Reglas:
+//   - Si el control clickeado necesita foco, primero se intenta cambiar
+//     el foco usando SetFocus().
+//   - Si KillFocus() del control anterior falla (validacion), el click
+//     completo se cancela.
+//   - Algunos botones especiales (Cancelar, Cerrar, Salir...) pueden
+//     saltarse la validacion usando lSkipValid := .T.
 // ============================================================================
+
 STATIC FUNCTION _WinMouseClick( oWin, nRow, nCol )
 
-    LOCAL i, oCtrl, nFocus
+    LOCAL i
+    LOCAL oCtrl
+    LOCAL nFocus
 
-    // Recorrer controles en orden inverso (ultimo pintado = arriba)
+    // Recorrer controles en orden inverso.
+    // El ultimo pintado se considera el superior.
     FOR i := Len( oWin:aCtrls ) TO 1 STEP -1
 
         oCtrl := oWin:aCtrls[ i ]
 
         IF oCtrl:lVisible .AND. oCtrl:IsHit( nRow, nCol )
 
-            // Buscar indice del control en aCtrls
+            // Buscar posicion real del control
             FOR nFocus := 1 TO Len( oWin:aCtrls )
+
                 IF oWin:aCtrls[ nFocus ] == oCtrl
-                    // Dar foco al control clickeado
-                    IF oCtrl:lEnabled .AND. oCtrl:lTabStop
-                        oWin:SetFocus( nFocus )
+
+                    // --------------------------------------------------------
+                    // BOTONES ESPECIALES:
+                    // Saltan validacion del foco anterior.
+                    // Ejemplo:
+                    //   Cancelar
+                    //   Cerrar
+                    //   Salir
+                    // --------------------------------------------------------
+                    IF Upper( oCtrl:ClassName() ) == "TBUTTON" .AND. ;
+                       oCtrl:lEnabled .AND. ;
+                       oCtrl:lSkipValid
+
+                        // Quitar foco visual anterior sin validar
+                        IF oWin:oFocus != NIL
+                            oWin:oFocus:lFocused := .F.
+                            oWin:oFocus:Paint()
+                        ENDIF
+
+                        // Nuevo foco
+                        oWin:nFocPos := nFocus
+                        oWin:oFocus  := oCtrl
+
+                        oCtrl:SetFocus()
+
+                        // Ejecutar accion
+                        oCtrl:Click()
+
+                        RETURN NIL
+
                     ENDIF
 
-                    // TButton tiene Click() con feedback visual
-                    IF Upper( oCtrl:ClassName() ) == "TBUTTON"
-                        oCtrl:Click()
+
+                    // --------------------------------------------------------
+                    // Cambio de foco NORMAL
+                    // Si la validacion falla, se cancela el click completo.
+                    // --------------------------------------------------------
+                    IF oCtrl:lEnabled .AND. oCtrl:lTabStop
+
+                        IF oWin:SetFocus( nFocus ) == NIL
+                            RETURN NIL
+                        ENDIF
+
                     ENDIF
+
+
+                    // --------------------------------------------------------
+                    // Ejecutar boton normal
+                    // --------------------------------------------------------
+                    IF Upper( oCtrl:ClassName() ) == "TBUTTON" .AND. ;
+                       oCtrl:lEnabled
+
+                        oCtrl:Click()
+
+                    ENDIF
+
                     RETURN NIL
+
                 ENDIF
+
             NEXT
 
         ENDIF
+
     NEXT
 
 RETURN NIL

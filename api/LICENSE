@@ -1,0 +1,30 @@
+GfxStack API License
+Copyright (c) 2026 Oswaldo Fernando
+
+SPDX-License-Identifier: MPL-2.0
+
+The source code in this directory is licensed under the Mozilla Public License
+Version 2.0 (MPL-2.0).
+
+You may use this API in open source or proprietary applications, subject to the
+MPL-2.0 terms.
+
+Important practical effect:
+
+- You may use the API without making the rest of your application open source.
+- If you modify files from this `api/` directory and distribute those modified
+  files or a program containing them, the modified API files must remain under
+  the MPL-2.0 and their source code must be made available to recipients.
+- New files outside this API can use a different license unless they copy code
+  from MPL-covered API files.
+
+Project contribution policy:
+
+Improvements to the API should be proposed back to the original GfxStack API
+repository whenever practical. This keeps the free API healthy and avoids
+private forks drifting away. This contribution request is project policy; the
+legal license terms are the MPL-2.0.
+
+Full license text:
+
+https://www.mozilla.org/MPL/2.0/

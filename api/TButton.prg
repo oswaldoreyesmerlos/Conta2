@@ -51,6 +51,7 @@ CLASS TButton FROM TControl
     DATA cCaption
     DATA bAction
     DATA lPressed
+    DATA lSkipValid
 
     METHOD New()
     METHOD Paint()
@@ -82,7 +83,7 @@ METHOD New( nTop, nLeft, nBottom, nRight, oPar, cCap, bAct ) CLASS TButton
     ::cCaption := cCap
     ::bAction  := bAct
     ::lPressed := .F.
-
+    ::lSkipValid := .F.
     ::cColor   := CLR_BUTTON
     ::lTabStop := .T.
 
