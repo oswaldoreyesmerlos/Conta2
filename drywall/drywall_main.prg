@@ -19,6 +19,13 @@ FUNCTION Main()
     CLS
     GfxCursor( SC_NONE )
 
+    // Activar raton
+    BEGIN SEQUENCE
+        SET EVENTMASK TO ( INKEY_KEYBOARD + INKEY_LDOWN + INKEY_LUP + INKEY_RDOWN + INKEY_RUP )
+        wvt_SetMouseMove( .T. )
+    RECOVER
+    END SEQUENCE
+
     IF !InicioDrywall()
         MsgStop( "Error creando tablas Drywall", "Inicio" )
         RETURN 1
