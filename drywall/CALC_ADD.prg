@@ -23,7 +23,7 @@ FUNCTION Add_Tabique( cTit )
     LOCAL oGPer1, oGPer2
     LOCAL oGPla1, oGPla2, oGNumP
     LOCAL oGAis, oGAisCod
-    LOCAL oGBand
+    LOCAL oChk, oGBand
     LOCAL oBtGua, oBtCan
     LOCAL lSave := .F.
     LOCAL nRowBtn
@@ -70,7 +70,9 @@ FUNCTION Add_Tabique( cTit )
 
     oGNumP := TGet():New( 11, 56, hData["NUM_PLACAS"], "9", oWin )
 
-    oWin:AddCtrl( TCheck():New( 17, 18, "Banda Acustica", hData["BANDA"] == "S", oWin ):bChange := {|| hData["BANDA"] := If( hData["BANDA"] == "S", "N", "S" ) } )
+    oChk := TCheck():New( 17, 18, "Banda Acustica", hData["BANDA"] == "S", oWin )
+    oChk:bChange := {|| hData["BANDA"] := If( hData["BANDA"] == "S", "N", "S" ) }
+    oWin:AddCtrl( oChk )
 
     // FIXME: Falta logica SAME_B e ID_AISLANT interactivos
     // Por ahora valores por defecto
