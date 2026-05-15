@@ -416,11 +416,10 @@ STATIC FUNCTION _PickArt( cFam )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->FAMILIA ) == AllTrim( cFam ) .AND. !FIELD->BAJA
+        IF !Deleted() .AND. AllTrim( FIELD->TIPO ) == AllTrim( cFam )
             AAdd( aData, { ;
                 AllTrim( FIELD->CODIGO ), ;
-                AllTrim( FIELD->DESCRIP ), ;
-                FIELD->PRECIO } )
+                AllTrim( FIELD->DESCRIP ) } )
         ENDIF
         dbSkip()
     ENDDO
@@ -432,7 +431,7 @@ STATIC FUNCTION _PickArt( cFam )
     ENDIF
 
     FOR i := 1 TO Len( aData )
-        AAdd( aCombo, { aData[i, 1], aData[i, 2] + "  (" + Transform( aData[i, 3], "999.99" ) + "eur)" } )
+        AAdd( aCombo, { aData[i, 1], aData[i, 2] } )
     NEXT
 
     cRet := PopupSelect( "SELECCIONAR " + cFam, aCombo, ;

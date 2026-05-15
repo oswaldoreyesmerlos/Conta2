@@ -215,11 +215,11 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    nMetVert := ( ( nLargo / nMod ) + 1 ) * nAlto
    nMetHor  := nLargo * 2
    
-   ::AddMat( "PERFIL", FIELD->ID_PERF_VERT, nMetVert * K_DESP_PER, "Maestra/Montante" )
-   
-   IF ! "DIR" $ FIELD->TIPO_OBRA
-      ::AddMat( "PERFIL", FIELD->ID_PERF_HOR, nMetHor * K_DESP_PER, "Canal Suelo/Techo" )
-   ENDIF
+    ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMetVert * K_DESP_PER, "Maestra/Montante" )
+
+    IF ! "DIR" $ FIELD->TIPO_OBRA
+       ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetHor * K_DESP_PER, "Canal Suelo/Techo" )
+    ENDIF
    
    ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, "Trasdosado" )
    ::AddMat( "TORNILLO", "TORN_PM_25", nArea * K_TORN_M2, "Fijacion" )
