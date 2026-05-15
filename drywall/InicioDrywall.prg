@@ -27,7 +27,11 @@ FUNCTION InicioDrywall()
     LOCAL i, nCdx
     LOCAL cDbf, cCdx
 
-    SET DEFAULT TO ( hb_DirBase() + "DATA" )
+    IF hb_DirExists( hb_DirBase() + "DATA" )
+        SET DEFAULT TO ( hb_DirBase() + "DATA" )
+    ELSE
+        SET DEFAULT TO ( hb_DirBase() + "..\DATA" )
+    ENDIF
 
     // =========================================================
         // 1. ARTICULO
