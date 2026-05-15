@@ -444,10 +444,10 @@ METHOD HandleKey( nKey ) CLASS TGrid
             nMCol >= ::nLeft + 1 .AND. nMCol <= ::nRight - 1
             nOffRow := nMRow - ( ::nTop + 2 )
             nNewRow := ::nTopRow + nOffRow
-            IF nNewRow >= 1 .AND. nNewRow <= Len( ::aData )
+             IF nNewRow >= 1 .AND. nNewRow <= Len( ::aData )
                  IF nNewRow != ::nCurRow
+                     _GridRepaint( Self, ::nCurRow, ::nTopRow )
                      ::nCurRow := nNewRow
-                     ::Paint()
                      IF ::bChange != NIL
                          EvalSafe( ::bChange, "TGrid:bChange", Self )
                      ENDIF
@@ -483,17 +483,19 @@ RETURN lHandled
 // ----------------------------------------------------------------------------
 METHOD GoUp() CLASS TGrid
 
+    LOCAL nOldRow := ::nCurRow
+    LOCAL nOldTop := ::nTopRow
+
     ::ResetSeek()
 
     IF ::nCurRow > 1
         ::nCurRow--
 
-        // Si salio del area visible, ajustar nTopRow
         IF ::nCurRow < ::nTopRow
             ::nTopRow := ::nCurRow
         ENDIF
 
-        ::Paint()
+        _GridRepaint( Self, nOldRow, nOldTop )
 
         IF ::bChange != NIL
             EvalSafe( ::bChange, "TGrid:bChange", Self )
@@ -510,18 +512,20 @@ RETURN Self
 // ----------------------------------------------------------------------------
 METHOD GoDown() CLASS TGrid
 
+    LOCAL nOldRow := ::nCurRow
+    LOCAL nOldTop := ::nTopRow
+
     ::ResetSeek()
 
     IF ::nCurRow < Len( ::aData )
 
         ::nCurRow++
 
-        // Si salio del area visible, ajustar nTopRow
         IF ::nCurRow > ::nTopRow + ::nVisibleRows - 1
             ::nTopRow := ::nCurRow - ::nVisibleRows + 1
         ENDIF
 
-        ::Paint()
+        _GridRepaint( Self, nOldRow, nOldTop )
 
         IF ::bChange != NIL
             EvalSafe( ::bChange, "TGrid:bChange", Self )
@@ -529,19 +533,16 @@ METHOD GoDown() CLASS TGrid
 
     ELSEIF ::nCurRow == Len( ::aData ) .AND. Len( ::aData ) > 0
 
-        // Estamos en la ultima fila.  Si NO esta vacia y hay bInsert,
-        // llamar al codeblock que anyade nueva fila.
         IF !::IsRowEmpty( ::nCurRow ) .AND. ::bInsert != NIL
             EvalSafe( ::bInsert, "TGrid:bInsert", Self )
 
-            // Tras anyadir, posicionarse en la nueva ultima fila
             ::nCurRow := Len( ::aData )
 
             IF ::nCurRow > ::nTopRow + ::nVisibleRows - 1
                 ::nTopRow := ::nCurRow - ::nVisibleRows + 1
             ENDIF
 
-            ::Paint()
+            ::Paint()   // bInsert cambio datos, repintar completo
         ENDIF
 
     ELSEIF Len( ::aData ) == 0 .AND. ::bInsert != NIL
@@ -564,12 +565,16 @@ RETURN Self
 // ----------------------------------------------------------------------------
 METHOD GoTop() CLASS TGrid
 
+    LOCAL nOldRow := ::nCurRow
+    LOCAL nOldTop := ::nTopRow
+
     ::ResetSeek()
 
     IF Len( ::aData ) > 0
         ::nCurRow := 1
         ::nTopRow := 1
-        ::Paint()
+
+        _GridRepaint( Self, nOldRow, nOldTop )
 
         IF ::bChange != NIL
             EvalSafe( ::bChange, "TGrid:bChange", Self )
@@ -583,12 +588,16 @@ RETURN Self
 // ----------------------------------------------------------------------------
 METHOD GoBottom() CLASS TGrid
 
+    LOCAL nOldRow := ::nCurRow
+    LOCAL nOldTop := ::nTopRow
+
     ::ResetSeek()
 
     IF Len( ::aData ) > 0
         ::nCurRow := Len( ::aData )
         ::nTopRow := Max( 1, ::nCurRow - ::nVisibleRows + 1 )
-        ::Paint()
+
+        _GridRepaint( Self, nOldRow, nOldTop )
 
         IF ::bChange != NIL
             EvalSafe( ::bChange, "TGrid:bChange", Self )
@@ -602,6 +611,9 @@ RETURN Self
 // ----------------------------------------------------------------------------
 METHOD PageUp() CLASS TGrid
 
+    LOCAL nOldRow := ::nCurRow
+    LOCAL nOldTop := ::nTopRow
+
     ::ResetSeek()
 
     IF Len( ::aData ) == 0
@@ -610,7 +622,8 @@ METHOD PageUp() CLASS TGrid
 
     ::nCurRow := Max( 1, ::nCurRow - ::nVisibleRows )
     ::nTopRow := Max( 1, ::nTopRow - ::nVisibleRows )
-    ::Paint()
+
+    _GridRepaint( Self, nOldRow, nOldTop )
 
     IF ::bChange != NIL
         EvalSafe( ::bChange, "TGrid:bChange", Self )
@@ -623,6 +636,9 @@ RETURN Self
 // ----------------------------------------------------------------------------
 METHOD PageDown() CLASS TGrid
 
+    LOCAL nOldRow := ::nCurRow
+    LOCAL nOldTop := ::nTopRow
+
     ::ResetSeek()
 
     IF Len( ::aData ) == 0
@@ -632,7 +648,8 @@ METHOD PageDown() CLASS TGrid
     ::nCurRow := Min( Len( ::aData ), ::nCurRow + ::nVisibleRows )
     ::nTopRow := Min( Max( 1, Len( ::aData ) - ::nVisibleRows + 1 ), ;
                       ::nTopRow + ::nVisibleRows )
-    ::Paint()
+
+    _GridRepaint( Self, nOldRow, nOldTop )
 
     IF ::bChange != NIL
         EvalSafe( ::bChange, "TGrid:bChange", Self )
@@ -699,7 +716,7 @@ METHOD SeekChar( cChar ) CLASS TGrid
             ::nTopRow := ::nCurRow - ::nVisibleRows + 1
         ENDIF
 
-        ::Paint()
+        _GridRepaint( Self, ::nCurRow, ::nTopRow )
 
         IF ::bChange != NIL
             EvalSafe( ::bChange, "TGrid:bChange", Self )
@@ -707,3 +724,38 @@ METHOD SeekChar( cChar ) CLASS TGrid
     ENDIF
 
 RETURN Self
+
+
+STATIC FUNCTION _GridRepaint( oGrid, nOldRow, nOldTop )
+
+    LOCAL i, nScrRow, nState
+
+    oGrid:Lock()
+
+    // Si el scroll cambio, repintar todo
+    IF nOldTop != oGrid:nTopRow
+        FOR i := 1 TO oGrid:nVisibleRows
+            nScrRow := oGrid:nTopRow + i - 1
+            IF nScrRow <= Len( oGrid:aData )
+                nState := If( nScrRow == oGrid:nCurRow, 2, 0 )
+                oGrid:PaintRow( nScrRow, nState )
+            ELSE
+                GfxClear( oGrid:nTop + 1 + i, oGrid:nLeft + 1, ;
+                          oGrid:nTop + 1 + i, oGrid:nRight - 1, CLR_WINDOW )
+            ENDIF
+        NEXT
+    ELSE
+        // Sin scroll: repintar solo fila vieja y nueva
+        // Antigua fila -> normal
+        IF nOldRow >= oGrid:nTopRow .AND. nOldRow <= oGrid:nTopRow + oGrid:nVisibleRows - 1
+            oGrid:PaintRow( nOldRow, 0 )
+        ENDIF
+        // Nueva fila -> seleccionada
+        IF oGrid:nCurRow >= oGrid:nTopRow .AND. oGrid:nCurRow <= oGrid:nTopRow + oGrid:nVisibleRows - 1
+            oGrid:PaintRow( oGrid:nCurRow, 2 )
+        ENDIF
+    ENDIF
+
+    oGrid:Unlock()
+
+RETURN NIL
