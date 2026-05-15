@@ -68,16 +68,18 @@ FUNCTION VerTareas( cTipo )
     oGrid:AddColumn( "MODUL",      6,  "99.99",  { |a| a[6] } )
     oGrid:bEnter := {|| _OnEdit( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() }
 
-    oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TLabel():New( 19, 2, "[F5] Nuevo [ENTER] Editar [DEL] Borrar [F2] Buscar Cliente", oWin ) )
-    oWin:AddCtrl( TButton():New( 20,  2, 21, 18, oWin, "NUEVO (F5)", {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
-    oWin:AddCtrl( TButton():New( 20, 20, 21, 38, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
-    oWin:AddCtrl( TButton():New( 20, 78, 21, 94, oWin, "CERRAR", {|| oWin:Close() } ) )
-
+    // Controles de cabecera primero (foco inicial)
     oWin:AddCtrl( oGTit )
+    oWin:AddCtrl( TButton():New( 1, 56, 1, 70, oWin, "BUSCAR CLI", {|| _BuscarCli( oGCli ) } ) )
     oWin:AddCtrl( oGCli )
     oWin:AddCtrl( oGFec )
     oWin:AddCtrl( oGObs )
+    // Luego el grid y botones de accion
+    oWin:AddCtrl( oGrid )
+    oWin:AddCtrl( TLabel():New( 19, 2, "[F5] Nuevo [ENTER] Editar [DEL] Borrar", oWin ) )
+    oWin:AddCtrl( TButton():New( 20,  2, 21, 18, oWin, "NUEVO (F5)", {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( 20, 20, 21, 38, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( 20, 78, 21, 94, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()
 
@@ -237,3 +239,51 @@ STATIC FUNCTION _ValidarCli( cCli )
 
     MsgStop( "Cliente no encontrado." )
 RETURN .F.
+
+
+STATIC FUNCTION _BuscarCli( oGCli )
+
+    LOCAL aData := {}, aCombo := {}, i, cSel
+    LOCAL nArea := Select()
+
+    IF Select( "CLIENTES" ) == 0
+        IF File( "CLIENTES.DBF" )
+            USE CLIENTES NEW SHARED VIA "DBFCDX"
+        ELSE
+            RETURN NIL
+        ENDIF
+    ENDIF
+
+    dbSelectArea( "CLIENTES" )
+    DbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted() .AND. !FIELD->BAJA
+            AAdd( aData, { ;
+                AllTrim( FIELD->ID ), ;
+                AllTrim( FIELD->NOMBRE + " " + FIELD->APELLIDO ), ;
+                AllTrim( FIELD->NIF ) } )
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    IF Empty( aData )
+        MsgInfo( "No hay clientes registrados.", "Buscar" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    FOR i := 1 TO Len( aData )
+        AAdd( aCombo, { aData[i, 1], aData[i, 2] + " (" + aData[i, 3] + ")" } )
+    NEXT
+
+    cSel := PopupSelect( "SELECCIONAR CLIENTE", aCombo, ;
+                          { { "Cliente", 72, "@!", 2 } }, 1 )
+
+    IF !Empty( cSel )
+        oGCli:SetValue( PadR( cSel, 15 ) )
+    ENDIF
+
+    Select( nArea )
+
+RETURN NIL
