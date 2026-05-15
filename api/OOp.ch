@@ -76,6 +76,8 @@
 #define K_LBUTTONUP      1003
 #define K_RBUTTONDOWN    1004
 #define K_RBUTTONUP      1005
+#define K_LDBLCLK        1006
+#define K_RDBLCLK        1007
 
 #command DEFAULT <v> TO <val> => IF <v> == NIL ; <v> := <val> ; ENDIF
 

@@ -468,6 +468,25 @@ METHOD Run() CLASS TMenuPop
                 EXIT
             ENDIF
 
+        CASE nKey == K_LDBLCLK
+             nMR := MRow()
+             nML := MCol()
+             IF nMR >= ::nTop .AND. nMR <= ::nBottom .AND. ;
+                nML >= ::nLeft .AND. nML <= ::nRight
+                 nTry := nMR - ::nTop
+                 IF nTry >= 1 .AND. nTry <= Len( ::aItems )
+                     IF Left( AllTrim( ::aItems[nTry, 1] ), 1 ) != "-"
+                         ::nSel := nTry
+                         ::Paint()
+                         lSub := ::ExecItem()
+                         _RedrawStack()
+                         IF !lSub
+                             EXIT
+                         ENDIF
+                     ENDIF
+                 ENDIF
+             ENDIF
+
         CASE nKey == K_LBUTTONDOWN
              nMR := MRow()
              nML := MCol()

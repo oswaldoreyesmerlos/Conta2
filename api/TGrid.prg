@@ -427,6 +427,15 @@ METHOD HandleKey( nKey ) CLASS TGrid
     CASE nKey == K_END  .OR. nKey == K_CTRL_PGDN
          ::GoBottom()
 
+    CASE nKey == K_LDBLCLK
+         // Doble click = Enter
+         IF ::bEnter != NIL .AND. ::nCurRow >= 1 .AND. ;
+            ::nCurRow <= Len( ::aData )
+            EvalSafe( ::bEnter, "TGrid:bEnter", Self )
+            ::Paint()
+         ENDIF
+         lHandled := .T.
+
     CASE nKey == K_LBUTTONDOWN
          nMRow := MRow()
          nMCol := MCol()
