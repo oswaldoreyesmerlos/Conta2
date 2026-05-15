@@ -96,15 +96,27 @@ STATIC FUNCTION _MoverTramos( cDocNum )
         dbSelectArea( "HIS_TRA" )
         dbAppend()
         
-        // Copiado de campos uno a uno (Regla de Oro)
-        REPLACE Field->NUMERO      WITH cDocNum
-        REPLACE Field->ID_LINEA    WITH TMP_TRA->ID_LINEA
-        REPLACE Field->CONCEPTO    WITH TMP_TRA->CONCEPTO
-        REPLACE Field->TIPO        WITH TMP_TRA->TIPO
-        REPLACE Field->LARGO       WITH TMP_TRA->LARGO
-        REPLACE Field->ALTO        WITH TMP_TRA->ALTO
-        REPLACE Field->ID_PLACA_A  WITH TMP_TRA->ID_PLACA_A
-        REPLACE Field->ID_AISLAN   WITH TMP_TRA->ID_AISLAN
+        REPLACE Field->NUMERO       WITH cDocNum
+        REPLACE Field->ID_LINEA     WITH TMP_TRA->ID_LINEA
+        REPLACE Field->CONCEPTO     WITH TMP_TRA->CONCEPTO
+        REPLACE Field->TIPO_OBRA    WITH TMP_TRA->TIPO_OBRA
+        REPLACE Field->LARGO        WITH TMP_TRA->LARGO
+        REPLACE Field->ALTO         WITH TMP_TRA->ALTO
+        REPLACE Field->MODUL        WITH TMP_TRA->MODUL
+        REPLACE Field->SEP_PRIM     WITH TMP_TRA->SEP_PRIM
+        REPLACE Field->CARAS        WITH TMP_TRA->CARAS
+        REPLACE Field->PLAC_CARA    WITH TMP_TRA->PLAC_CARA
+        REPLACE Field->ID_PER_VER   WITH TMP_TRA->ID_PER_VER
+        REPLACE Field->ID_PER_HOR   WITH TMP_TRA->ID_PER_HOR
+        REPLACE Field->ID_PER_PER   WITH TMP_TRA->ID_PER_PER
+        REPLACE Field->ID_PLACA_A   WITH TMP_TRA->ID_PLACA_A
+        REPLACE Field->ID_PLACA_B   WITH TMP_TRA->ID_PLACA_B
+        REPLACE Field->ID_AISLANT   WITH TMP_TRA->ID_AISLANT
+        REPLACE Field->ID_ANCLAJE   WITH TMP_TRA->ID_ANCLAJE
+        REPLACE Field->ID_AISLAN    WITH TMP_TRA->ID_AISLAN
+        REPLACE Field->L_AISLANT    WITH TMP_TRA->L_AISLANT
+        REPLACE Field->L_BANDA      WITH TMP_TRA->L_BANDA
+        REPLACE Field->METROS       WITH TMP_TRA->METROS
         
         dbSelectArea( "TMP_TRA" )
         dbSkip()
@@ -122,15 +134,31 @@ STATIC FUNCTION _GetNextDoc()
     LOCAL nVal := 0
     LOCAL nAreaTmp := Select()
 
-    dbSelectArea( "EMPRESA" )
-    
-    IF NetRLock()
-        nVal := Field->CONT_PRES + 1
-        REPLACE Field->CONT_PRES WITH nVal
-        dbUnlock()
-        cNum := PadL( AllTrim( Str( nVal ) ), 6, "0" )
+    // Usa la tabla Contador (compartida con AppGestion)
+    IF Select( "CONTADOR" ) == 0
+        USE CONTADOR NEW SHARED VIA "DBFCDX"
     ENDIF
-    
+
+    dbSelectArea( "CONTADOR" )
+    IF DbSeek( "PRE" )
+        IF NetRLock()
+            nVal := FIELD->ULT_NUM + 1
+            REPLACE FIELD->ULT_NUM WITH nVal
+            DbCommit()
+            dbUnlock()
+        ENDIF
+    ELSE
+        IF NetFLock()
+            DbAppend()
+            REPLACE FIELD->COD_DOC WITH "PRE"
+            REPLACE FIELD->ULT_NUM WITH 1
+            nVal := 1
+            DbCommit()
+            dbUnlock()
+        ENDIF
+    ENDIF
+
+    cNum := PadL( AllTrim( Str( nVal ) ), 6, "0" )
     dbSelectArea( nAreaTmp )
 RETURN cNum
 
@@ -242,10 +270,12 @@ STATIC FUNCTION _MoverResumen( cDoc )
         dbSelectArea( "HIS_RES" )
         dbAppend()
         REPLACE Field->NUMERO   WITH cDoc
+        REPLACE Field->FAMILIA  WITH TMP_RES->FAMILIA
         REPLACE Field->CODIGO   WITH TMP_RES->CODIGO
         REPLACE Field->DESCRIP  WITH TMP_RES->DESCRIP
         REPLACE Field->UNIDAD   WITH TMP_RES->UNIDAD
         REPLACE Field->CANT_TOT WITH TMP_RES->CANT_TOT
+        REPLACE Field->PRECIO   WITH TMP_RES->PRECIO
         REPLACE Field->IMP_TOT  WITH TMP_RES->IMP_TOT
         REPLACE Field->PESO_TOT WITH TMP_RES->PESO_TOT
         dbSelectArea( "TMP_RES" )

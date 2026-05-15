@@ -132,8 +132,10 @@ STATIC FUNCTION _GeneraResumen()
                 REPLACE Field->CANT_TOT  WITH nCan
                 REPLACE Field->IMP_TOT   WITH nImp
                 REPLACE Field->PESO_TOT  WITH nPes
+                REPLACE Field->FAMILIA   WITH TMP_MAT->FAMILIA
                 REPLACE Field->DESCRIP   WITH TMP_MAT->DESCRIP
                 REPLACE Field->UNIDAD    WITH TMP_MAT->UNIDAD
+                REPLACE Field->PRECIO    WITH TMP_MAT->PRECIO
                 dbUnlock()
             ENDIF
         ENDIF
