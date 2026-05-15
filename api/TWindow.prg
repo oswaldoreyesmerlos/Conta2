@@ -501,8 +501,11 @@ METHOD Run() CLASS TWindow
 
     LOCAL nKey
     LOCAL nFirst
-    LOCAL aPrev                  // bloques del nivel previo (para POP)
+    LOCAL aPrev := NIL           // bloques del nivel previo (para POP)
     LOCAL nT, nL, nB, nR         // coordenadas ampliadas (Save y Restore)
+    LOCAL oErr
+    LOCAL bOld
+    LOCAL lHadError := .F.
 
     ::lVisible := .T.
     ::lExit    := .F.
@@ -514,40 +517,53 @@ METHOD Run() CLASS TWindow
     nB := Min( ::nBottom + PADWIN, GfxMaxRow() )
     nR := Min( ::nRight  + PADWIN, GfxMaxCol() )
 
-    // [1] Detectar ventana padre.  Si ya hay una ventana activa, ESA es
-    //     nuestra padre.  Pasamos a ser nosotros la activa.
-    ::oOwner      := s_oCurrentWnd
-    s_oCurrentWnd := Self
+    bOld := ErrorBlock( {| e | Break( e ) } )
 
-    // [2] PUSH del stack de bloques.  A partir de aqui, los GfxPaintAdd
-    //     se registraran en NUESTRO array (vacio inicialmente).  Los
-    //     bloques de niveles superiores quedan guardados en aPrev.
-    aPrev := GfxPaintPush()
+    BEGIN SEQUENCE
 
-    // [3] SAVE clasico ampliado.  Capturamos el estado EXACTO de la zona
-    //     antes de pintar nada nuestro.  Incluye caracteres + capa
-    //     grafica WVG.  El margen PADWIN garantiza que cubrimos las
-    //     lineas finas que se pintan fuera del rectangulo de celdas.
-    ::xBackup := GfxSave( nT, nL, nB, nR )
+        // [1] Detectar ventana padre.  Si ya hay una ventana activa, ESA es
+        //     nuestra padre.  Pasamos a ser nosotros la activa.
+        ::oOwner      := s_oCurrentWnd
+        s_oCurrentWnd := Self
 
-    // [4] Pintar nuestro contenido (registra bloques + pinta caracteres)
-    ::Paint()
+        // [2] PUSH del stack de bloques.  A partir de aqui, los GfxPaintAdd
+        //     se registraran en NUESTRO array (vacio inicialmente).  Los
+        //     bloques de niveles superiores quedan guardados en aPrev.
+        aPrev := GfxPaintPush()
 
-    // [5] Establecer foco inicial
-    nFirst := ::FindFirstFocus()
+        // [3] SAVE clasico ampliado.  Capturamos el estado EXACTO de la zona
+        //     antes de pintar nada nuestro.  Incluye caracteres + capa
+        //     grafica WVG.  El margen PADWIN garantiza que cubrimos las
+        //     lineas finas que se pintan fuera del rectangulo de celdas.
+        ::xBackup := GfxSave( nT, nL, nB, nR )
 
-    IF nFirst > 0
-        ::SetFocus( nFirst )
-    ENDIF
+        // [4] Pintar nuestro contenido (registra bloques + pinta caracteres)
+        ::Paint()
 
-    // [6] Bucle de teclas
-    DO WHILE ! ::lExit
+        // [5] Establecer foco inicial
+        nFirst := ::FindFirstFocus()
 
-        nKey := Inkey( 0 )
+        IF nFirst > 0
+            ::SetFocus( nFirst )
+        ENDIF
 
-        ::HandleKey( nKey )
+        // [6] Bucle de teclas
+        DO WHILE ! ::lExit
 
-    ENDDO
+            nKey := Inkey( 0 )
+
+            ::HandleKey( nKey )
+
+        ENDDO
+
+    RECOVER USING oErr
+
+        lHadError := .T.
+        ErrorLogError( oErr, "TWindow:Run " + hb_ValToStr( ::cTitle ) )
+
+    END SEQUENCE
+
+    ErrorBlock( bOld )
 
     // Si la ventana se cierra con ESC o por boton, puede no producirse un
     // cambio normal de foco.  Limpiamos el foco sin repintar sobre la zona
@@ -563,14 +579,18 @@ METHOD Run() CLASS TWindow
     //     mismas que el Save.  Esto borra todo lo que pintamos
     //     (caracteres + capa grafica WVG residual) de una sola
     //     operacion.
-    GfxRestore( nT, nL, nB, nR, ::xBackup )
+    IF ::xBackup != NIL
+        GfxRestore( nT, nL, nB, nR, ::xBackup )
+    ENDIF
 
     ::xBackup := NIL
 
     // [8] POP del stack: nuestros bloques salen del array activo de WVG.
     //     A partir de aqui, futuros WM_PAINT del SO ejecutaran solo los
     //     bloques del nivel padre (si los hay).
-    GfxPaintPop( aPrev )
+    IF aPrev != NIL
+        GfxPaintPop( aPrev )
+    ENDIF
 
     // [9] Restaurar la ventana activa al padre
     s_oCurrentWnd := ::oOwner
@@ -583,6 +603,12 @@ METHOD Run() CLASS TWindow
                                 // a registrar los bloques desde cero.
 
     _WinFlushKeys()
+
+    IF lHadError
+        MsgStop( "Se ha registrado un error en error.log." + hb_Eol() + ;
+                 "La ventana se cerrara para evitar un estado inconsistente.", ;
+                 "Error interno" )
+    ENDIF
 
 RETURN NIL
 

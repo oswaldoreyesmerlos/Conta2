@@ -342,7 +342,6 @@ STATIC FUNCTION _CertBuscarObra( hCert )
     LOCAL cId  := AllTrim( hCert["oGIdObr"]:GetValue() )
     LOCAL nArea := Select()
     LOCAL cDesc := ""
-    LOCAL cNumPre := ""
     LOCAL nIva  := 21.00
     LOCAL lInvObra := .F.
 
@@ -367,7 +366,6 @@ STATIC FUNCTION _CertBuscarObra( hCert )
 
     hCert["cIdObra"] := AllTrim( OBR_CE->ID )
     cDesc   := AllTrim( OBR_CE->DESCRIP )
-    cNumPre := AllTrim( DbFieldValue( "NUM_PRE", "" ) )
 
     OBR_CE->( DbCloseArea() )
     Select( nArea )
@@ -378,9 +376,8 @@ STATIC FUNCTION _CertBuscarObra( hCert )
     hCert["nTotalObra"] := _CertCargarLinesObra( hCert["cIdObra"], @hCert["aLineas"] )
     hCert["oLTotalObra"]:SetText( Transform( hCert["nTotalObra"], "999,999.99" ) )
 
-    IF !Empty( cNumPre )
-        _CertIvaPresupuesto( cNumPre, @nIva, @lInvObra )
-    ENDIF
+    lInvObra := _ObraInversion( hCert["cIdObra"] )
+    nIva := If( lInvObra, 0.00, 21.00 )
     hCert["nIvaFijo"] := nIva
     hCert["lInv"]     := lInvObra
 
@@ -396,38 +393,15 @@ STATIC FUNCTION _CertBuscarObra( hCert )
 RETURN NIL
 
 
-STATIC FUNCTION _CertIvaPresupuesto( cNumPre, nIva, lInv )
-
-    LOCAL nArea := Select()
-
-    nIva  := 21.00
-    lInv  := .F.
-
-    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_IV", "PRE_NUM" )
-        RETURN NIL
-    ENDIF
-
-    DbSelectArea( "PRE_IV" )
-    OrdSetFocus( "PRE_NUM" )
-
-    IF DbSeek( PadR( cNumPre, 10 ) ) .OR. DbSeek( cNumPre )
-        lInv := DbFieldValue( "INVERSION", .F. )
-        nIva := If( lInv, 0.00, 21.00 )
-    ENDIF
-
-    PRE_IV->( DbCloseArea() )
-    Select( nArea )
-
-RETURN NIL
-
-
 STATIC FUNCTION _CertCalcPorc( oGet, hCert )
 
     LOCAL i
     LOCAL nTotalCert := 0
     LOCAL aLins := hCert["aLineas"]
 
-    hCert["nPorcentaje"] := oGet:GetValue()
+    // Validate() ya ha sincronizado ::uVar antes de ejecutar bValid.
+    // No llamar a GetValue() aqui: volveria a disparar Validate()/bValid.
+    hCert["nPorcentaje"] := oGet:uVar
 
     IF hCert["nPorcentaje"] <= 0 .OR. hCert["nPorcentaje"] > 100
         MsgStop( "El % debe estar entre 1 y 100.", "Certificacion" )
@@ -443,7 +417,7 @@ STATIC FUNCTION _CertCalcPorc( oGet, hCert )
     hCert["oGrid"]:Paint()
     hCert["oLTotalCert"]:SetText( Transform( nTotalCert, "999,999.99" ) )
 
-    hCert["nPorcentaje"] := oGet:GetValue()
+    hCert["nPorcentaje"] := oGet:uVar
 
 RETURN .T.
 
@@ -600,6 +574,7 @@ STATIC FUNCTION _CertFacturar( cIdCert )
     LOCAL cFormaPa := ""
     LOCAL nDias    := 0
     LOCAL dVto
+    LOCAL lInversion := .F.
     LOCAL cNumFac  := ""
     LOCAL nArea    := Select()
 
@@ -646,6 +621,13 @@ STATIC FUNCTION _CertFacturar( cIdCert )
         RETURN .F.
     ENDIF
 
+    lInversion := _ObraInversion( cIdObra )
+    IF lInversion
+        nPorcIva := 0.00
+        nIva     := 0.00
+        nTotal   := nBase
+    ENDIF
+
     _ObraFormaPagoCliente( cCliente, @cFormaPa, @nDias )
     dVto := dFecha + nDias
 
@@ -656,7 +638,7 @@ STATIC FUNCTION _CertFacturar( cIdCert )
 
     IF !_ObraCrearFacturaCab( "A", cNumFac, cCliente, dFecha, dVto, ;
                               nBase, nIva, nTotal, cFormaPa, cNumPre, ;
-                              cIdObra, "C", "Certificacion " + cIdCert )
+                              cIdObra, "C", "Certificacion " + cIdCert, lInversion )
         RETURN .F.
     ENDIF
 

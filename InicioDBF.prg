@@ -624,6 +624,7 @@ FUNCTION InicioDBF()
     AAdd( aCampos, { "FECHA_IN",  "D",  8, 0 } )
     AAdd( aCampos, { "FECHA_FIN", "D",  8, 0 } )
     AAdd( aCampos, { "TOTAL",     "N", 12, 2 } )
+    AAdd( aCampos, { "INVERSION", "L",  1, 0 } )
     AAdd( aCampos, { "ESTADO",    "C",  1, 0 } ) // A=Abierta E=En curso F=Finalizada C=Cancelada
     AAdd( aCampos, { "USUARIO_",  "C", 10, 0 } )
     AAdd( aCampos, { "FECHA_AL",  "D",  8, 0 } )

@@ -169,6 +169,80 @@ FUNCTION ErrorLogAppend( cText )
 RETURN .T.
 
 
+FUNCTION ErrorLogError( oErr, cContext )
+
+    DEFAULT cContext TO ""
+
+RETURN ErrorLogAppend( _ErrorLogBuild( oErr, cContext, 3 ) )
+
+
+STATIC FUNCTION _ErrorLogBuild( oErr, cContext, nStart )
+
+    LOCAL cMsg  := ""
+    LOCAL cLog  := ""
+    LOCAL cArgs := ""
+    LOCAL nI
+    LOCAL i
+
+    DEFAULT cContext TO ""
+    DEFAULT nStart   TO 2
+
+    cMsg := "ERROR DE EJECUCION" + hb_Eol()
+    IF !Empty( cContext )
+        cMsg += "Contexto    : " + hb_ValToStr( cContext ) + hb_Eol()
+    ENDIF
+
+    BEGIN SEQUENCE
+        cMsg += "Subsistema  : " + hb_ValToStr( oErr:SubSystem )   + hb_Eol()
+        cMsg += "Codigo      : " + hb_ValToStr( oErr:SubCode )     + hb_Eol()
+        cMsg += "Operacion   : " + hb_ValToStr( oErr:Operation )   + hb_Eol()
+        cMsg += "Descripcion : " + hb_ValToStr( oErr:Description ) + hb_Eol()
+        cMsg += "Severidad   : " + hb_ValToStr( oErr:Severity )    + hb_Eol()
+        cMsg += "CanRetry    : " + hb_ValToStr( oErr:CanRetry )    + hb_Eol()
+        IF !Empty( oErr:FileName )
+            cMsg += "Fichero     : " + hb_ValToStr( oErr:FileName ) + hb_Eol()
+        ENDIF
+        IF !Empty( oErr:OsCode )
+            cMsg += "OS code     : " + hb_ValToStr( oErr:OsCode )  + hb_Eol()
+        ENDIF
+    RECOVER
+        cMsg += "(no se pudieron leer todos los campos del error)" + hb_Eol()
+    END SEQUENCE
+
+    BEGIN SEQUENCE
+        IF HB_ISARRAY( oErr:Args )
+            cArgs := "Argumentos:" + hb_Eol()
+            FOR i := 1 TO Len( oErr:Args )
+                cArgs += "  [" + AllTrim( Str( i ) ) + "] " + ;
+                         hb_ValToStr( oErr:Args[ i ] ) + hb_Eol()
+            NEXT
+        ENDIF
+    RECOVER
+        cArgs := "(argumentos no accesibles)" + hb_Eol()
+    END SEQUENCE
+
+    cLog := Replicate( "=", 70 ) + hb_Eol()
+    cLog += "FECHA: " + DToC( Date() ) + " HORA: " + Time() + hb_Eol()
+    cLog += cMsg
+    IF !Empty( cArgs )
+        cLog += cArgs
+    ENDIF
+
+    cLog += "Pila de llamadas:" + hb_Eol()
+    nI := nStart
+    DO WHILE !Empty( ProcName( nI ) )
+        cLog += "  " + PadR( ProcFile( nI ), 24 ) + ;
+                " -> " + PadR( ProcName( nI ), 30 ) + ;
+                " (linea " + AllTrim( Str( ProcLine( nI ) ) ) + ")" + hb_Eol()
+        nI++
+        IF nI > 50
+            EXIT
+        ENDIF
+    ENDDO
+
+RETURN cLog
+
+
 STATIC FUNCTION _AppPathAddSep( cPath )
 
     cPath := AllTrim( cPath )
@@ -218,11 +292,6 @@ RETURN cOut
 FUNCTION ErrSys( oErr )
 
     STATIC lProc := .F.
-    LOCAL cMsg     := ""
-    LOCAL cLog     := ""
-    LOCAL cArgs    := ""
-    LOCAL nI       := 2
-    LOCAL i
 
     IF lProc
         ErrorLevel( 2 )
@@ -232,55 +301,7 @@ FUNCTION ErrSys( oErr )
 
     ErrorBlock( { |e| Break( e ) } )
 
-    cMsg := "ERROR DE EJECUCION" + hb_Eol()
-    BEGIN SEQUENCE
-        cMsg += "Subsistema  : " + hb_ValToStr( oErr:SubSystem )   + hb_Eol()
-        cMsg += "Codigo      : " + hb_ValToStr( oErr:SubCode )     + hb_Eol()
-        cMsg += "Operacion   : " + hb_ValToStr( oErr:Operation )   + hb_Eol()
-        cMsg += "Descripcion : " + hb_ValToStr( oErr:Description ) + hb_Eol()
-        cMsg += "Severidad   : " + hb_ValToStr( oErr:Severity )    + hb_Eol()
-        cMsg += "CanRetry    : " + hb_ValToStr( oErr:CanRetry )    + hb_Eol()
-        IF !Empty( oErr:FileName )
-            cMsg += "Fichero     : " + hb_ValToStr( oErr:FileName ) + hb_Eol()
-        ENDIF
-        IF !Empty( oErr:OsCode )
-            cMsg += "OS code     : " + hb_ValToStr( oErr:OsCode )  + hb_Eol()
-        ENDIF
-    RECOVER
-        cMsg += "(no se pudieron leer todos los campos del error)" + hb_Eol()
-    END SEQUENCE
-
-    BEGIN SEQUENCE
-        IF HB_ISARRAY( oErr:Args )
-            cArgs := "Argumentos:" + hb_Eol()
-            FOR i := 1 TO Len( oErr:Args )
-                cArgs += "  [" + AllTrim( Str( i ) ) + "] " + ;
-                         hb_ValToStr( oErr:Args[ i ] ) + hb_Eol()
-            NEXT
-        ENDIF
-    RECOVER
-        cArgs := "(argumentos no accesibles)" + hb_Eol()
-    END SEQUENCE
-
-    cLog := Replicate( "=", 70 ) + hb_Eol()
-    cLog += "FECHA: " + DToC( Date() ) + " HORA: " + Time() + hb_Eol()
-    cLog += cMsg
-    IF !Empty( cArgs )
-        cLog += cArgs
-    ENDIF
-
-    cLog += "Pila de llamadas:" + hb_Eol()
-    DO WHILE !Empty( ProcName( nI ) )
-        cLog += "  " + PadR( ProcFile( nI ), 24 ) + ;
-                " -> " + PadR( ProcName( nI ), 30 ) + ;
-                " (linea " + AllTrim( Str( ProcLine( nI ) ) ) + ")" + hb_Eol()
-        nI++
-        IF nI > 50
-            EXIT
-        ENDIF
-    ENDDO
-
-    ErrorLogAppend( cLog )
+    ErrorLogAppend( _ErrorLogBuild( oErr, "ErrSys", 2 ) )
 
     BEGIN SEQUENCE
         dbCloseAll()
@@ -524,23 +545,38 @@ RETURN cPref
 FUNCTION EvalSafe( bBlock, cContext, xArg1, xArg2, xArg3 )
 
     LOCAL xRet := NIL
-
-    HB_SYMBOL_UNUSED( cContext )
+    LOCAL bOld
+    LOCAL oErr
 
     IF ValType( bBlock ) != "B"
         RETURN NIL
     ENDIF
 
-    DO CASE
-    CASE PCount() <= 2
-        xRet := Eval( bBlock )
-    CASE PCount() == 3
-        xRet := Eval( bBlock, xArg1 )
-    CASE PCount() == 4
-        xRet := Eval( bBlock, xArg1, xArg2 )
-    OTHERWISE
-        xRet := Eval( bBlock, xArg1, xArg2, xArg3 )
-    ENDCASE
+    bOld := ErrorBlock( {| e | Break( e ) } )
+
+    BEGIN SEQUENCE
+
+        DO CASE
+        CASE PCount() <= 2
+            xRet := Eval( bBlock )
+        CASE PCount() == 3
+            xRet := Eval( bBlock, xArg1 )
+        CASE PCount() == 4
+            xRet := Eval( bBlock, xArg1, xArg2 )
+        OTHERWISE
+            xRet := Eval( bBlock, xArg1, xArg2, xArg3 )
+        ENDCASE
+
+    RECOVER USING oErr
+
+        ErrorLogError( oErr, cContext )
+        MsgStop( "Se ha registrado un error en error.log." + hb_Eol() + ;
+                 "Contexto: " + hb_ValToStr( cContext ), "Error interno" )
+        xRet := NIL
+
+    END SEQUENCE
+
+    ErrorBlock( bOld )
 
 RETURN xRet
 

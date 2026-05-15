@@ -25,6 +25,7 @@ FUNCTION CrearObraDesdePresupuesto( cNumPre, cDescripcion, cDireccionObra, dFech
    LOCAL cCliente := ""
    LOCAL nTotal   := 0.00
    LOCAL cObs     := ""
+   LOCAL lInversion := .F.
    LOCAL nArea    := Select()
 
    DEFAULT cDescripcion   TO ""
@@ -55,6 +56,7 @@ FUNCTION CrearObraDesdePresupuesto( cNumPre, cDescripcion, cDireccionObra, dFech
    cCliente := PRE_OBR_C->CLIENTE_
    nTotal   := PRE_OBR_C->TOTAL
    cObs     := AllTrim( PRE_OBR_C->OBSERVA )
+   lInversion := PRE_OBR_C->INVERSION
 
    IF Empty( cDescripcion )
       cDescripcion := "Obra segun presupuesto " + AllTrim( cNumPre )
@@ -68,7 +70,7 @@ FUNCTION CrearObraDesdePresupuesto( cNumPre, cDescripcion, cDireccionObra, dFech
    ENDIF
 
    IF !_ObraAppend( cIdObra, cNumPre, cCliente, cDescripcion, cDireccionObra, ;
-                    dFechaIn, dFechaFin, nTotal, "A", cObs )
+                    dFechaIn, dFechaFin, nTotal, "A", cObs, lInversion )
       PRE_OBR_C->( DbCloseArea() )
       Select( nArea )
       RETURN ""
@@ -96,7 +98,7 @@ RETURN cIdObra
 // Permite crear una obra sin presupuesto origen.
 // Util para trabajos internos o casos excepcionales controlados.
 // ============================================================================
-FUNCTION CrearObraManual( cCliente, cDescripcion, cDireccionObra, nTotal, dFechaIn, dFechaFin )
+FUNCTION CrearObraManual( cCliente, cDescripcion, cDireccionObra, nTotal, dFechaIn, dFechaFin, lInversion )
 
    LOCAL cIdObra := ""
    LOCAL nArea   := Select()
@@ -107,6 +109,7 @@ FUNCTION CrearObraManual( cCliente, cDescripcion, cDireccionObra, nTotal, dFecha
    DEFAULT nTotal         TO 0.00
    DEFAULT dFechaIn       TO Date()
    DEFAULT dFechaFin      TO CToD( "" )
+   DEFAULT lInversion     TO .F.
 
    IF Empty( cCliente )
       MsgStop( "Debe indicar el cliente de la obra.", "Obras" )
@@ -133,7 +136,7 @@ FUNCTION CrearObraManual( cCliente, cDescripcion, cDireccionObra, nTotal, dFecha
    ENDIF
 
    IF !_ObraAppend( cIdObra, "", cCliente, cDescripcion, cDireccionObra, ;
-                    dFechaIn, dFechaFin, nTotal, "A", "" )
+                    dFechaIn, dFechaFin, nTotal, "A", "", lInversion )
       Select( nArea )
       RETURN ""
    ENDIF
@@ -197,6 +200,7 @@ FUNCTION FacturarObra( cIdObra, nImporte, cTipoFac, nPorcIva, cConcepto, dFecha 
    LOCAL dVto
    LOCAL nDias     := 0
    LOCAL cFormaPa  := ""
+   LOCAL lInversion := .F.
    LOCAL nArea     := Select()
 
    DEFAULT cTipoFac TO "C"
@@ -222,6 +226,8 @@ FUNCTION FacturarObra( cIdObra, nImporte, cTipoFac, nPorcIva, cConcepto, dFecha 
       RETURN ""
    ENDIF
 
+   lInversion := _ObraInversion( cIdObra )
+
    _ObraFormaPagoCliente( cCliente, @cFormaPa, @nDias )
    dVto := dFecha + nDias
 
@@ -246,7 +252,7 @@ FUNCTION FacturarObra( cIdObra, nImporte, cTipoFac, nPorcIva, cConcepto, dFecha 
 
    IF !_ObraCrearFacturaCab( cSerie, cNumFac, cCliente, dFecha, dVto, ;
                              nBase, nIva, nTotal, cFormaPa, cNumPre, ;
-                             cIdObra, cTipoFac, cConcepto )
+                             cIdObra, cTipoFac, cConcepto, lInversion )
       Select( nArea )
       RETURN ""
    ENDIF
@@ -338,12 +344,14 @@ RETURN lTiene
 // _ObraAppend()
 // ============================================================================
 STATIC FUNCTION _ObraAppend( cIdObra, cNumPre, cCliente, cDescripcion, cDireccionObra, ;
-                             dFechaIn, dFechaFin, nTotal, cEstado, cObserva )
+                             dFechaIn, dFechaFin, nTotal, cEstado, cObserva, lInversion )
 
    LOCAL cUsuario := "SISTEMA"
    LOCAL nArea    := Select()
 
    MEMVAR cUserID
+
+   DEFAULT lInversion TO .F.
 
    IF Type( "cUserID" ) == "C" .AND. !Empty( cUserID )
       cUsuario := AllTrim( cUserID )
@@ -370,6 +378,7 @@ STATIC FUNCTION _ObraAppend( cIdObra, cNumPre, cCliente, cDescripcion, cDireccio
    REPLACE OBR_APP->FECHA_IN  WITH dFechaIn
    REPLACE OBR_APP->FECHA_FIN WITH dFechaFin
    REPLACE OBR_APP->TOTAL     WITH nTotal
+   REPLACE OBR_APP->INVERSION WITH lInversion
    REPLACE OBR_APP->ESTADO    WITH cEstado
    REPLACE OBR_APP->USUARIO_  WITH PadR( cUsuario, 10 )
    REPLACE OBR_APP->FECHA_AL  WITH Date()
@@ -417,6 +426,29 @@ RETURN lOk
 
 
 // ============================================================================
+// _ObraInversion()
+// La obra es la fuente de verdad para sujeto pasivo / inversion IVA.
+// ============================================================================
+FUNCTION _ObraInversion( cIdObra )
+
+   LOCAL nArea := Select()
+   LOCAL lInv  := .F.
+
+   IF ABRIR_TABLA( "OBRAS", "OBR_INV", "OBR_ID" )
+      DbSelectArea( "OBR_INV" )
+      OrdSetFocus( "OBR_ID" )
+      IF DbSeek( PadR( cIdObra, 12 ) ) .OR. DbSeek( cIdObra )
+         lInv := OBR_INV->INVERSION
+      ENDIF
+      OBR_INV->( DbCloseArea() )
+   ENDIF
+
+   Select( nArea )
+
+RETURN lInv
+
+
+// ============================================================================
 // _ObraFormaPagoCliente()
 // ============================================================================
 FUNCTION _ObraFormaPagoCliente( cCliente, cFormaPa, nDias )
@@ -446,9 +478,11 @@ RETURN NIL
 // ============================================================================
 FUNCTION _ObraCrearFacturaCab( cSerie, cNumFac, cCliente, dFecha, dVto, ;
                                       nBase, nIva, nTotal, cFormaPa, cNumPre, ;
-                                      cIdObra, cTipoFac, cConcepto )
+                                      cIdObra, cTipoFac, cConcepto, lInversion )
 
    LOCAL nArea := Select()
+
+   DEFAULT lInversion TO .F.
 
    IF !ABRIR_TABLA( "FACTURA", "FAC_OBR_C", "FAC_NUM" )
       Select( nArea )
@@ -485,6 +519,7 @@ FUNCTION _ObraCrearFacturaCab( cSerie, cNumFac, cCliente, dFecha, dVto, ;
    REPLACE FAC_OBR_C->NUM_PRE  WITH PadR( AllTrim( cNumPre ), 10 )
    REPLACE FAC_OBR_C->ID_OBRA  WITH PadR( AllTrim( cIdObra ), 12 )
    REPLACE FAC_OBR_C->TIPO_FAC WITH cTipoFac
+   REPLACE FAC_OBR_C->INVERSION WITH lInversion
 
    DbCommit()
    DbUnlock()
@@ -855,6 +890,14 @@ FUNCTION ObrasView()
 RETURN NIL
 
 
+FUNCTION ObraNuevaManual()
+RETURN _ObraManualForm()
+
+
+FUNCTION ObraDesdePresupuesto()
+RETURN _ObraDesdePreForm()
+
+
 // ============================================================================
 // _ObrasCargar()
 // ============================================================================
@@ -905,6 +948,8 @@ STATIC FUNCTION _ObraManualForm()
     LOCAL oGFI
     LOCAL oGFF
     LOCAL oGTot
+    LOCAL oChkInv
+    LOCAL oBtBusCli
     LOCAL oBtBusDir
     LOCAL oBtGua
     LOCAL oBtCan
@@ -924,12 +969,16 @@ STATIC FUNCTION _ObraManualForm()
     oGFI  := TGet():New(  8, 20, cFecIn,   "@!",          oWin )
     oGFF  := TGet():New( 10, 20, cFecFin,  "@!",          oWin )
     oGTot := TGet():New( 12, 20, nTotal,   "999,999.99",  oWin )
+    oChkInv := TCheck():New( 14, 20, "Sujeto pasivo / inversion IVA", .F., oWin )
+
+    oBtBusCli := TButton():New( 2, 68, 2, 82, oWin, "BUSCAR CLI", ;
+       {|| _ObraBuscarCliente( oGCli ) } )
 
     oBtBusDir := TButton():New( 6, 68, 6, 82, oWin, "BUSCAR DIR", ;
        {|| _ObraBuscarDirCli( oGCli, oGDir ) } )
 
     oBtGua := TButton():New( 17, 34, 18, 53, oWin, "GUARDAR", ;
-       {|| _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oWin ) } )
+       {|| _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oChkInv, oWin ) } )
 
     oBtCan := TButton():New( 17, 57, 18, 76, oWin, "CANCELAR", ;
        {|| oWin:Close() } )
@@ -940,6 +989,8 @@ STATIC FUNCTION _ObraManualForm()
     oWin:AddCtrl( oGFI     )
     oWin:AddCtrl( oGFF     )
     oWin:AddCtrl( oGTot    )
+    oWin:AddCtrl( oChkInv  )
+    oWin:AddCtrl( oBtBusCli )
     oWin:AddCtrl( oBtBusDir )
     oWin:AddCtrl( oBtGua   )
     oWin:AddCtrl( oBtCan   )
@@ -949,7 +1000,18 @@ STATIC FUNCTION _ObraManualForm()
 RETURN NIL
 
 
-STATIC FUNCTION _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oWin )
+STATIC FUNCTION _ObraBuscarCliente( oGCli )
+
+   LOCAL cId := LookupCliente()
+
+   IF !Empty( cId )
+      oGCli:SetValue( PadR( cId, 10 ) )
+   ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oChkInv, oWin )
 
    LOCAL cId
    LOCAL dFecIn  := CToD( AllTrim( oGFI:GetValue() ) )
@@ -962,7 +1024,8 @@ STATIC FUNCTION _ObraManualGuardar( oGCli, oGDes, oGDir, oGFI, oGFF, oGTot, oWin
    cId := CrearObraManual( AllTrim( oGCli:GetValue() ), ;
                             AllTrim( oGDes:GetValue() ), ;
                             AllTrim( oGDir:GetValue() ), ;
-                            oGTot:GetValue(), dFecIn, dFecFin )
+                            oGTot:GetValue(), dFecIn, dFecFin, ;
+                            oChkInv:GetValue() )
 
    IF !Empty( cId )
       MsgInfo( "Obra creada: " + cId, "Obras" )
@@ -988,6 +1051,7 @@ STATIC FUNCTION _ObraDesdePreForm()
     LOCAL oGDir
     LOCAL oGFI
     LOCAL oGFF
+    LOCAL oBtBusPre
     LOCAL oBtBusDir
     LOCAL oBtGua
     LOCAL oBtCan
@@ -999,13 +1063,15 @@ STATIC FUNCTION _ObraDesdePreForm()
     oWin:AddCtrl( TLabel():New(  6,  2, "Direccion obra:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8,  2, "Fecha inicio  :", oWin ) )
     oWin:AddCtrl( TLabel():New( 10,  2, "Fecha fin prev:", oWin ) )
-    oWin:AddCtrl( TLabel():New( 13,  2, "Nota: el presupuesto debe estar aceptado (ESTADO=A).", oWin ) )
 
     oGPre := TGet():New(  2, 20, cNumPre, "@!", oWin )
     oGDes := TGet():New(  4, 20, cDesc,   "@!", oWin )
     oGDir := TGet():New(  6, 20, cDir,    "@!", oWin )
     oGFI  := TGet():New(  8, 20, cFecIn,  "@!", oWin )
     oGFF  := TGet():New( 10, 20, cFecFin, "@!", oWin )
+
+    oBtBusPre := TButton():New( 2, 56, 2, 72, oWin, "BUSCAR PRESUP", ;
+       {|| _ObraLookupPreAceptado( oGPre, oGDes ) } )
 
     oBtBusDir := TButton():New( 6, 68, 6, 82, oWin, "BUSCAR DIR", ;
        {|| _ObraBuscarDirPre( oGPre, oGDir ) } )
@@ -1017,6 +1083,7 @@ STATIC FUNCTION _ObraDesdePreForm()
        {|| oWin:Close() } )
 
     oWin:AddCtrl( oGPre     )
+    oWin:AddCtrl( oBtBusPre )
     oWin:AddCtrl( oGDes     )
     oWin:AddCtrl( oGDir     )
     oWin:AddCtrl( oGFI      )
@@ -1067,6 +1134,7 @@ STATIC FUNCTION _ObraFacturaForm( cIdObra, cTipoFac )
    LOCAL cDescObra := ""
    LOCAL cNomCli   := ""
    LOCAL cConcepto
+   LOCAL lInversion := .F.
    LOCAL dFecha    := Date()
    LOCAL nBase     := 0.00
    LOCAL nCuotaIva := 0.00
@@ -1079,6 +1147,11 @@ STATIC FUNCTION _ObraFacturaForm( cIdObra, cTipoFac )
 
    IF !_ObraLeerCab( cIdObra, @cCliente, @cNumPre, @cDescObra )
       RETURN NIL
+   ENDIF
+
+   lInversion := _ObraInversion( cIdObra )
+   IF lInversion
+      nIva := 0.00
    ENDIF
 
    cNomCli   := _ObraClienteNombre( cCliente )
@@ -1098,6 +1171,7 @@ STATIC FUNCTION _ObraFacturaForm( cIdObra, cTipoFac )
    oWin:AddCtrl( TLabel():New(  3,  2, "Cliente       : " + AllTrim( cCliente ) + " " + cNomCli, oWin ) )
    oWin:AddCtrl( TLabel():New(  4,  2, "Presupuesto   : " + AllTrim( cNumPre ), oWin ) )
    oWin:AddCtrl( TLabel():New(  5,  2, "Descripcion   : " + AllTrim( cDescObra ), oWin ) )
+   oWin:AddCtrl( TLabel():New(  6,  2, "Sujeto pasivo : " + If( lInversion, "SI", "NO" ), oWin ) )
    oWin:AddCtrl( TLabel():New(  7,  2, "Total obra    : " + Transform( aRes[1], "999,999,999.99" ), oWin ) )
    oWin:AddCtrl( TLabel():New(  8,  2, "Facturado     : " + Transform( aRes[2], "999,999,999.99" ), oWin ) )
    oWin:AddCtrl( TLabel():New(  9,  2, "Pendiente     : " + Transform( aRes[3], "999,999,999.99" ), oWin ) )
@@ -1119,8 +1193,11 @@ STATIC FUNCTION _ObraFacturaForm( cIdObra, cTipoFac )
       ( MsgStop( "La fecha de factura es obligatoria.", "Validacion" ), .F. ) }
    oGImp:bValid := {| o | o:uVar > 0 .OR. ;
       ( MsgStop( "El importe debe ser mayor que cero.", "Validacion" ), .F. ) }
-   oGIva:bValid := {| o | o:uVar >= 0 .AND. o:uVar <= 100 .OR. ;
-      ( MsgStop( "El IVA debe estar entre 0 y 100.", "Validacion" ), .F. ) }
+   oGIva:bValid := {| o | ;
+      If( lInversion .AND. o:uVar != 0, ;
+          ( MsgStop( "La obra esta marcada como sujeto pasivo. El IVA debe ser 0.", "Validacion" ), .F. ), ;
+          o:uVar >= 0 .AND. o:uVar <= 100 .OR. ;
+             ( MsgStop( "El IVA debe estar entre 0 y 100.", "Validacion" ), .F. ) ) }
 
    oBtGua := TButton():New( 25, 34, 26, 53, oWin, "EMITIR", ;
       {|| _ObraFacturaGuardar( cIdObra, cTipoFac, oGFec, oGImp, oGIva, oGCon, oWin ) } )
@@ -1150,11 +1227,21 @@ STATIC FUNCTION _ObraFacturaGuardar( cIdObra, cTipoFac, oGFec, oGImp, oGIva, oGC
    LOCAL nCuotaIva
    LOCAL aRes
    LOCAL cMsg
+   LOCAL cCliente := ""
+   LOCAL cNumPre  := ""
+   LOCAL cDescObra:= ""
+   LOCAL lInversion
 
    dFecha   := oGFec:GetValue()
    nImporte := Round( oGImp:GetValue(), 2 )
    nIva     := Round( oGIva:GetValue(), 2 )
    aRes     := GetResumenObra( cIdObra )
+
+   _ObraLeerCab( cIdObra, @cCliente, @cNumPre, @cDescObra )
+   lInversion := _ObraInversion( cIdObra )
+   IF lInversion
+      nIva := 0.00
+   ENDIF
 
    IF Empty( dFecha )
       MsgStop( "La fecha de factura es obligatoria.", "Validacion" )
@@ -1182,6 +1269,7 @@ STATIC FUNCTION _ObraFacturaGuardar( cIdObra, cTipoFac, oGFec, oGImp, oGIva, oGC
            "Obra      : " + AllTrim( cIdObra ) + Chr(13) + ;
             "Pendiente : " + Transform( aRes[4], "999,999,999.99" ) + Chr(13) + ;
            "Fecha     : " + DToC( dFecha ) + Chr(13) + ;
+           "Suj. pas. : " + If( lInversion, "SI", "NO" ) + Chr(13) + ;
            "Base      : " + Transform( nBase, "999,999,999.99" ) + Chr(13) + ;
            "IVA       : " + Transform( nCuotaIva, "999,999,999.99" ) + Chr(13) + ;
            "Total     : " + Transform( nImporte, "999,999,999.99" )
@@ -1551,6 +1639,55 @@ FUNCTION _ObraBuscarDirCli( oGCli, oGDir )
 
     IF !Empty( cSel )
         oGDir:SetValue( cSel )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _ObraLookupPreAceptado( oGPre, oGDes )
+
+    LOCAL aData := {}
+    LOCAL aCombo := {}
+    LOCAL i, cSel
+    LOCAL nArea := Select()
+
+    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_LO", "PRE_FEC" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "PRE_LO" )
+    OrdSetFocus( "PRE_FEC" )
+    DbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( DbFieldValue( "ESTADO", "" ) ) == "A"
+            AAdd( aData, { ;
+                AllTrim( PRE_LO->NUMERO ), ;
+                DToC( PRE_LO->FECHA ), ;
+                AllTrim( PRE_LO->CLIENTE_ ), ;
+                PRE_LO->TOTAL } )
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    PRE_LO->( DbCloseArea() )
+    Select( nArea )
+
+    IF Empty( aData )
+        MsgInfo( "No hay presupuestos aceptados.", "Buscar" )
+        RETURN NIL
+    ENDIF
+
+    FOR i := 1 TO Len( aData )
+        AAdd( aCombo, { aData[i, 1], aData[i, 1] + " - " + aData[i, 2] + " - " + aData[i, 3] } )
+    NEXT
+
+    cSel := PopupSelect( "SELECCIONAR PRESUPUESTO ACEPTADO", aCombo, ;
+                          { { "Presupuesto", 72, "@!", 2 } }, 1 )
+
+    IF !Empty( cSel )
+        oGPre:SetValue( PadR( cSel, 10 ) )
     ENDIF
 
 RETURN NIL
