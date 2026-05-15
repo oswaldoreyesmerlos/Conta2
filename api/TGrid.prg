@@ -405,6 +405,7 @@ METHOD HandleKey( nKey ) CLASS TGrid
 
     LOCAL lHandled := .T.
     LOCAL cChar
+    LOCAL nMRow, nMCol, nOffRow, nNewRow
 
     DO CASE
 
@@ -425,6 +426,27 @@ METHOD HandleKey( nKey ) CLASS TGrid
 
     CASE nKey == K_END  .OR. nKey == K_CTRL_PGDN
          ::GoBottom()
+
+    CASE nKey == K_LBUTTONDOWN
+         nMRow := MRow()
+         nMCol := MCol()
+         // Verificar si el click esta dentro del area de datos del grid
+         IF nMRow >= ::nTop + 2 .AND. nMRow <= ::nTop + 1 + ::nVisibleRows .AND. ;
+            nMCol >= ::nLeft + 1 .AND. nMCol <= ::nRight - 1
+            nOffRow := nMRow - ( ::nTop + 2 )
+            nNewRow := ::nTopRow + nOffRow
+            IF nNewRow >= 1 .AND. nNewRow <= Len( ::aData )
+                 IF nNewRow != ::nCurRow
+                     ::nCurRow := nNewRow
+                     ::Paint()
+                     IF ::bChange != NIL
+                         EvalSafe( ::bChange, "TGrid:bChange", Self )
+                     ENDIF
+                 ENDIF
+                 lHandled := .T.
+            ENDIF
+         ENDIF
+         // Si el click fue en el area del grid pero fuera de datos, no hacer nada
 
     CASE nKey == K_ENTER .OR. nKey == K_F2
          IF ::bEnter != NIL .AND. ::nCurRow >= 1 .AND. ;

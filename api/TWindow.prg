@@ -708,6 +708,9 @@ STATIC FUNCTION _WinMouseClick( oWin, nRow, nCol )
 
                         oCtrl:Click()
 
+                    ELSE
+                        // Propagar el click al control (TGrid, TCheck, etc.)
+                        oCtrl:HandleKey( K_LBUTTONDOWN )
                     ENDIF
 
                     RETURN NIL

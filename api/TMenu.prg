@@ -154,6 +154,8 @@ RETURN NIL
 
 METHOD ProcKey( nKey ) CLASS TMenu
 
+    LOCAL nI, nC, nML, nMR
+
     DO CASE
 
     CASE nKey == K_RIGHT
@@ -172,6 +174,23 @@ METHOD ProcKey( nKey ) CLASS TMenu
 
     CASE nKey == K_ENTER .OR. nKey == K_DOWN
         ::OpenPopup()
+
+    CASE nKey == K_LBUTTONDOWN
+         nMR := MRow()
+         nML := MCol()
+         // Verificar si el click es en la fila del menu
+         IF nMR == ::nTop
+             nC := 2
+             FOR nI := 1 TO Len( ::aItems )
+                 IF nML >= nC .AND. nML <= nC + Len( ::aItems[nI, 1] ) + 2
+                     ::nAct := nI
+                     ::Paint()
+                     ::OpenPopup()
+                     EXIT
+                 ENDIF
+                 nC += Len( ::aItems[nI, 1] ) + 4
+             NEXT
+         ENDIF
 
     ENDCASE
 
@@ -378,6 +397,7 @@ METHOD Run() CLASS TMenuPop
     LOCAL nKey
     LOCAL lSub
     LOCAL lSep
+    LOCAL nMR, nML, nTry
 
     DO WHILE .T.
 
@@ -447,6 +467,27 @@ METHOD Run() CLASS TMenuPop
             IF !lSub
                 EXIT
             ENDIF
+
+        CASE nKey == K_LBUTTONDOWN
+             nMR := MRow()
+             nML := MCol()
+             // Verificar si el click esta dentro del area del popup
+             IF nMR >= ::nTop .AND. nMR <= ::nBottom .AND. ;
+                nML >= ::nLeft .AND. nML <= ::nRight
+                 nTry := nMR - ::nTop
+                 IF nTry >= 1 .AND. nTry <= Len( ::aItems )
+                     // Saltar separadores
+                     IF Left( AllTrim( ::aItems[nTry, 1] ), 1 ) != "-"
+                         ::nSel := nTry
+                         ::Paint()
+                         lSub := ::ExecItem()
+                         _RedrawStack()
+                         IF !lSub
+                             EXIT
+                         ENDIF
+                     ENDIF
+                 ENDIF
+             ENDIF
 
         ENDCASE
 
