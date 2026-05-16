@@ -148,30 +148,30 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
     DEFAULT cCodigo TO ""
 
     nArea     := Select()
-    cCodigo   := Space( 10 )
-    cDescrip  := Space( 60 )
-    cFamilia  := Space(  3 )
-    cProveed  := Space( 10 )
-    cCodBarr  := Space( 15 )
-    cUnidad   := Space(  3 )
-    nStock    := 0.0000
-    nStoMin   := 0.0000
-    nStoMax   := 0.0000
-    lEsServ   := .F.
-    cCtaVta   := Space( 10 )
-    cCtaCom   := Space( 10 )
-    nCosto    := 0.0000
-    nPrecio   := 0.00
-    nIva      := 21.00
-    cTipoIva  := Space(  1 )
-    nDescuent := 0.00
-    lBaja     := .F.
-
     IF !ABRIR_TABLA( "ARTICULOS", "ART", "ART_COD" )
         RETURN NIL
     ENDIF
 
-    IF !lNuevo .AND. !Empty( AllTrim( cCodigo ) )
+    IF lNuevo
+        cCodigo   := Space( 10 )
+        cDescrip  := Space( 60 )
+        cFamilia  := Space(  3 )
+        cProveed  := Space( 10 )
+        cCodBarr  := Space( 15 )
+        cUnidad   := Space(  3 )
+        nStock    := 0.0000
+        nStoMin   := 0.0000
+        nStoMax   := 0.0000
+        lEsServ   := .F.
+        cCtaVta   := Space( 10 )
+        cCtaCom   := Space( 10 )
+        nCosto    := 0.0000
+        nPrecio   := 0.00
+        nIva      := 21.00
+        cTipoIva  := Space(  1 )
+        nDescuent := 0.00
+        lBaja     := .F.
+    ELSEIF !Empty( AllTrim( cCodigo ) )
         DbSelectArea( "ART" )
         OrdSetFocus( "ART_COD" )
         IF DbSeek( AllTrim( cCodigo ) )
