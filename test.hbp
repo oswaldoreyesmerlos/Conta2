@@ -45,15 +45,12 @@ Util.prg
 InicioDBF.prg
 drywall\InicioDrywall.prg
 drywall\OOPTRAMO.prg
-drywall\FuncAux.prg
 drywall\CALC_ADD.prg
 drywall\CALC_EDIT.prg
 drywall\CALC_MOD.prg
 drywall\EDIT_MOD.prg
-drywall\MAT_EDIT.prg
 
 drywall\PRES_MOD.prg
-drywall\REPT_MOD.prg
 drywall\TARE_MOD.prg
 drywall\VAL_MOD.prg
 drywall\M_Articulos.prg

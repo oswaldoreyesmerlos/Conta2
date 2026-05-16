@@ -196,7 +196,7 @@ FUNCTION ClientesForm( lNuevo, cId )
     cCtaAnt  := Space( 10 )
     lBaja    := .F.
 
-    lFueAbierta := DBUSED( "CLI" )
+    lFueAbierta := IsDbUsed( "CLI" )
 
     IF !ABRIR_TABLA( "CLIENTES", "CLI", "CLI_ID" )
         RETURN NIL

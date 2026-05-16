@@ -171,7 +171,7 @@ FUNCTION ProveedForm( lNuevo, cId )
     cCtaAnt  := Space( 10 )
     lBaja    := .F.
 
-    lFueAbierta := DBUSED( "PRV" )
+    lFueAbierta := IsDbUsed( "PRV" )
 
     IF !ABRIR_TABLA( "PROVEED", "PRV", "PRV_ID" )
         RETURN NIL

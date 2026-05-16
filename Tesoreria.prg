@@ -72,7 +72,7 @@ RETURN NIL
 FUNCTION BancoNuevo()
 
     LOCAL nArea := Select()
-    LOCAL lAbierta := DBUSED( "BAN" )
+    LOCAL lAbierta := IsDbUsed( "BAN" )
 
     IF !lAbierta .AND. !ABRIR_TABLA( "BANCOS", "BAN", "BAN_COD" )
         RETURN NIL

@@ -17,6 +17,7 @@ CLASS TGet FROM TControl
     DATA nPos
     DATA nOffset
     DATA lNumFresh
+    DATA lFresh
 
     DATA bWhen
     DATA bValid
@@ -87,6 +88,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
     ::nPos := 1
     ::nOffset := 0
     ::lNumFresh := .F.
+    ::lFresh    := .T.
 
     ::bWhen  := NIL
     ::bValid := NIL
@@ -168,6 +170,8 @@ METHOD SetFocus() CLASS TGet
             RETURN NIL
         ENDIF
     ENDIF
+
+    ::lFresh := .T.
 
     IF ::cType == "N"
         ::nPos      := ::nLen
@@ -358,6 +362,12 @@ METHOD HandleKey( nKey ) CLASS TGet
             ::lNumFresh := .F.
             ::Paint()
             RETURN .T.
+        ENDIF
+
+        IF ::lFresh .AND. ::cType == "C"
+            ::cBuffer := Space( ::nBufLen )
+            ::nPos := 1
+            ::lFresh := .F.
         ENDIF
 
         ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, cChr )

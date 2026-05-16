@@ -133,7 +133,7 @@ FUNCTION VendedoresForm( lNuevo, cId )
     cCtaCon  := Space( 10 )
     lBaja    := .F.
 
-    lFueAbierta := DBUSED( "VEN" )
+    lFueAbierta := IsDbUsed( "VEN" )
 
     IF !ABRIR_TABLA( "VENDEDOR", "VEN", "VEN_ID" )
         RETURN NIL

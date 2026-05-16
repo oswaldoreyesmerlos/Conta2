@@ -1,5 +1,7 @@
 #include "OOp.ch"
 
+STATIC s_lMsgBoxActive := .F.
+
 // ============================================================================
 // FUNCION: MsgBox
 // ----------------------------------------------------------------------------
@@ -39,6 +41,14 @@ FUNCTION MsgBox( cMsg, cTit )
     // ------------------------------------------------------------------------
     hb_Default( @cTit, "Mensaje" )
     hb_Default( @cMsg, "" )
+
+    IF s_lMsgBoxActive
+        CLEAR TYPEAHEAD
+        RETURN nRet
+    ENDIF
+
+    s_lMsgBoxActive := .T.
+    CLEAR TYPEAHEAD
 
     // ------------------------------------------------------------------------
     // Calcular dimensiones del dialogo
@@ -86,6 +96,7 @@ FUNCTION MsgBox( cMsg, cTit )
         oWin, ;
         "ACEPTAR", ;
         { || nRet := K_ENTER, oWin:Close() } )
+    oBtn:lSkipValid := .T.
 
     // ------------------------------------------------------------------------
     // Registrar controles
@@ -97,6 +108,9 @@ FUNCTION MsgBox( cMsg, cTit )
     // Ejecutar dialogo modal
     // ------------------------------------------------------------------------
     oWin:Run()
+
+    CLEAR TYPEAHEAD
+    s_lMsgBoxActive := .F.
 
 RETURN nRet
 

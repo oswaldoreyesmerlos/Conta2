@@ -49,7 +49,7 @@ FUNCTION VerTareas( cTipo )
 
     oWin:AddCtrl( TLabel():New( 3,  2, "CLIENTE..:", oWin ) )
     oGCli := TGet():New( 3, 14, cCli, "@S15!", oWin )
-    oGCli:bValid := {| o | _ValidarCli( @cCli ) }
+    oGCli:bValid := {| o | _ValidarCli( o ) }
 
     oWin:AddCtrl( TLabel():New( 3, 60, "FEC:", oWin ) )
     oGFec := TGet():New( 3, 65, dFec, "99/99/9999", oWin )
@@ -202,9 +202,12 @@ STATIC FUNCTION _AbrirTablas()
 RETURN lOk
 
 
-STATIC FUNCTION _ValidarCli( cCli )
+STATIC FUNCTION _ValidarCli( oGet )
 
-    LOCAL cCod := AllTrim( cCli )
+    LOCAL nArea := Select()
+    LOCAL nOrd  := IndexOrd()
+    LOCAL cCod  := AllTrim( oGet:uVar )
+    LOCAL lOk   := .T.
 
     IF Empty( cCod )
         RETURN .T.
@@ -219,13 +222,22 @@ STATIC FUNCTION _ValidarCli( cCli )
     ENDIF
 
     dbSelectArea( "CLIENTES" )
+    OrdSetFocus( "CLI_ID" )
+
     IF dbSeek( PadR( cCod, 10 ) )
-        cCli := PadR( AllTrim( FIELD->NOMBRE ), 15 )
-        RETURN .T.
+        oGet:uVar    := PadR( AllTrim( FIELD->ID ), 15 )
+        oGet:cBuffer := PadR( AllTrim( FIELD->ID ), oGet:nBufLen )
+    ELSE
+        MsgStop( "Cliente no encontrado." )
+        lOk := .F.
     ENDIF
 
-    MsgStop( "Cliente no encontrado." )
-RETURN .F.
+    IF nArea > 0
+        dbSelectArea( nArea )
+        dbSetOrder( nOrd )
+    ENDIF
+
+RETURN lOk
 
 
 STATIC FUNCTION _BuscarCli( oGCli )

@@ -331,7 +331,7 @@ FUNCTION ABRIR_TABLA( cArchivo, cAlias, cIndice, aCdxAdicionales, lReabierta )
     DEFAULT cAlias TO cArchivo
     DEFAULT lReabierta TO .F.
 
-    IF DBUSED( cAlias )
+    IF IsDbUsed( cAlias )
         DbSelectArea( cAlias )
         IF !Empty( cIndice )
             OrdSetFocus( cIndice )
@@ -428,7 +428,7 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
 
     LOCAL cProxCod := ""
     LOCAL nAreaIni := Select()
-    LOCAL lFueAbierta := DBUSED( "CON" )
+    LOCAL lFueAbierta := IsDbUsed( "CON" )
     LOCAL cPrefijo := ""
     LOCAL nUltNum  := 0
     LOCAL nDigitos := 7
@@ -605,11 +605,6 @@ RETURN If( xVar == NIL, xDefecto, xVar )
 
 
 FUNCTION IsDbUsed( cAlias )
-RETURN DBUSED( cAlias )
-
-
-FUNCTION DBUSED( cAlias )
-
     IF ValType( cAlias ) != "C" .OR. Empty( AllTrim( cAlias ) )
         RETURN .F.
     ENDIF

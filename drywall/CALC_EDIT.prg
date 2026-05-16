@@ -68,7 +68,7 @@ STATIC FUNCTION Edit_Tabique( hData )
     oGAlt  := TGet():New( 4, 45, hData["ALTO"],     "999.99", oWin )
     oGMod  := TGet():New( 6, 18, hData["MODUL"],    "9.99",   oWin )
     oGSis  := TGet():New( 6, 45, hData["SISTEMA"],  "999",    oWin )
-    oGSis:bValid := {|o| Val(o:cBuffer) $ {48,70,90} .OR. (MsgStop("Sistema: 48, 70 o 90","Validacion"),.F.) }
+    oGSis:bValid := {|o| _ValidSistema( o ) }
 
     oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"],  "@!", oWin )
     oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
@@ -481,6 +481,19 @@ STATIC FUNCTION _SysAncho( xSistema )
     ENDCASE
 
 RETURN 0
+
+
+STATIC FUNCTION _ValidSistema( oGet )
+
+    LOCAL nSistema := _SysAncho( oGet:uVar )
+
+    IF AScan( { 48, 70, 90 }, nSistema ) > 0
+        RETURN .T.
+    ENDIF
+
+    MsgStop( "Sistema: 48, 70 o 90", "Validacion" )
+
+RETURN .F.
 
 
 STATIC FUNCTION _BtnPick( oGet, hData, cKey, cFam )

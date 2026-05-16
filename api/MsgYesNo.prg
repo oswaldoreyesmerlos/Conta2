@@ -1,5 +1,7 @@
 #include "OOp.ch"
 
+STATIC s_lMsgYesNoActive := .F.
+
 // ============================================================================
 // FUNCION: MsgYesNo
 // ----------------------------------------------------------------------------
@@ -28,6 +30,14 @@ FUNCTION MsgYesNo( cMsg, cTit )
 
     hb_Default( @cTit, "Confirmacion" )
     hb_Default( @cMsg, "" )
+
+    IF s_lMsgYesNoActive
+        CLEAR TYPEAHEAD
+        RETURN lResp
+    ENDIF
+
+    s_lMsgYesNoActive := .T.
+    CLEAR TYPEAHEAD
 
     nMsgLen := Len( AllTrim( cMsg ) )
 
@@ -60,6 +70,7 @@ FUNCTION MsgYesNo( cMsg, cTit )
         oWin, ;
         "SI", ;
         { || lResp := .T., oWin:Close() } )
+    oBtnSi:lSkipValid := .T.
 
     oBtnNo := TButton():New( ;
         5, ;
@@ -69,12 +80,16 @@ FUNCTION MsgYesNo( cMsg, cTit )
         oWin, ;
         "NO", ;
         { || lResp := .F., oWin:Close() } )
+    oBtnNo:lSkipValid := .T.
 
     oWin:AddCtrl( oLbl )
     oWin:AddCtrl( oBtnSi )
     oWin:AddCtrl( oBtnNo )
 
     oWin:Run()
+
+    CLEAR TYPEAHEAD
+    s_lMsgYesNoActive := .F.
 
 RETURN lResp
 

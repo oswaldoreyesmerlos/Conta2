@@ -50,7 +50,7 @@ FUNCTION Add_Tabique( cTit )
     oGMod := TGet():New( 5, 16, hData["MODUL"],  "9.99", oWin )
     oWin:AddCtrl( TLabel():New( 5, 32, "Sistema mm:", oWin ) )
     oGSis := TGet():New( 5, 46, hData["SISTEMA"], "99", oWin )
-    oGSis:bValid := {|o| Val(o:cBuffer) $ {48,70,90} .OR. (MsgStop("Sistema: 48, 70 o 90","Validacion"),.F.) }
+    oGSis:bValid := {|o| _ValidSistema( o ) }
 
     // -- FILA 6: Montante + buscar, Canal + buscar --
     oWin:AddCtrl( TLabel():New( 7,  2, "Montante..:", oWin ) )
@@ -589,6 +589,19 @@ STATIC FUNCTION _SysAncho( xSistema )
     ENDCASE
 
 RETURN 0
+
+
+STATIC FUNCTION _ValidSistema( oGet )
+
+    LOCAL nSistema := _SysAncho( oGet:uVar )
+
+    IF AScan( { 48, 70, 90 }, nSistema ) > 0
+        RETURN .T.
+    ENDIF
+
+    MsgStop( "Sistema: 48, 70 o 90", "Validacion" )
+
+RETURN .F.
 
 
 STATIC FUNCTION _RequireCode( cCod, cLabel )
