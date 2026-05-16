@@ -315,9 +315,11 @@ STATIC FUNCTION _LoadData( nIdLinea )
 
     LOCAL hData := hb_Hash()
     LOCAL cTipo
+    LOCAL lWeOpened := .F.
 
     IF Select( "TMP_TRA" ) == 0
         USE TMP_TRA NEW SHARED VIA "DBFCDX"
+        lWeOpened := .T.
     ENDIF
 
     dbSelectArea( "TMP_TRA" )
@@ -353,17 +355,29 @@ STATIC FUNCTION _LoadData( nIdLinea )
                 hData["SAME_B"] := "N"
             ENDIF
 
-            dbCloseArea()
+            IF lWeOpened
+                dbCloseArea()
+            ENDIF
             RETURN hData
         ENDIF
         dbSkip()
     ENDDO
 
+    IF lWeOpened
+        dbCloseArea()
+    ENDIF
     MsgStop( "No se encontro el tramo " + AllTrim( Str( nIdLinea ) ) )
 RETURN NIL
 
 
 STATIC FUNCTION _UpdateData( hData )
+
+    LOCAL lWeOpened := .F.
+
+    IF Select( "TMP_TRA" ) == 0
+        USE TMP_TRA NEW SHARED VIA "DBFCDX"
+        lWeOpened := .T.
+    ENDIF
 
     dbSelectArea( "TMP_TRA" )
     dbGoTop()
@@ -396,12 +410,17 @@ STATIC FUNCTION _UpdateData( hData )
                 DbCommit()
                 DbUnlock()
             ENDIF
-            dbCloseArea()
+            IF lWeOpened
+                dbCloseArea()
+            ENDIF
             RETURN .T.
         ENDIF
         dbSkip()
     ENDDO
 
+    IF lWeOpened
+        dbCloseArea()
+    ENDIF
     MsgStop( "No se pudo actualizar el tramo." )
 RETURN .F.
 

@@ -247,6 +247,12 @@ RETURN NIL
 // ============================================================================
 STATIC FUNCTION _MoverCabecera( cDoc, nTot )
     LOCAL nArea := Select()
+
+    IF Select( "TMP_CAB" ) == 0
+        MsgStop( "No hay cabecera de presupuesto activa.", "Error" )
+        RETURN NIL
+    ENDIF
+
     dbSelectArea( "HIS_CAB" )
     dbAppend()
     IF !NetErr()

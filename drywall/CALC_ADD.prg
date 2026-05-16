@@ -21,6 +21,7 @@ FUNCTION Add_Tabique( cTit )
     LOCAL oGCon, oGLar, oGAlt, oGMod
     LOCAL oGSis, oGPer1, oGPer2, oGPla1, oGPla2, oGNumP
     LOCAL oChkSame, oChkAis, oChkBand
+    LOCAL oGAisCod
     LOCAL oBtBusP1, oBtBusP2, oBtBusA, oBtBusB, oBtBusAis
     LOCAL oBtGua, oBtCan, lSave := .F.
 
