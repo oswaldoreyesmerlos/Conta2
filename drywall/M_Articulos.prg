@@ -278,7 +278,6 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
 
     oWin:Run()
 
-    ART_F->( DbCloseArea() )
     Select( nArea )
 
 RETURN NIL
