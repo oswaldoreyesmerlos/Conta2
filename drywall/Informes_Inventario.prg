@@ -123,6 +123,86 @@ RETURN _MostrarInformeTexto( "ARTICULOS BAJO STOCK MINIMO", cTexto, "STOCK_MINIM
 
 
 // ============================================================================
+// InformeProyectos()
+// ============================================================================
+FUNCTION InformeProyectos()
+
+    LOCAL cTexto := ""
+    LOCAL nArea  := Select()
+    LOCAL cNum
+
+    IF !ABRIR_TABLA( "TMP_CAB", "TPC_I", "" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "TPC_I" )
+    DbGoTop()
+
+    cTexto += PadC( "INFORME DE PROYECTOS", 90 ) + hb_Eol()
+    cTexto += Replicate( "-", 90 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
+    cTexto += hb_Eol()
+
+    DO WHILE !Eof()
+        IF !Deleted()
+            cNum := AllTrim( TPC_I->NUMERO )
+            cTexto += PadR( "Proyecto: " + cNum, 20 ) + " "
+            cTexto += DToC( TPC_I->FECHA ) + "  "
+            cTexto += AllTrim( TPC_I->TITULO ) + "  "
+            cTexto += "Cli: " + AllTrim( TPC_I->ID_CLIENTE ) + hb_Eol()
+            cTexto += Replicate( "-", 90 ) + hb_Eol()
+
+            _InfoProyTramos( cNum, @cTexto )
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    TPC_I->( DbCloseArea() )
+    Select( nArea )
+
+RETURN _MostrarInformeTexto( "INFORME DE PROYECTOS", cTexto, "INFORME_PROYECTOS.TXT" )
+
+
+STATIC FUNCTION _InfoProyTramos( cNum, cTexto )
+
+    LOCAL nArea := Select()
+
+    IF !ABRIR_TABLA( "TMP_TRA", "TPT_I", "" )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "TPT_I" )
+    DbGoTop()
+
+    cTexto += PadR( "LIN", 4 ) + " "
+    cTexto += PadR( "TIPO", 12 ) + " "
+    cTexto += PadR( "CONCEPTO", 30 ) + " "
+    cTexto += PadL( "LARGO", 8 ) + " "
+    cTexto += PadL( "ALTO", 8 ) + " "
+    cTexto += PadL( "MOD", 6 ) + hb_Eol()
+    cTexto += Replicate( "-", 90 ) + hb_Eol()
+
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cNum )
+            cTexto += PadL( AllTrim( Str( FIELD->ID_LINEA ) ), 4 ) + " "
+            cTexto += PadR( AllTrim( FIELD->TIPO_OBRA ), 12 ) + " "
+            cTexto += PadR( AllTrim( FIELD->CONCEPTO ), 30 ) + " "
+            cTexto += PadL( Transform( FIELD->LARGO, "999.99" ), 8 ) + " "
+            cTexto += PadL( Transform( FIELD->ALTO, "999.99" ), 8 ) + " "
+            cTexto += PadL( Transform( FIELD->MODUL, "99.99" ), 6 ) + hb_Eol()
+        ENDIF
+        DbSkip()
+    ENDDO
+
+    TPT_I->( DbCloseArea() )
+    Select( nArea )
+
+RETURN NIL
+
+
+// ============================================================================
 // FUNCIONES DE APOYO (adaptadas de Informes.prg)
 // ============================================================================
 FUNCTION _MostrarInformeTexto( cTitulo, cTexto, cFile )

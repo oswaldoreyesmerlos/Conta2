@@ -62,6 +62,7 @@ STATIC FUNCTION _DrywallMenu()
     AAdd( aMaestros, { "Familias",   {|| M_Familias()    }, NIL, "Familias de articulos" } )
     AAdd( aMaestros, { "Tablas Aux", NIL, aAux, "Configuracion general" } )
 
+    AAdd( aInformes, { "Proyectos",       {|| InformeProyectos() },     NIL, "Listado de proyectos y tramos" } )
     AAdd( aInformes, { "Articulos",       {|| InformeArticulos() },     NIL, "Listado de articulos" } )
     AAdd( aInformes, { "Stock Minimo",    {|| InformeStockMinimo() },   NIL, "Alertas de stock" } )
 
