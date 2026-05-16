@@ -33,7 +33,7 @@ FUNCTION EditTramo( nIdLinea )
 RETURN lRet
 
 
-FUNCTION Edit_Tabique( hData )
+STATIC FUNCTION Edit_Tabique( hData )
 
     LOCAL oWin
     LOCAL oGCon, oGLar, oGAlt, oGMod, oGSis
@@ -121,7 +121,7 @@ FUNCTION Edit_Tabique( hData )
 RETURN .F.
 
 
-FUNCTION Edit_Techo( hData )
+STATIC FUNCTION Edit_Techo( hData )
 
     LOCAL oWin
     LOCAL oGCon, oGLar, oGAnc
@@ -209,7 +209,7 @@ FUNCTION Edit_Techo( hData )
 RETURN .F.
 
 
-FUNCTION Edit_Trasdosado( hData )
+STATIC FUNCTION Edit_Trasdosado( hData )
 
     LOCAL oWin
     LOCAL oGCon, oGLar, oGAlt, oGMod

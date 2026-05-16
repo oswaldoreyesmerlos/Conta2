@@ -168,7 +168,7 @@ METHOD Calc_Tabique() CLASS OOPTRAMO
    ::AddMat( "CINTA", "CINTA_PAP",  nM2Total * K_CINTA_M2, "Cinta Papel" )
    
    IF FIELD->L_AISLANT
-      ::AddMat( "AISLAN", FIELD->ID_AISLAN, nArea * K_DESP_PLA, "Lana Mineral Interior" )
+      ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Lana Mineral Interior" )
    ENDIF
 RETURN NIL
 
@@ -201,7 +201,7 @@ METHOD Calc_Techo() CLASS OOPTRAMO
    ::AddMat( "CINTA",    "CINTA_PAP",  nArea * K_CINTA_M2, "Cinta Techo" )
    
    IF FIELD->L_AISLANT
-      ::AddMat( "AISLAN", FIELD->ID_AISLAN, nArea * K_DESP_PLA, "Aislamiento Plenum" )
+      ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Aislamiento Plenum" )
    ENDIF
 RETURN NIL
 

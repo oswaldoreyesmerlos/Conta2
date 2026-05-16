@@ -77,7 +77,6 @@ FUNCTION InicioDrywall()
 		AAdd( aFlds, { "ID_PER_VER",    "C", 15, 0 } )
 		AAdd( aFlds, { "ID_PER_HOR",    "C", 15, 0 } )
 		AAdd( aFlds, { "ID_PER_PER",    "C", 15, 0 } )
-		AAdd( aFlds, { "ID_AISLAN",     "C", 15, 0 } )
 
 		// --- Placas (Asimetría soportada) ---
 		AAdd( aFlds, { "ID_PLACA_A",    "C", 15, 0 } ) // Cara Vista / Base
@@ -175,10 +174,10 @@ FUNCTION InicioDrywall()
         AAdd( aAllDefs, { "HIS_CAB", aFlds, aInds } )
 
         // =========================================================
-        // 9. HIS_TRA   (Tramos históricos — espejo de TMP_TRA)
-        // =========================================================
-        aFlds := {}
-        AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
+		// 9. HIS_TRA   (Tramos históricos — espejo de TMP_TRA)
+		// =========================================================
+		aFlds := {}
+		AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
 		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
 		AAdd( aFlds, { "TIPO_OBRA",     "C", 10, 0 } ) // TABIQUE, TECHO, TRAS_SEM...
 		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
@@ -198,7 +197,6 @@ FUNCTION InicioDrywall()
 		AAdd( aFlds, { "ID_PER_VER",    "C", 15, 0 } )
 		AAdd( aFlds, { "ID_PER_HOR",    "C", 15, 0 } )
 		AAdd( aFlds, { "ID_PER_PER",    "C", 15, 0 } )
-		AAdd( aFlds, { "ID_AISLAN",     "C", 15, 0 } )
 
 		// --- Placas (Asimetría soportada) ---
 		AAdd( aFlds, { "ID_PLACA_A",    "C", 15, 0 } ) // Cara Vista / Base
@@ -258,7 +256,6 @@ FUNCTION InicioDrywall()
         // =========================================================
         // 11. HIS_RES   (Resumen histórico — espejo de TMP_RES)
         // =========================================================
-        aFlds := {}
         aFlds := {}
         AAdd( aFlds, { "NUMERO",    "C",  6, 0 } )
         AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) // Antes faltaba

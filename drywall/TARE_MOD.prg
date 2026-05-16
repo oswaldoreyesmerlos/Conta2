@@ -158,35 +158,6 @@ STATIC FUNCTION _OnEdit( oGrid )
 RETURN NIL
 
 
-STATIC FUNCTION _OnDelete( oGrid )
-
-    LOCAL aRow := oGrid:CurrentRow()
-    LOCAL nId
-
-    IF aRow == NIL
-        RETURN NIL
-    ENDIF
-
-    IF !MsgYesNo( "Borrar tramo " + AllTrim( Str( aRow[1] ) ) + "?", "Confirmar" )
-        RETURN NIL
-    ENDIF
-
-    nId := aRow[1]
-    dbSelectArea( "TMP_TRA" )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF FIELD->ID_LINEA == nId .AND. NetRLock()
-            dbDelete()
-            dbCommit()
-            dbUnlock()
-            EXIT
-        ENDIF
-        dbSkip()
-    ENDDO
-
-RETURN NIL
-
-
 STATIC FUNCTION _PickTipoObra()
 
     LOCAL aData := { {"TABIQUE","Tabique pladur"}, {"TECHO","Techo pladur"}, {"TRASDOSADO","Trasdosado"}, {"TRASDOSADO_DIR","Trasdosado Directo"}, {"TRASDOSADO_AUT","Trasdosado Autoportante"}, {"GENERICO","Material generico (m2)"} }
