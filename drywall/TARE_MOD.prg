@@ -83,6 +83,17 @@ FUNCTION VerTareas( cTipo )
 
     oWin:Run()
 
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    IF NetRLock()
+        REPLACE FIELD->TITULO     WITH oGTit:GetValue()
+        REPLACE FIELD->FECHA      WITH oGFec:GetValue()
+        REPLACE FIELD->ID_CLIENTE WITH oGCli:GetValue()
+        REPLACE FIELD->OBSERV     WITH oGObs:GetValue()
+        dbCommit()
+        dbUnlock()
+    ENDIF
+
     IF nArea > 0; dbSelectArea( nArea ); dbSetOrder( nOrd ); ENDIF
 RETURN NIL
 
