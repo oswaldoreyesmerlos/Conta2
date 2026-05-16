@@ -24,7 +24,7 @@ FUNCTION M_Familias()
     aData := _FamCargar()
 
     oWin  := TWindow():New( 3, 10, 34, 119, "FAMILIAS DE ARTICULOS" )
-    oGrid := TGrid():New( 2, 2, 26, 106, oWin )
+    oGrid := TGrid():New( 2, 2, 25, 106, oWin )
 
     oGrid:aData    := aData
     oGrid:nSeekCol := 1
@@ -43,14 +43,14 @@ FUNCTION M_Familias()
         g:aData := aData, ;
         g:Paint() }
 
-    oBtNvo := TButton():New( 28, 2, 29, 18, oWin, "NUEVO (F5)", ;
+    oBtNvo := TButton():New( 27, 2, 28, 18, oWin, "NUEVO (F5)", ;
         {|| _FamForm( NIL, .T. ), ;
             aData := _FamCargar(), ;
             oGrid:aData := aData, ;
             oGrid:nCurRow := Len( aData ), ;
             oGrid:Paint() } )
 
-    oBtSal := TButton():New( 28, 88, 29, 104, oWin, "CERRAR", ;
+    oBtSal := TButton():New( 27, 60, 28, 76, oWin, "CERRAR", ;
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGrid  )
