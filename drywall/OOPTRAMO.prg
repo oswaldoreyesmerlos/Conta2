@@ -179,17 +179,15 @@ METHOD Calc_Techo() CLASS OOPTRAMO
    LOCAL nPerim   := ( nLargo + nAlto ) * 2
    LOCAL nMod     := FIELD->MODUL    
    LOCAL nSepPrim := FIELD->SEP_PRIM 
-   LOCAL lPri     := !Empty( FIELD->ID_PER_HOR )
    LOCAL nMetSec, nMetPri, nCruces
    
    IF nMod == 0; nMod := 0.50; ENDIF
-   IF nSepPrim == 0; nSepPrim := 1.00; ENDIF
 
    nMetSec := nArea / nMod
 
    ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMetSec * K_DESP_PER, "Perfil Secundario" )
 
-   IF lPri
+   IF nSepPrim > 0
        nMetPri := nArea / nSepPrim
        nCruces := nArea / ( nMod * nSepPrim )
        ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetPri * K_DESP_PER, "Perfil Primario" )
@@ -199,7 +197,7 @@ METHOD Calc_Techo() CLASS OOPTRAMO
    ::AddMat( "PERFIL", FIELD->ID_PER_PER, nPerim  * K_DESP_PER, "Angular Perimetral" )
    
    ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, "Techo Continuo" )
-   ::DesgloseAnclaje( FIELD->ID_ANCLAJE, nArea, nSepPrim )
+   ::DesgloseAnclaje( FIELD->ID_ANCLAJE, nArea, If( nSepPrim > 0, nSepPrim, 1.00 ) )
    ::AddMat( "TORNILLO", "TORN_PM_25", nArea * K_TORN_M2, "Fijacion Placa" )
    ::AddMat( "PASTA",    "PASTA_JUNT", nArea * K_PASTA_M2, "Juntas Techo" )
    ::AddMat( "CINTA",    "CINTA_PAP",  nArea * K_CINTA_M2, "Cinta Techo" )
