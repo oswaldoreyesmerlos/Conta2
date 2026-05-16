@@ -64,7 +64,7 @@ FUNCTION ArticulosView()
 
     oWin:Run()
 
-    ART->( DbCloseArea() )
+    Select( nArea )
 
 RETURN NIL
 
@@ -278,7 +278,7 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
 
     oWin:Run()
 
-    ART->( DbCloseArea() )
+    ART_F->( DbCloseArea() )
     Select( nArea )
 
 RETURN NIL
