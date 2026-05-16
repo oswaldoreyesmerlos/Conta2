@@ -517,9 +517,15 @@ STATIC FUNCTION _GetDatePicture()
 
     LOCAL cFmt := Set( _SET_DATEFORMAT )
     LOCAL cSep := "/"
+    LOCAL i
 
     IF !Empty( cFmt )
-        cSep := SubStr( cFmt, 3, 1 )
+        FOR i := 1 TO Len( cFmt )
+            IF !IsAlpha( SubStr( cFmt, i, 1 ) )
+                cSep := SubStr( cFmt, i, 1 )
+                EXIT
+            ENDIF
+        NEXT
     ENDIF
 
 RETURN "99" + cSep + "99" + cSep + "9999"
