@@ -104,6 +104,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 
     CASE ::cType == "D"
         ::cBuffer := DToC( uValue )
+        ::cPicture := _GetDatePicture()
 
     CASE ::cType == "L"
         ::cBuffer := If( uValue, "Si ", "No " )
@@ -510,3 +511,15 @@ STATIC FUNCTION _TGetNumBuffer( cBuffer )
     ENDIF
 
 RETURN cNum
+
+
+STATIC FUNCTION _GetDatePicture()
+
+    LOCAL cFmt := Set( _SET_DATEFORMAT )
+    LOCAL cSep := "/"
+
+    IF !Empty( cFmt )
+        cSep := SubStr( cFmt, 3, 1 )
+    ENDIF
+
+RETURN "99" + cSep + "99" + cSep + "9999"
