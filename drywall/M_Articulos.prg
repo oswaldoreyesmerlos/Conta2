@@ -16,7 +16,9 @@ FUNCTION ArticulosView()
     LOCAL oBtNvo
     LOCAL oBtSal
     LOCAL oLbl
-    LOCAL aData
+    LOCAL aData, nArea
+
+    nArea := Select()
 
     IF !ABRIR_TABLA( "ARTICULOS", "ART", "ART_DES" )
         RETURN NIL
