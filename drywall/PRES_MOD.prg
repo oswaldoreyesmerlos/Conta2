@@ -103,6 +103,9 @@ STATIC FUNCTION _MoverTramos( cDocNum )
         REPLACE Field->LARGO        WITH TMP_TRA->LARGO
         REPLACE Field->ALTO         WITH TMP_TRA->ALTO
         REPLACE Field->MODUL        WITH TMP_TRA->MODUL
+        IF FieldPos( "SISTEMA" ) > 0 .AND. TMP_TRA->( FieldPos( "SISTEMA" ) ) > 0
+            REPLACE Field->SISTEMA  WITH TMP_TRA->SISTEMA
+        ENDIF
         REPLACE Field->SEP_PRIM     WITH TMP_TRA->SEP_PRIM
         REPLACE Field->CARAS        WITH TMP_TRA->CARAS
         REPLACE Field->PLAC_CARA    WITH TMP_TRA->PLAC_CARA

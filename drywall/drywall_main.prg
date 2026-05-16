@@ -11,6 +11,7 @@ FUNCTION Main()
     LOCAL oMenu, aMenuDef
 
     rddSetDefault( "DBFCDX" )
+    ErrorBlock( { |e| ErrSys( e ) } )
 
     GfxSetFont( "Lucida Console", 16, 8 )
     SetMode( 40, 132 )
@@ -76,10 +77,6 @@ RETURN aMenu
 
 STATIC FUNCTION _DrywallLimpiar()
 
-    IF !MsgYesNo( "Borrar todos los datos del presupuesto actual?", "Nuevo Proyecto" )
-        RETURN NIL
-    ENDIF
-
-    GrabaPres()
+    _LimpiaTemporales()
 
 RETURN NIL

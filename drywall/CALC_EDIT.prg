@@ -36,11 +36,12 @@ RETURN lRet
 FUNCTION Edit_Tabique( hData )
 
     LOCAL oWin
-    LOCAL oGCon, oGLar, oGAlt, oGMod
+    LOCAL oGCon, oGLar, oGAlt, oGMod, oGSis
     LOCAL oGPer1, oGPer2, oGBand
     LOCAL oGPla1, oGNumP
     LOCAL oGSame, oGPla2
     LOCAL oGAis, oGAisCod
+    LOCAL oBtBusP1, oBtBusP2, oBtBusA, oBtBusB
     LOCAL lSave := .F.
 
     oWin := TWindow():New( 2, 5, 26, 95, "EDITAR TABIQUE" )
@@ -49,6 +50,7 @@ FUNCTION Edit_Tabique( hData )
     oWin:AddCtrl( TLabel():New(  4,  2, "Largo (m)....:", oWin ) )
     oWin:AddCtrl( TLabel():New(  4, 30, "Alto (m).....:", oWin ) )
     oWin:AddCtrl( TLabel():New(  6,  2, "Modulacion...:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6, 30, "Sistema mm...:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8,  2, "Montante.....:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8, 40, "Canal........:", oWin ) )
     oWin:AddCtrl( TLabel():New(  9, 40, "Banda Acust?.:", oWin ) )
@@ -63,20 +65,22 @@ FUNCTION Edit_Tabique( hData )
     oGLar  := TGet():New( 4, 18, hData["LARGO"],    "999.99", oWin )
     oGAlt  := TGet():New( 4, 45, hData["ALTO"],     "999.99", oWin )
     oGMod  := TGet():New( 6, 18, hData["MODUL"],    "9.99",   oWin )
+    oGSis  := TGet():New( 6, 45, hData["SISTEMA"],  "999",    oWin )
+    oGSis:bValid := {|o| Val(o:cBuffer) $ {48,70,90} .OR. (MsgStop("Sistema: 48, 70 o 90","Validacion"),.F.) }
 
     oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"],  "@!", oWin )
-    oGPer1:bValid := {|| _ValPick( hData, "ID_PERFIL", "PERFIL" ) }
+    oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
 
     oGPer2 := TGet():New( 8, 56, hData["ID_PERFIL2"], "@!", oWin )
-    oGPer2:bValid := {|| _ValPick( hData, "ID_PERFIL2", "PERFIL" ) }
+    oBtBusP2 := TButton():New( 8, 72, 8, 86, oWin, "BUSCAR", {|| _BtnPick( oGPer2, hData, "ID_PERFIL2", "PERFIL" ) } )
 
     oGPla1 := TGet():New( 11, 18, hData["ID_PLACA_A"], "@!", oWin )
-    oGPla1:bValid := {|| _ValPick( hData, "ID_PLACA_A", "PLACA" ) }
+    oBtBusA := TButton():New( 11, 33, 11, 47, oWin, "BUSCAR", {|| _BtnPick( oGPla1, hData, "ID_PLACA_A", "PLACA" ) } )
 
     oGNumP := TGet():New( 11, 56, hData["NUM_PLACAS"], "9", oWin )
 
     oGPla2 := TGet():New( 13, 56, hData["ID_PLACA_B"], "@!", oWin )
-    oGPla2:bValid := {|| _ValPick( hData, "ID_PLACA_B", "PLACA" ) }
+    oBtBusB := TButton():New( 13, 72, 13, 86, oWin, "BUSCAR", {|| _BtnPick( oGPla2, hData, "ID_PLACA_B", "PLACA" ) } )
 
     oWin:AddCtrl( TButton():New( 22, 30, 23, 49, oWin, "ACTUALIZAR", {|| lSave := .T., oWin:Close() } ) )
     oWin:AddCtrl( TButton():New( 22, 52, 23, 71, oWin, "CANCELAR",  {|| oWin:Close() } ) )
@@ -85,11 +89,16 @@ FUNCTION Edit_Tabique( hData )
     oWin:AddCtrl( oGLar  )
     oWin:AddCtrl( oGAlt  )
     oWin:AddCtrl( oGMod  )
+    oWin:AddCtrl( oGSis  )
     oWin:AddCtrl( oGPer1 )
+    oWin:AddCtrl( oBtBusP1 )
     oWin:AddCtrl( oGPer2 )
+    oWin:AddCtrl( oBtBusP2 )
     oWin:AddCtrl( oGPla1 )
+    oWin:AddCtrl( oBtBusA )
     oWin:AddCtrl( oGNumP )
     oWin:AddCtrl( oGPla2 )
+    oWin:AddCtrl( oBtBusB )
 
     oWin:Run()
 
@@ -98,6 +107,7 @@ FUNCTION Edit_Tabique( hData )
         hData["LARGO"]       := oGLar:GetValue()
         hData["ALTO"]        := oGAlt:GetValue()
         hData["MODUL"]       := oGMod:GetValue()
+        hData["SISTEMA"]     := oGSis:GetValue()
         hData["ID_PERFIL"]   := oGPer1:GetValue()
         hData["ID_PERFIL2"]  := oGPer2:GetValue()
         hData["ID_PLACA_A"]  := oGPla1:GetValue()
@@ -119,6 +129,7 @@ FUNCTION Edit_Techo( hData )
     LOCAL oGPer1, oGPer2, oGPer3, oGAnc2
     LOCAL oGPla1, oGNumP
     LOCAL oGAis, oGAisCod
+    LOCAL oBtBusP1, oBtBusP2, oBtBusP3, oBtBusAnc, oBtBusA
     LOCAL lSave := .F.
 
     oWin := TWindow():New( 2, 5, 27, 95, "EDITAR TECHO" )
@@ -144,16 +155,16 @@ FUNCTION Edit_Techo( hData )
     oGSepP := TGet():New( 6, 45, hData["SEP_PRIM"], "9.99",   oWin )
 
     oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"],  "@!", oWin )
-    oGPer1:bValid := {|| _ValPick( hData, "ID_PERFIL", "PERFIL" ) }
+    oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
     oGPer2 := TGet():New( 8, 56, hData["ID_PERFIL2"], "@!", oWin )
-    oGPer2:bValid := {|| _ValPick( hData, "ID_PERFIL2", "PERFIL" ) }
+    oBtBusP2 := TButton():New( 8, 72, 8, 86, oWin, "BUSCAR", {|| _BtnPick( oGPer2, hData, "ID_PERFIL2", "PERFIL" ) } )
     oGPer3 := TGet():New( 9, 18, hData["ID_PERFIL3"], "@!", oWin )
-    oGPer3:bValid := {|| _ValPick( hData, "ID_PERFIL3", "PERFIL" ) }
+    oBtBusP3 := TButton():New( 9, 33, 9, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer3, hData, "ID_PERFIL3", "PERFIL" ) } )
     oGAnc2 := TGet():New( 9, 56, hData["ID_ANCLAJE"], "@!", oWin )
-    oGAnc2:bValid := {|| _ValPick( hData, "ID_ANCLAJE", "ANCLAJE" ) }
+    oBtBusAnc := TButton():New( 9, 72, 9, 86, oWin, "BUSCAR", {|| _BtnPick( oGAnc2, hData, "ID_ANCLAJE", "ANCLAJE" ) } )
 
     oGPla1 := TGet():New( 11, 18, hData["ID_PLACA_A"], "@!", oWin )
-    oGPla1:bValid := {|| _ValPick( hData, "ID_PLACA_A", "PLACA" ) }
+    oBtBusA := TButton():New( 11, 33, 11, 47, oWin, "BUSCAR", {|| _BtnPick( oGPla1, hData, "ID_PLACA_A", "PLACA" ) } )
     oGNumP := TGet():New( 11, 56, hData["NUM_PLACAS"], "9", oWin )
 
     oWin:AddCtrl( TButton():New( 23, 30, 24, 49, oWin, "ACTUALIZAR", {|| lSave := .T., oWin:Close() } ) )
@@ -165,10 +176,15 @@ FUNCTION Edit_Techo( hData )
     oWin:AddCtrl( oGMod  )
     oWin:AddCtrl( oGSepP )
     oWin:AddCtrl( oGPer1 )
+    oWin:AddCtrl( oBtBusP1 )
     oWin:AddCtrl( oGPer2 )
+    oWin:AddCtrl( oBtBusP2 )
     oWin:AddCtrl( oGPer3 )
+    oWin:AddCtrl( oBtBusP3 )
     oWin:AddCtrl( oGAnc2 )
+    oWin:AddCtrl( oBtBusAnc )
     oWin:AddCtrl( oGPla1 )
+    oWin:AddCtrl( oBtBusA )
     oWin:AddCtrl( oGNumP )
 
     oWin:Run()
@@ -200,6 +216,7 @@ FUNCTION Edit_Trasdosado( hData )
     LOCAL oGPer1, oGPer2
     LOCAL oGPla1
     LOCAL oGAis, oGAisCod
+    LOCAL oBtBusP1, oBtBusP2, oBtBusA
     LOCAL lSave := .F.
     LOCAL cTipo := hData["TIPO"]
     LOCAL cLbl1 := "Perfil.......:"
@@ -241,15 +258,15 @@ FUNCTION Edit_Trasdosado( hData )
     ENDIF
 
     oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"], "@!", oWin )
-    oGPer1:bValid := {|| _ValPick( hData, "ID_PERFIL", "PERFIL" ) }
+    oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
 
     IF lPideCanal
         oGPer2 := TGet():New( 8, 56, hData["ID_PERFIL2"], "@!", oWin )
-        oGPer2:bValid := {|| _ValPick( hData, "ID_PERFIL2", "PERFIL" ) }
+        oBtBusP2 := TButton():New( 8, 72, 8, 86, oWin, "BUSCAR", {|| _BtnPick( oGPer2, hData, "ID_PERFIL2", "PERFIL" ) } )
     ENDIF
 
     oGPla1 := TGet():New( 11, 18, hData["ID_PLACA_A"], "@!", oWin )
-    oGPla1:bValid := {|| _ValPick( hData, "ID_PLACA_A", "PLACA" ) }
+    oBtBusA := TButton():New( 11, 33, 11, 47, oWin, "BUSCAR", {|| _BtnPick( oGPla1, hData, "ID_PLACA_A", "PLACA" ) } )
 
     oWin:AddCtrl( TButton():New( 20, 30, 21, 49, oWin, "ACTUALIZAR", {|| lSave := .T., oWin:Close() } ) )
     oWin:AddCtrl( TButton():New( 20, 52, 21, 71, oWin, "CANCELAR",  {|| oWin:Close() } ) )
@@ -261,10 +278,13 @@ FUNCTION Edit_Trasdosado( hData )
         oWin:AddCtrl( oGMod )
     ENDIF
     oWin:AddCtrl( oGPer1 )
+    oWin:AddCtrl( oBtBusP1 )
     IF lPideCanal
         oWin:AddCtrl( oGPer2 )
+        oWin:AddCtrl( oBtBusP2 )
     ENDIF
     oWin:AddCtrl( oGPla1 )
+    oWin:AddCtrl( oBtBusA )
 
     oWin:Run()
 
@@ -311,6 +331,7 @@ STATIC FUNCTION _LoadData( nIdLinea )
             hData["LARGO"]      := FIELD->LARGO
             hData["ALTO"]       := FIELD->ALTO
             hData["MODUL"]      := FIELD->MODUL
+            hData["SISTEMA"]    := If( FieldPos( "SISTEMA" ) > 0, FIELD->SISTEMA, 0 )
             hData["SEP_PRIM"]   := FIELD->SEP_PRIM
             hData["NUM_PLACAS"] := FIELD->PLAC_CARA
             hData["SAME_B"]     := "S"
@@ -354,6 +375,9 @@ STATIC FUNCTION _UpdateData( hData )
                 REPLACE FIELD->LARGO      WITH hData["LARGO"]
                 REPLACE FIELD->ALTO       WITH hData["ALTO"]
                 REPLACE FIELD->MODUL      WITH hData["MODUL"]
+                IF FieldPos( "SISTEMA" ) > 0 .AND. hb_HHasKey( hData, "SISTEMA" )
+                    REPLACE FIELD->SISTEMA WITH _SysAncho( hData["SISTEMA"] )
+                ENDIF
                 REPLACE FIELD->SEP_PRIM   WITH hData["SEP_PRIM"]
                 REPLACE FIELD->PLAC_CARA  WITH hData["NUM_PLACAS"]
                 REPLACE FIELD->ID_PER_VER WITH hData["ID_PERFIL"]
@@ -380,6 +404,30 @@ STATIC FUNCTION _UpdateData( hData )
 
     MsgStop( "No se pudo actualizar el tramo." )
 RETURN .F.
+
+
+STATIC FUNCTION _SysAncho( xSistema )
+
+    DO CASE
+    CASE ValType( xSistema ) == "N"
+        RETURN xSistema
+    CASE ValType( xSistema ) == "C"
+        RETURN Val( AllTrim( xSistema ) )
+    ENDCASE
+
+RETURN 0
+
+
+STATIC FUNCTION _BtnPick( oGet, hData, cKey, cFam )
+
+    LOCAL cRet := _PickArt( cFam )
+
+    IF !Empty( cRet )
+        hData[ cKey ] := cRet
+        oGet:SetValue( PadR( cRet, 15 ) )
+    ENDIF
+
+RETURN NIL
 
 
 STATIC FUNCTION _ValPick( hData, cKey, cFam )

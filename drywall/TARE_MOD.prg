@@ -90,15 +90,20 @@ RETURN NIL
 STATIC FUNCTION _TareCargar()
 
     LOCAL aData := {}
+    LOCAL cSistema
 
     dbSelectArea( "TMP_TRA" )
     dbGoTop()
 
     DO WHILE !Eof()
         IF !Deleted()
+            cSistema := AllTrim( FIELD->TIPO_OBRA )
+            IF FieldPos( "SISTEMA" ) > 0 .AND. FIELD->SISTEMA > 0
+                cSistema += " " + AllTrim( Str( FIELD->SISTEMA ) ) + "mm"
+            ENDIF
             AAdd( aData, { ;
                 FIELD->ID_LINEA, ;
-                AllTrim( FIELD->TIPO_OBRA ), ;
+                cSistema, ;
                 AllTrim( FIELD->CONCEPTO ), ;
                 FIELD->LARGO, ;
                 FIELD->ALTO, ;

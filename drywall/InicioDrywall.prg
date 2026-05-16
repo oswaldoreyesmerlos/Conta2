@@ -26,6 +26,7 @@ FUNCTION InicioDrywall()
     LOCAL tmp
     LOCAL i, nCdx
     LOCAL cDbf, cCdx
+    LOCAL aFlds, aInds
 
     IF hb_DirExists( hb_DirBase() + "DATA" )
         SET DEFAULT TO ( hb_DirBase() + "DATA" )
@@ -65,6 +66,7 @@ FUNCTION InicioDrywall()
 		AAdd( aFlds, { "LARGO",         "N",  6, 2 } ) 
 		AAdd( aFlds, { "ALTO",          "N",  6, 2 } ) 
 		AAdd( aFlds, { "MODUL",         "N",  5, 2 } ) // Separación Perfil VERTICAL (Placa)
+		AAdd( aFlds, { "SISTEMA",       "N",  3, 0 } ) // Ancho de perfileria: 48, 70, 90
 		AAdd( aFlds, { "SEP_PRIM",      "N",  5, 2 } ) // Separación Perfil HORIZ (Estructura) - Solo Techos
 
 		// --- Configuración Capas ---
@@ -178,13 +180,14 @@ FUNCTION InicioDrywall()
         aFlds := {}
         AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
 		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
-		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
 		AAdd( aFlds, { "TIPO_OBRA",     "C", 10, 0 } ) // TABIQUE, TECHO, TRAS_SEM...
+		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
 
 		// --- Geometría ---
 		AAdd( aFlds, { "LARGO",         "N",  6, 2 } ) 
 		AAdd( aFlds, { "ALTO",          "N",  6, 2 } ) 
 		AAdd( aFlds, { "MODUL",         "N",  5, 2 } ) // Separación Perfil VERTICAL (Placa)
+		AAdd( aFlds, { "SISTEMA",       "N",  3, 0 } ) // Ancho de perfileria: 48, 70, 90
 		AAdd( aFlds, { "SEP_PRIM",      "N",  5, 2 } ) // Separación Perfil HORIZ (Estructura) - Solo Techos
 
 		// --- Configuración Capas ---
