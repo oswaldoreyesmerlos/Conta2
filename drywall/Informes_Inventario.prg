@@ -19,31 +19,23 @@
 FUNCTION InformeArticulos()
 
     LOCAL cTexto
-    LOCAL nArea
 
-    IF !ABRIR_TABLA( "ARTICULOS", "ART_I", "ART_DES" )
-        RETURN NIL
+    IF Select( "ART_I" ) == 0
+        IF !ABRIR_TABLA( "ARTICULOS", "ART_I", "ART_DES" )
+            RETURN NIL
+        ENDIF
     ENDIF
-
-    cTexto := ""
-    nArea  := Select()
 
     DbSelectArea( "ART_I" )
     OrdSetFocus( "ART_DES" )
     DbGoTop()
 
-    cTexto += PadC( "INFORME DE ARTICULOS", 80 ) + hb_Eol()
+    cTexto := PadC( "INFORME DE ARTICULOS", 80 ) + hb_Eol()
     cTexto += Replicate( "-", 80 ) + hb_Eol()
-    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
-    cTexto += hb_Eol()
-
-    cTexto += PadR( "CODIGO", 10 ) + " "
-    cTexto += PadR( "DESCRIPCION", 40 ) + " "
-    cTexto += PadL( "STOCK", 12 ) + " "
-    cTexto += PadL( "PRECIO", 12 ) + " "
-    cTexto += PadR( "FAMILIA", 3 ) + " "
-    cTexto += "BAJA" + hb_Eol()
-
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol() + hb_Eol()
+    cTexto += PadR( "CODIGO", 10 ) + " " + PadR( "DESCRIPCION", 40 ) + " "
+    cTexto += PadL( "STOCK", 12 ) + " " + PadL( "PRECIO", 12 ) + " "
+    cTexto += PadR( "FAMILIA", 3 ) + " BAJA" + hb_Eol()
     cTexto += Replicate( "-", 80 ) + hb_Eol()
 
     DO WHILE !Eof()
@@ -58,9 +50,6 @@ FUNCTION InformeArticulos()
         DbSkip()
     ENDDO
 
-    ART_I->( DbCloseArea() )
-    Select( nArea )
-
 RETURN _MostrarInformeTexto( "INFORME DE ARTICULOS", cTexto, "INFORME_ARTICULOS.TXT" )
 
 
@@ -71,31 +60,24 @@ RETURN _MostrarInformeTexto( "INFORME DE ARTICULOS", cTexto, "INFORME_ARTICULOS.
 FUNCTION InformeStockMinimo()
 
     LOCAL cTexto
-    LOCAL nArea
-    LOCAL nCont
+    LOCAL nCont := 0
 
-    IF !ABRIR_TABLA( "ARTICULOS", "ART_SM", "ART_DES" )
-        RETURN NIL
+    IF Select( "ART_SM" ) == 0
+        IF !ABRIR_TABLA( "ARTICULOS", "ART_SM", "ART_DES" )
+            RETURN NIL
+        ENDIF
     ENDIF
-
-    cTexto := ""
-    nArea  := Select()
-    nCont  := 0
 
     DbSelectArea( "ART_SM" )
     OrdSetFocus( "ART_DES" )
     DbGoTop()
 
-    cTexto += PadC( "ARTICULOS POR DEBAJO DE STOCK MINIMO", 85 ) + hb_Eol()
+    cTexto := PadC( "ARTICULOS POR DEBAJO DE STOCK MINIMO", 85 ) + hb_Eol()
     cTexto += Replicate( "-", 85 ) + hb_Eol()
-    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
-    cTexto += hb_Eol()
-    cTexto += PadR( "CODIGO",     10 ) + " "
-    cTexto += PadR( "DESCRIPCION",40 ) + " "
-    cTexto += PadL( "STOCK ACT.", 10 ) + " "
-    cTexto += PadL( "STOCK MIN.", 10 ) + " "
-    cTexto += PadL( "DIFERENCIA", 10 ) + " "
-    cTexto += "UNIDAD" + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol() + hb_Eol()
+    cTexto += PadR( "CODIGO", 10 ) + " " + PadR( "DESCRIPCION", 40 ) + " "
+    cTexto += PadL( "STOCK ACT.", 10 ) + " " + PadL( "STOCK MIN.", 10 ) + " "
+    cTexto += PadL( "DIFERENCIA", 10 ) + " UNIDAD" + hb_Eol()
     cTexto += Replicate( "-", 85 ) + hb_Eol()
 
     DO WHILE !Eof()
@@ -104,7 +86,7 @@ FUNCTION InformeStockMinimo()
                 nCont++
                 cTexto += PadR( AllTrim( ART_SM->CODIGO  ), 10 ) + " "
                 cTexto += PadR( AllTrim( ART_SM->DESCRIP ), 40 ) + " "
-                cTexto += PadL( AllTrim( Str( ART_SM->STOCK,   10, 2 ) ), 10 ) + " "
+                cTexto += PadL( AllTrim( Str( ART_SM->STOCK, 10, 2 ) ), 10 ) + " "
                 cTexto += PadL( AllTrim( Str( ART_SM->STO_MIN, 10, 2 ) ), 10 ) + " "
                 cTexto += PadL( AllTrim( Str( ART_SM->STO_MIN - ART_SM->STOCK, 10, 2 ) ), 10 ) + " "
                 cTexto += AllTrim( ART_SM->UNIDAD ) + hb_Eol()
@@ -116,9 +98,6 @@ FUNCTION InformeStockMinimo()
     cTexto += Replicate( "-", 85 ) + hb_Eol()
     cTexto += "Total articulos bajo minimo: " + AllTrim( Str( nCont ) ) + hb_Eol()
 
-    ART_SM->( DbCloseArea() )
-    Select( nArea )
-
 RETURN _MostrarInformeTexto( "ARTICULOS BAJO STOCK MINIMO", cTexto, "STOCK_MINIMO.TXT" )
 
 
@@ -128,12 +107,12 @@ RETURN _MostrarInformeTexto( "ARTICULOS BAJO STOCK MINIMO", cTexto, "STOCK_MINIM
 FUNCTION InformeProyectos()
 
     LOCAL cTexto := ""
-    LOCAL nArea  := Select()
     LOCAL cNum
 
-    IF !ABRIR_TABLA( "TMP_CAB", "TPC_I", "" )
-        Select( nArea )
-        RETURN NIL
+    IF Select( "TPC_I" ) == 0
+        IF !ABRIR_TABLA( "TMP_CAB", "TPC_I", "" )
+            RETURN NIL
+        ENDIF
     ENDIF
 
     DbSelectArea( "TPC_I" )
@@ -141,8 +120,7 @@ FUNCTION InformeProyectos()
 
     cTexto += PadC( "INFORME DE PROYECTOS", 90 ) + hb_Eol()
     cTexto += Replicate( "-", 90 ) + hb_Eol()
-    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol()
-    cTexto += hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol() + hb_Eol()
 
     DO WHILE !Eof()
         IF !Deleted()
@@ -158,19 +136,15 @@ FUNCTION InformeProyectos()
         DbSkip()
     ENDDO
 
-    TPC_I->( DbCloseArea() )
-    Select( nArea )
-
 RETURN _MostrarInformeTexto( "INFORME DE PROYECTOS", cTexto, "INFORME_PROYECTOS.TXT" )
 
 
 STATIC FUNCTION _InfoProyTramos( cNum, cTexto )
 
-    LOCAL nArea := Select()
-
-    IF !ABRIR_TABLA( "TMP_TRA", "TPT_I", "" )
-        Select( nArea )
-        RETURN NIL
+    IF Select( "TPT_I" ) == 0
+        IF !ABRIR_TABLA( "TMP_TRA", "TPT_I", "" )
+            RETURN NIL
+        ENDIF
     ENDIF
 
     DbSelectArea( "TPT_I" )
@@ -195,9 +169,6 @@ STATIC FUNCTION _InfoProyTramos( cNum, cTexto )
         ENDIF
         DbSkip()
     ENDDO
-
-    TPT_I->( DbCloseArea() )
-    Select( nArea )
 
 RETURN NIL
 
