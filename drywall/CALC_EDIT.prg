@@ -26,6 +26,8 @@ FUNCTION EditTramo( nIdLinea )
         lRet := Edit_Techo( hData )
     CASE "TRAS" $ cTipo
         lRet := Edit_Trasdosado( hData )
+    CASE cTipo == "GENERICO"
+        lRet := Edit_Generico( hData )
     OTHERWISE
         MsgStop( "Tipo de obra desconocido: [" + cTipo + "]" )
     ENDCASE
@@ -300,6 +302,50 @@ STATIC FUNCTION Edit_Trasdosado( hData )
             hData["ID_PERFIL2"] := oGPer2:GetValue()
         ENDIF
         hData["ID_PLACA_A"] := oGPla1:GetValue()
+        hData["CARAS_REALES"] := 1
+        _UpdateData( hData )
+        RETURN .T.
+    ENDIF
+
+RETURN .F.
+
+
+STATIC FUNCTION Edit_Generico( hData )
+
+    LOCAL oWin
+    LOCAL oGCon, oGLar, oGAlt, oGMat
+    LOCAL oBtBusMat
+    LOCAL lSave := .F.
+
+    oWin := TWindow():New( 2, 5, 20, 95, "EDITAR MATERIAL GENERICO (m2)" )
+
+    oWin:AddCtrl( TLabel():New(  2, 2, "Concepto..:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4, 2, "Largo (m).:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  4, 30, "Alto (m)..:", oWin ) )
+    oWin:AddCtrl( TLabel():New(  6, 2, "Material..:", oWin ) )
+
+    oGCon := TGet():New( 2, 16, hData["CONCEPTO"],   "@!",     oWin )
+    oGLar := TGet():New( 4, 16, hData["LARGO"],      "999.99", oWin )
+    oGAlt := TGet():New( 4, 43, hData["ALTO"],       "999.99", oWin )
+    oGMat := TGet():New( 6, 16, hData["ID_PLACA_A"], "@!",     oWin )
+    oBtBusMat := TButton():New( 6, 48, 6, 62, oWin, "BUSCAR", {|| _BtnPick( oGMat, hData, "ID_PLACA_A", "GENERICO" ) } )
+
+    oWin:AddCtrl( TButton():New( 16, 30, 17, 49, oWin, "ACTUALIZAR", {|| lSave := .T., oWin:Close() } ) )
+    oWin:AddCtrl( TButton():New( 16, 52, 17, 71, oWin, "CANCELAR",  {|| oWin:Close() } ) )
+
+    oWin:AddCtrl( oGCon  )
+    oWin:AddCtrl( oGLar  )
+    oWin:AddCtrl( oGAlt  )
+    oWin:AddCtrl( oGMat  )
+    oWin:AddCtrl( oBtBusMat )
+
+    oWin:Run()
+
+    IF lSave
+        hData["CONCEPTO"]    := oGCon:GetValue()
+        hData["LARGO"]       := oGLar:GetValue()
+        hData["ALTO"]        := oGAlt:GetValue()
+        hData["ID_PLACA_A"]  := oGMat:GetValue()
         hData["CARAS_REALES"] := 1
         _UpdateData( hData )
         RETURN .T.
