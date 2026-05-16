@@ -50,7 +50,7 @@ FUNCTION M_Familias()
             oGrid:nCurRow := Len( aData ), ;
             oGrid:Paint() } )
 
-    oBtSal := TButton():New( 27, 60, 28, 76, oWin, "CERRAR", ;
+    oBtSal := TButton():New( 27, 55, 28, 71, oWin, "CERRAR", ;
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGrid  )

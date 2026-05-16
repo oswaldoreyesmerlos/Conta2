@@ -46,7 +46,7 @@ FUNCTION EditAux( cTipo )
         oWin:AddCtrl( oGrid )
         oWin:AddCtrl( TLabel():New( 12, 2, "[F5] Nuevo [ENTER] Editar [DEL] Borrar", oWin ) )
         oWin:AddCtrl( TButton():New( 13, 2, 14, 18, oWin, "NUEVO (F5)", {|| AuxForm( .T., cTipo ), aData := _AuxLoadData(), oGrid:aData := aData, oGrid:Paint() } ) )
-        oWin:AddCtrl( TButton():New( 13, 46, 14, 62, oWin, "CERRAR", {|| oWin:Close() } ) )
+        oWin:AddCtrl( TButton():New( 13, 40, 14, 56, oWin, "CERRAR", {|| oWin:Close() } ) )
 
         oWin:Run()
 
