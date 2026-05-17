@@ -446,11 +446,18 @@ METHOD HandleKey( nKey ) CLASS TGrid
             nNewRow := ::nTopRow + nOffRow
              IF nNewRow >= 1 .AND. nNewRow <= Len( ::aData )
                  IF nNewRow != ::nCurRow
-                     _GridRepaint( Self, ::nCurRow, ::nTopRow )
+                     nOffRow := ::nCurRow   // reutilizar como old row
                      ::nCurRow := nNewRow
-                     IF ::bChange != NIL
-                         EvalSafe( ::bChange, "TGrid:bChange", Self )
+                     _GridRepaint( Self, nOffRow, ::nTopRow )
+                 ELSE
+                     // Segundo click en la misma fila -> ejecutar accion
+                     IF ::bEnter != NIL
+                         EvalSafe( ::bEnter, "TGrid:bEnter", Self )
+                         ::Paint()
                      ENDIF
+                 ENDIF
+                 IF ::bChange != NIL
+                     EvalSafe( ::bChange, "TGrid:bChange", Self )
                  ENDIF
                  lHandled := .T.
             ENDIF
