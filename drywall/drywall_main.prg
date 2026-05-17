@@ -79,11 +79,12 @@ STATIC FUNCTION _DrywallMenu()
     AAdd( aMaestros, { "Familias",   {|| M_Familias()    }, NIL, "Familias de articulos" } )
     AAdd( aMaestros, { "Tablas Aux", NIL, aAux, "Configuracion general" } )
 
-    AAdd( aInformes, { "Proyectos",       {|| InformeProyectos() },     NIL, "Listado de proyectos y tramos" } )
-    AAdd( aInformes, { "Resultado Calculo", {|| ResultadoCalculo() },   NIL, "Resumen de materiales calculados" } )
-    AAdd( aInformes, { "Despiece Calculo",  {|| ResultadoDetalle() },   NIL, "Detalle de materiales por tramo" } )
-    AAdd( aInformes, { "Articulos",       {|| InformeArticulos() },     NIL, "Listado de articulos" } )
-    AAdd( aInformes, { "Stock Minimo",    {|| InformeStockMinimo() },   NIL, "Alertas de stock" } )
+    AAdd( aInformes, { "Visor Proyectos",     {|| VisorProyectos() },           NIL, "Lista interactiva de proyectos" } )
+    AAdd( aInformes, { "Proyectos (texto)",  {|| InformeProyectos() },         NIL, "Listado de proyectos activos" } )
+    AAdd( aInformes, { "Historicos",         {|| InformeHistoricos() },        NIL, "Proyectos archivados" } )
+    AAdd( aInformes, { "Clientes",           {|| InformeClientesDrywall() },   NIL, "Listado de clientes" } )
+    AAdd( aInformes, { "Articulos",          {|| InformeArticulos() },         NIL, "Listado de articulos" } )
+    AAdd( aInformes, { "Stock Minimo",       {|| InformeStockMinimo() },       NIL, "Alertas de stock" } )
 
     AAdd( aSistema, { "Salir", {|| __Quit() }, NIL, "Cerrar aplicacion" } )
 

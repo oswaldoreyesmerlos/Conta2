@@ -328,10 +328,44 @@ RETURN NIL
 // ============================================================================
 STATIC FUNCTION _SeedProyectos()
 
+    _LimpiarTmp()
     _Proyecto( "PR001", "Banyo 6 modulos", "TST0001", "Banyo completo 6m" )
     _Proyecto( "PR002", "Reforma salon 30m2", "TST0002", "Tabiques + techo continuo" )
 
     _Log( "Proyectos" )
+
+RETURN NIL
+
+
+STATIC FUNCTION _LimpiarTmp()
+
+    _Zap( "TMP_CAB" )
+    _Zap( "TMP_TRA" )
+    _Zap( "TMP_MAT" )
+    _Zap( "TMP_RES" )
+
+RETURN NIL
+
+
+STATIC FUNCTION _Zap( cAlias )
+
+    LOCAL cAreaAnt := Alias()
+
+    IF Select( cAlias ) > 0
+        dbSelectArea( cAlias )
+        dbCloseArea()
+    ENDIF
+
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+        USE ( cAlias ) NEW EXCLUSIVE VIA "DBFCDX" ALIAS ( cAlias )
+        __dbZap()
+        DbCloseArea()
+    RECOVER
+    END SEQUENCE
+
+    IF !Empty( cAreaAnt ) .AND. Select( cAreaAnt ) > 0
+        dbSelectArea( cAreaAnt )
+    ENDIF
 
 RETURN NIL
 

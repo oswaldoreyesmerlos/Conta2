@@ -143,6 +143,7 @@ RETURN NIL
 FUNCTION ErrorLogAppend( cText )
 
     LOCAL nH
+    LOCAL cFile
 
     DEFAULT cText TO ""
 
@@ -150,9 +151,10 @@ FUNCTION ErrorLogAppend( cText )
         RETURN .F.
     ENDIF
 
-    nH := FOpen( "error.log", FO_READWRITE + FO_DENYNONE )
+    // error.log en el directorio del exe (no en DATA que es el SET DEFAULT)
+    nH := FOpen( hb_DirBase() + "error.log", FO_READWRITE + FO_DENYNONE )
     IF nH < 0
-        nH := FCreate( "error.log", FC_NORMAL )
+        nH := FCreate( hb_DirBase() + "error.log", FC_NORMAL )
     ENDIF
 
     IF nH < 0

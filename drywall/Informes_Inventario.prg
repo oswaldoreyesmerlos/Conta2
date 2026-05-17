@@ -102,12 +102,65 @@ RETURN _MostrarInformeTexto( "ARTICULOS BAJO STOCK MINIMO", cTexto, "STOCK_MINIM
 
 
 // ============================================================================
+// InformeClientesDrywall()
+// ============================================================================
+FUNCTION InformeClientesDrywall()
+
+    LOCAL cTexto := ""
+
+    IF Select( "CLI_ID" ) == 0
+        IF !File( "CLIENTES.DBF" )
+            MsgStop( "La tabla CLIENTES no existe. Ejecute Seed primero.", "Informe" )
+            RETURN NIL
+        ENDIF
+        IF !ABRIR_TABLA( "CLIENTES", "CLI_ID", "CLI_NOM" )
+            RETURN NIL
+        ENDIF
+    ENDIF
+
+    DbSelectArea( "CLI_ID" )
+    BEGIN SEQUENCE WITH {|oErr| Break(oErr)}
+        OrdSetFocus( "CLI_NOM" )
+    RECOVER
+        MsgStop( "El indice CLI_NOM no esta disponible en CLIENTES.", "Informe" )
+        RETURN NIL
+    END SEQUENCE
+    DbGoTop()
+
+    cTexto := PadC( "INFORME DE CLIENTES", 80 ) + hb_Eol()
+    cTexto += Replicate( "-", 80 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol() + hb_Eol()
+
+    cTexto += PadR( "CODIGO", 10 ) + " "
+    cTexto += PadR( "NOMBRE", 30 ) + " "
+    cTexto += PadR( "NIF", 13 ) + " "
+    cTexto += PadR( "CIUDAD", 20 ) + " "
+    cTexto += PadR( "TELEFONO", 12 ) + " "
+    cTexto += "BAJA" + hb_Eol()
+    cTexto += Replicate( "-", 80 ) + hb_Eol()
+
+    DO WHILE !Eof()
+        IF !Deleted()
+            cTexto += PadR( AllTrim( CLI_ID->ID ), 10 ) + " "
+            cTexto += PadR( AllTrim( CLI_ID->NOMBRE + " " + CLI_ID->APELLIDO ), 30 ) + " "
+            cTexto += PadR( AllTrim( CLI_ID->NIF ), 13 ) + " "
+            cTexto += PadR( AllTrim( CLI_ID->CIUDAD ), 20 ) + " "
+            cTexto += PadR( AllTrim( CLI_ID->TELEFONO ), 12 ) + " "
+            cTexto += If( CLI_ID->BAJA, "SI", "NO" ) + hb_Eol()
+        ENDIF
+        DbSkip()
+    ENDDO
+
+RETURN _MostrarInformeTexto( "INFORME DE CLIENTES", cTexto, "INFORME_CLIENTES.TXT" )
+
+
+// ============================================================================
 // InformeProyectos()
+// Solo cabeceras de proyectos activos (TMP_CAB)
 // ============================================================================
 FUNCTION InformeProyectos()
 
     LOCAL cTexto := ""
-    LOCAL cNum
 
     IF Select( "TPC_I" ) == 0
         IF !ABRIR_TABLA( "TMP_CAB", "TPC_I", "" )
@@ -118,57 +171,352 @@ FUNCTION InformeProyectos()
     DbSelectArea( "TPC_I" )
     DbGoTop()
 
-    cTexto += PadC( "INFORME DE PROYECTOS", 90 ) + hb_Eol()
+    cTexto += PadC( "LISTADO DE PROYECTOS", 90 ) + hb_Eol()
     cTexto += Replicate( "-", 90 ) + hb_Eol()
     cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol() + hb_Eol()
 
+    cTexto += PadR( "NUMERO", 8 ) + " "
+    cTexto += PadR( "FECHA", 12 ) + " "
+    cTexto += PadR( "CLIENTE", 15 ) + " "
+    cTexto += "TITULO" + hb_Eol()
+    cTexto += Replicate( "-", 90 ) + hb_Eol()
+
     DO WHILE !Eof()
         IF !Deleted()
-            cNum := AllTrim( TPC_I->NUMERO )
-            cTexto += PadR( "Proyecto: " + cNum, 20 ) + " "
-            cTexto += DToC( TPC_I->FECHA ) + "  "
-            cTexto += AllTrim( TPC_I->TITULO ) + "  "
-            cTexto += "Cli: " + AllTrim( TPC_I->ID_CLIENTE ) + hb_Eol()
-            cTexto += Replicate( "-", 90 ) + hb_Eol()
-
-            _InfoProyTramos( cNum, @cTexto )
+            cTexto += PadR( AllTrim( TPC_I->NUMERO ), 8 ) + " "
+            cTexto += PadR( DToC( TPC_I->FECHA ), 12 ) + " "
+            cTexto += PadR( AllTrim( TPC_I->ID_CLIENTE ), 15 ) + " "
+            cTexto += AllTrim( TPC_I->TITULO ) + hb_Eol()
         ENDIF
         DbSkip()
     ENDDO
 
-RETURN _MostrarInformeTexto( "INFORME DE PROYECTOS", cTexto, "INFORME_PROYECTOS.TXT" )
+RETURN _MostrarInformeTexto( "LISTADO DE PROYECTOS", cTexto, "LISTADO_PROYECTOS.TXT" )
 
 
-STATIC FUNCTION _InfoProyTramos( cNum, cTexto )
+// ============================================================================
+// InformeHistoricos()
+// Cabeceras de proyectos archivados (HIS_CAB)
+// ============================================================================
+FUNCTION InformeHistoricos()
 
-    IF Select( "TPT_I" ) == 0
-        IF !ABRIR_TABLA( "TMP_TRA", "TPT_I", "" )
+    LOCAL cTexto := ""
+
+    IF Select( "HIS_I" ) == 0
+        IF !ABRIR_TABLA( "HIS_CAB", "HIS_I", "" )
             RETURN NIL
         ENDIF
     ENDIF
 
-    DbSelectArea( "TPT_I" )
+    DbSelectArea( "HIS_I" )
     DbGoTop()
 
-    cTexto += PadR( "LIN", 4 ) + " "
-    cTexto += PadR( "TIPO", 12 ) + " "
-    cTexto += PadR( "CONCEPTO", 30 ) + " "
-    cTexto += PadL( "LARGO", 8 ) + " "
-    cTexto += PadL( "ALTO", 8 ) + " "
-    cTexto += PadL( "MOD", 6 ) + hb_Eol()
+    cTexto += PadC( "LISTADO DE PROYECTOS HISTORICOS", 90 ) + hb_Eol()
+    cTexto += Replicate( "-", 90 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol() + hb_Eol()
+
+    cTexto += PadR( "NUMERO", 8 ) + " "
+    cTexto += PadR( "FECHA", 12 ) + " "
+    cTexto += PadR( "CLIENTE", 15 ) + " "
+    cTexto += "TITULO" + hb_Eol()
     cTexto += Replicate( "-", 90 ) + hb_Eol()
 
     DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cNum )
-            cTexto += PadL( AllTrim( Str( FIELD->ID_LINEA ) ), 4 ) + " "
-            cTexto += PadR( AllTrim( FIELD->TIPO_OBRA ), 12 ) + " "
-            cTexto += PadR( AllTrim( FIELD->CONCEPTO ), 30 ) + " "
-            cTexto += PadL( Transform( FIELD->LARGO, "999.99" ), 8 ) + " "
-            cTexto += PadL( Transform( FIELD->ALTO, "999.99" ), 8 ) + " "
-            cTexto += PadL( Transform( FIELD->MODUL, "99.99" ), 6 ) + hb_Eol()
+        IF !Deleted()
+            cTexto += PadR( AllTrim( HIS_I->NUMERO ), 8 ) + " "
+            cTexto += PadR( DToC( HIS_I->FECHA ), 12 ) + " "
+            cTexto += PadR( AllTrim( HIS_I->ID_CLIENTE ), 15 ) + " "
+            cTexto += AllTrim( HIS_I->TITULO ) + hb_Eol()
         ENDIF
         DbSkip()
     ENDDO
+
+RETURN _MostrarInformeTexto( "PROYECTOS HISTORICOS", cTexto, "LISTADO_HISTORICOS.TXT" )
+
+
+// ============================================================================
+// VisorProyectos()
+// Grid interactivo de todos los proyectos (TMP + HIS).
+// ENTER sobre un proyecto → muestra su cálculo (TMP_RES / HIS_RES).
+// ============================================================================
+FUNCTION VisorProyectos()
+
+    LOCAL nArea := Select()
+    LOCAL oWin, oGrid, aData
+
+    aData := _VisorCargarDatos()
+
+    IF Empty( aData )
+        MsgInfo( "No hay proyectos registrados.", "Visor" )
+        RETURN NIL
+    ENDIF
+
+    oWin := TWindow():New( 2, 2, GfxMaxRow() - 2, GfxMaxCol() - 2, "VISOR DE PROYECTOS" )
+
+    oWin:AddCtrl( TLabel():New( 1, 2, ;
+        "[ENTER] Ver cálculo   [Flechas] Navegar   [ESC] Salir", oWin ) )
+
+    oGrid := TGrid():New( 3, 1, GfxMaxRow() - 6, GfxMaxCol() - 4, oWin )
+    oGrid:aData    := aData
+    oGrid:nSeekCol := 3
+    oGrid:AddColumn( "ORIGEN",   6,  "@!", { |a| a[1] } )
+    oGrid:AddColumn( "NUMERO",   8,  "@!", { |a| a[2] } )
+    oGrid:AddColumn( "FECHA",   12,  "@!", { |a| a[3] } )
+    oGrid:AddColumn( "CLIENTE", 15,  "@!", { |a| a[4] } )
+    oGrid:AddColumn( "TITULO",  35,  "@!", { |a| a[5] } )
+    oGrid:AddColumn( "ESTADO",  12,  "@!", { |a| a[6] } )
+
+    oGrid:bEnter := {|| _VisorVerCalculo( oGrid ) }
+
+    oWin:AddCtrl( oGrid )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 2, GfxMaxRow() - 3, 18, oWin, "REFRESCAR", ;
+        {|| aData := _VisorCargarDatos(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, GfxMaxCol() - 20, GfxMaxRow() - 3, GfxMaxCol() - 4, oWin, "CERRAR", ;
+        {|| oWin:Close() } ) )
+
+    oWin:Run()
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _VisorCargarDatos()
+
+    LOCAL aData := {}
+    LOCAL cEstado
+    LOCAL lResAbierta
+
+    // Asegurar TMP_CAB abierta
+    IF Select( "TMP_CAB" ) == 0
+        IF !ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
+            // No se pudo abrir, omitimos proyectos activos
+        ENDIF
+    ENDIF
+
+    // Asegurar TMP_RES abierta (para consultar estado)
+    lResAbierta := .F.
+    IF Select( "TMP_RES" ) == 0
+        IF ABRIR_TABLA( "TMP_RES", "TMP_RES", "RES_PK" )
+            lResAbierta := .T.
+        ENDIF
+    ELSE
+        dbSelectArea( "TMP_RES" )
+        BEGIN SEQUENCE WITH {|oErr| Break(oErr)}
+            OrdSetFocus( "RES_PK" )
+        RECOVER
+        END SEQUENCE
+        lResAbierta := .T.
+    ENDIF
+
+    // Proyectos activos (TMP_CAB)
+    IF Select( "TMP_CAB" ) > 0
+        dbSelectArea( "TMP_CAB" )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted()
+                cEstado := "Pendiente"
+                IF lResAbierta
+                    BEGIN SEQUENCE WITH {|oErr| Break(oErr)}
+                        TMP_RES->( dbSeek( AllTrim( TMP_CAB->NUMERO ) ) )
+                        IF TMP_RES->( Found() )
+                            cEstado := "Calculado"
+                        ENDIF
+                    RECOVER
+                    END SEQUENCE
+                ENDIF
+                AAdd( aData, { ;
+                    "TMP", ;
+                    AllTrim( TMP_CAB->NUMERO ), ;
+                    DToC( TMP_CAB->FECHA ), ;
+                    AllTrim( TMP_CAB->ID_CLIENTE ), ;
+                    AllTrim( TMP_CAB->TITULO ), ;
+                    cEstado } )
+            ENDIF
+            dbSkip()
+        ENDDO
+    ENDIF
+
+    // Asegurar HIS_CAB abierta
+    IF Select( "HIS_CAB" ) == 0
+        IF !ABRIR_TABLA( "HIS_CAB", "HIS_CAB", "" )
+            // No se pudo abrir, omitimos archivados
+        ENDIF
+    ENDIF
+
+    // Proyectos archivados (HIS_CAB)
+    IF Select( "HIS_CAB" ) > 0
+        dbSelectArea( "HIS_CAB" )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted()
+                AAdd( aData, { ;
+                    "HIS", ;
+                    AllTrim( HIS_CAB->NUMERO ), ;
+                    DToC( HIS_CAB->FECHA ), ;
+                    AllTrim( HIS_CAB->ID_CLIENTE ), ;
+                    AllTrim( HIS_CAB->TITULO ), ;
+                    "Archivado" } )
+            ENDIF
+            dbSkip()
+        ENDDO
+    ENDIF
+
+RETURN aData
+
+
+STATIC FUNCTION _VisorVerCalculo( oGrid )
+
+    LOCAL aRow := oGrid:CurrentRow()
+    LOCAL cOrigen, cNum
+
+    IF aRow == NIL
+        RETURN NIL
+    ENDIF
+
+    cOrigen := aRow[1]   // "TMP" o "HIS"
+    cNum    := aRow[2]   // Número de proyecto
+
+    IF cOrigen == "TMP"
+        _VisorMostrarResultado( "TMP_RES", cNum, "RESULTADO - Proyecto " + cNum )
+    ELSEIF cOrigen == "HIS"
+        _VisorMostrarResultado( "HIS_RES", cNum, "HISTORICO - Proyecto " + cNum )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _VisorMostrarResultado( cAlias, cNum, cTitulo )
+
+    LOCAL nArea := Select()
+    LOCAL aData := {}
+    LOCAL oWin, oGrid
+    LOCAL nTotalImp := 0
+    LOCAL nTotalPeso := 0
+    LOCAL lAbierta := .F.
+
+    // Abrir tabla si no está en uso
+    IF Select( cAlias ) == 0
+        IF File( cAlias + ".DBF" )
+            BEGIN SEQUENCE WITH {|oErr| Break(oErr)}
+                USE ( cAlias ) NEW SHARED VIA "DBFCDX" ALIAS ( cAlias )
+                lAbierta := ( Select( cAlias ) > 0 )
+            RECOVER
+            END SEQUENCE
+        ENDIF
+    ELSE
+        lAbierta := .T.
+    ENDIF
+
+    IF !lAbierta
+        MsgStop( "No hay datos de calculo disponibles.", "Aviso" )
+        RETURN NIL
+    ENDIF
+
+    dbSelectArea( cAlias )
+    BEGIN SEQUENCE WITH {|oErr| Break(oErr)}
+        OrdSetFocus( 1 )
+        dbSeek( PadR( cNum, 6 ) )
+    RECOVER
+        MsgInfo( "Error al acceder a los datos de '" + cNum + "'.", "Aviso" )
+        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        RETURN NIL
+    END SEQUENCE
+
+    IF !Found()
+        MsgInfo( "El proyecto '" + cNum + "' no tiene calculo.", "Aviso" )
+        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        RETURN NIL
+    ENDIF
+
+    DO WHILE !Eof() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cNum )
+        IF !Deleted()
+            AAdd( aData, { ;
+                AllTrim( FIELD->FAMILIA ), ;
+                AllTrim( FIELD->CODIGO ), ;
+                AllTrim( FIELD->DESCRIP ), ;
+                AllTrim( FIELD->UNIDAD ), ;
+                FIELD->CANT_TOT, ;
+                FIELD->PRECIO, ;
+                FIELD->IMP_TOT, ;
+                FIELD->PESO_TOT } )
+            nTotalImp  += FIELD->IMP_TOT
+            nTotalPeso += FIELD->PESO_TOT
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    oWin := TWindow():New( 4, 4, GfxMaxRow() - 4, GfxMaxCol() - 4, cTitulo )
+
+    oWin:AddCtrl( TLabel():New( 1, 2, ;
+        "Total: " + Transform( nTotalImp, "999,999,999.99" ) + ;
+        "   Peso: " + Transform( nTotalPeso, "999,999,999.999" ), oWin ) )
+
+    oGrid := TGrid():New( 3, 1, GfxMaxRow() - 8, GfxMaxCol() - 6, oWin )
+    oGrid:aData    := aData
+    oGrid:nSeekCol := 2
+    oGrid:AddColumn( "FAMILIA",     10, "@!",          { |a| a[1] } )
+    oGrid:AddColumn( "CODIGO",      15, "@!",          { |a| a[2] } )
+    oGrid:AddColumn( "DESCRIPCION", 40, "@!",          { |a| a[3] } )
+    oGrid:AddColumn( "UD",           4, "@!",          { |a| a[4] } )
+    oGrid:AddColumn( "CANTIDAD",    12, "999,999.999", { |a| a[5] } )
+    oGrid:AddColumn( "PRECIO",      10, "999,999.99",  { |a| a[6] } )
+    oGrid:AddColumn( "IMPORTE",     14, "999,999.99",  { |a| a[7] } )
+    oGrid:AddColumn( "PESO",        12, "999,999.999", { |a| a[8] } )
+
+    oWin:AddCtrl( oGrid )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "IMPRIMIR", ;
+        {|| _VisorImpResultado( aData, cTitulo, nTotalImp, nTotalPeso ) } ) )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, GfxMaxCol() - 20, GfxMaxRow() - 5, GfxMaxCol() - 4, oWin, "CERRAR", ;
+        {|| oWin:Close() } ) )
+
+    oWin:Run()
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _VisorImpResultado( aData, cTitulo, nTotalImp, nTotalPeso )
+
+    LOCAL cTexto := ""
+    LOCAL i
+
+    cTexto += PadC( cTitulo, 100 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += "FECHA: " + DToC( Date() ) + "   HORA: " + Time() + hb_Eol() + hb_Eol()
+
+    cTexto += PadR( "FAMILIA", 10 ) + " "
+    cTexto += PadR( "CODIGO", 15 ) + " "
+    cTexto += PadR( "DESCRIPCION", 40 ) + " "
+    cTexto += PadR( "UD", 4 ) + " "
+    cTexto += PadL( "CANTIDAD", 12 ) + " "
+    cTexto += PadL( "PRECIO", 10 ) + " "
+    cTexto += PadL( "IMPORTE", 14 ) + " "
+    cTexto += PadL( "PESO", 12 ) + hb_Eol()
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+
+    FOR i := 1 TO Len( aData )
+        cTexto += PadR( aData[i, 1], 10 ) + " "
+        cTexto += PadR( aData[i, 2], 15 ) + " "
+        cTexto += PadR( aData[i, 3], 40 ) + " "
+        cTexto += PadR( aData[i, 4],  4 ) + " "
+        cTexto += PadL( Transform( aData[i, 5], "999,999.999" ), 12 ) + " "
+        cTexto += PadL( Transform( aData[i, 6], "999,999.99" ),  10 ) + " "
+        cTexto += PadL( Transform( aData[i, 7], "999,999.99" ),  14 ) + " "
+        cTexto += PadL( Transform( aData[i, 8], "999,999.999" ), 12 ) + hb_Eol()
+    NEXT
+
+    cTexto += Replicate( "-", 100 ) + hb_Eol()
+    cTexto += PadR( "TOTALES", 70 ) + " "
+    cTexto += PadL( Transform( nTotalImp, "999,999,999.99" ), 14 ) + " "
+    cTexto += PadL( Transform( nTotalPeso, "999,999,999.999" ), 12 ) + hb_Eol()
+
+    _ImpTexto( cTexto, "RESULTADO_" + StrTran( cTitulo, " ", "_" ) + ".TXT" )
 
 RETURN NIL
 
