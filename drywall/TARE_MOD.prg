@@ -79,6 +79,7 @@ FUNCTION VerTareas( cTipo )
     oWin:AddCtrl( TLabel():New( 22, 2, "[F5] Nuevo [ENTER] Editar [DEL] Borrar", oWin ) )
     oWin:AddCtrl( TButton():New( 23,  2, 24, 18, oWin, "NUEVO (F5)", {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( 23, 20, 24, 38, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( 23, 40, 24, 58, oWin, "RESULTADO", {|| ResultadoCalculo() } ) )
     oWin:AddCtrl( TButton():New( 23, 85, 24, 101, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()
@@ -171,15 +172,23 @@ RETURN NIL
 
 STATIC FUNCTION _PickTipoObra()
 
-    LOCAL aData := { {"TABIQUE","Tabique pladur"}, {"TECHO","Techo pladur"}, {"TRASDOSADO","Trasdosado"}, {"TRASDOSADO_DIR","Trasdosado Directo"}, {"TRASDOSADO_AUT","Trasdosado Autoportante"}, {"GENERICO","Material generico (m2)"} }
+    LOCAL aData := { }
     LOCAL aCombo := {}
     LOCAL i
+
+    AAdd( aData, {"TABIQUE","Tabique pladur"} )
+    AAdd( aData,  {"TECHO","Techo pladur"} )
+    AAdd( aData,  {"TRASDOSADO_AUT","Trasdosado Autoportante"} )
+    AAdd( aData,  {"TRASDOSADO","Trasdosado  Semi Directo"} )
+    AAdd( aData,  {"TRASDOSADO_DIR","Trasdosado Directo"} )
+    AAdd( aData,  {"GENERICO","Material generico (m2)"} )
+    
 
     FOR i := 1 TO Len( aData )
         AAdd( aCombo, { aData[i, 1], aData[i, 2] } )
     NEXT
 
-RETURN PopupSelect( "SELECCIONAR TIPO", aCombo, { { "Tipo", 20, "@!", 2 } }, 1 )
+RETURN PopupSelect( "SELECCIONAR TIPO", aCombo, { { "Tipo", 30, "@!", 2 } }, 1 )
 
 
 STATIC FUNCTION _AbrirTablas()

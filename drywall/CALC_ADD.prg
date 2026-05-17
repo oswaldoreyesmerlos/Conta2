@@ -17,13 +17,7 @@
 // ============================================================================
 FUNCTION Add_Tabique( cTit )
 
-    LOCAL oWin, hData
-    LOCAL oGCon, oGLar, oGAlt, oGMod
-    LOCAL oGSis, oGPer1, oGPer2, oGPla1, oGPla2, oGNumP
-    LOCAL oChkSame, oChkAis, oChkBand
-    LOCAL oGAisCod
-    LOCAL oBtBusP1, oBtBusP2, oBtBusA, oBtBusB, oBtBusAis
-    LOCAL oBtGua, oBtCan, lSave := .F.
+    LOCAL hData
 
     hData := _InitData( "TABIQUE", cTit )
     hData["MODUL"]      := 0.60
@@ -33,7 +27,25 @@ FUNCTION Add_Tabique( cTit )
     hData["BANDA"]      := "N"
     hData["SISTEMA"]    := "48"
 
-    oWin := TWindow():New( 2, 5, 27, 105, "NUEVO TABIQUE" )
+RETURN Form_Tabique( hData, .T. )
+
+
+FUNCTION Form_Tabique( hData, lNuevo )
+
+    LOCAL oWin
+    LOCAL oGCon, oGLar, oGAlt, oGMod
+    LOCAL oGSis, oGPer1, oGPer2, oGPla1, oGPla2, oGNumP
+    LOCAL oChkSame, oChkAis, oChkBand
+    LOCAL oGAisCod
+    LOCAL oBtBusP1, oBtBusP2, oBtBusA, oBtBusB, oBtBusAis
+    LOCAL oBtGua, oBtCan, lSave := .F.
+    LOCAL cTitulo := If( lNuevo, "NUEVO TABIQUE", "EDITAR TABIQUE" )
+    LOCAL cBoton  := If( lNuevo, "GUARDAR", "ACTUALIZAR" )
+    LOCAL lDiffB  := ( hData["SAME_B"] == "N" )
+    LOCAL lAis    := ( hData["AIS"] == "S" )
+    LOCAL lBand   := ( hData["BANDA"] == "S" )
+
+    oWin := TWindow():New( 2, 5, 27, 105, cTitulo )
 
     // -- FILA 1: Concepto --
     oWin:AddCtrl( TLabel():New( 1,  2, "Concepto..:", oWin ) )
@@ -56,49 +68,46 @@ FUNCTION Add_Tabique( cTit )
     oWin:AddCtrl( TLabel():New( 7,  2, "Montante..:", oWin ) )
     oGPer1 := TGet():New( 7, 16, hData["ID_PERFIL"], "@!", oWin )
     oBtBusP1 := TButton():New( 7, 48, 7, 62, oWin, "BUSCAR", {|| _BtnPick(oGPer1,hData,"ID_PERFIL","PERFIL") } )
-    oWin:AddCtrl( TLabel():New( 8,  2, "Canal.....:", oWin ) )
-    oGPer2 := TGet():New( 8, 16, hData["ID_PERFIL2"], "@!", oWin )
-    oBtBusP2 := TButton():New( 8, 48, 8, 62, oWin, "BUSCAR", {|| _BtnPick(oGPer2,hData,"ID_PERFIL2","PERFIL") } )
+    oWin:AddCtrl( TLabel():New( 9,  2, "Canal.....:", oWin ) )
+    oGPer2 := TGet():New( 9, 16, hData["ID_PERFIL2"], "@!", oWin )
+    oBtBusP2 := TButton():New( 9, 48, 9, 62, oWin, "BUSCAR", {|| _BtnPick(oGPer2,hData,"ID_PERFIL2","PERFIL") } )
 
     // -- FILA 10: Placa A + buscar, Capas --
-    oWin:AddCtrl( TLabel():New( 10, 2, "Placa A...:", oWin ) )
-    oGPla1 := TGet():New( 10,16, hData["ID_PLACA_A"], "@!", oWin )
-    oBtBusA := TButton():New( 10,48, 10,62, oWin, "BUSCAR", {|| _BtnPick(oGPla1,hData,"ID_PLACA_A","PLACA") } )
-    oWin:AddCtrl( TLabel():New( 10,66, "Capas:", oWin ) )
-    oGNumP := TGet():New( 10,74, hData["NUM_PLACAS"], "9", oWin )
+    oWin:AddCtrl( TLabel():New( 11, 2, "Placa A...:", oWin ) )
+    oGPla1 := TGet():New( 11,16, hData["ID_PLACA_A"], "@!", oWin )
+    oBtBusA := TButton():New( 11,48, 11,62, oWin, "BUSCAR", {|| _BtnPick(oGPla1,hData,"ID_PLACA_A","PLACA") } )
+    oWin:AddCtrl( TLabel():New( 11,66, "Capas:", oWin ) )
+    oGNumP := TGet():New( 11,74, hData["NUM_PLACAS"], "9", oWin )
     oGNumP:bValid := {|o| o:uVar >=1 .AND. o:uVar <=5 .OR. (MsgStop("Maximo 5 capas","Validacion"),.F.) }
 
-    // -- FILA 12: Igual Cara B (checkbox) --
-    oChkSame := TCheck():New( 12,16, "Igual Cara B", .T., oWin )
+    // -- FILA 12: Cara B distinta de A (habilita placa B) --
+    oChkSame := TCheck():New( 13,16, "Cara B distinta de A", lDiffB, oWin )
     oChkSame:bChange := {|| _TabqToggleSame( oChkSame, oGPla2, oBtBusB, hData ) }
-    oChkSame:lTabStop := .F.
 
-    // -- FILA 13: Placa B + buscar (deshabilitado si Same B) --
-    oWin:AddCtrl( TLabel():New( 13, 2, "Placa B...:", oWin ) )
-    oGPla2 := TGet():New( 13,16, hData["ID_PLACA_B"], "@!", oWin )
-    oGPla2:lEnabled := .F.
-    oBtBusB := TButton():New( 13,48, 13,62, oWin, "BUSCAR", {|| _BtnPick(oGPla2,hData,"ID_PLACA_B","PLACA") } )
-    oBtBusB:lEnabled := .F.
+    // -- FILA 13: Placa B + buscar (solo si es distinta) --
+    oWin:AddCtrl( TLabel():New( 14, 2, "Placa B...:", oWin ) )
+    oGPla2 := TGet():New( 14,16, hData["ID_PLACA_B"], "@!", oWin )
+    oGPla2:lEnabled := lDiffB
+    oBtBusB := TButton():New( 14,48, 14,62, oWin, "BUSCAR", {|| _BtnPick(oGPla2,hData,"ID_PLACA_B","PLACA") } )
+    oBtBusB:lEnabled := lDiffB
 
-    // -- FILA 15: Lleva Aislan (checkbox) --
-    oChkAis := TCheck():New( 15,16, "Lleva Aislante", .F., oWin )
+    // -- FILA 15: Lana de roca (checkbox) --
+    oChkAis := TCheck():New( 16,16, "Lana de roca", lAis, oWin )
     oChkAis:bChange := {|| _TabqToggleAis( oChkAis, oGAisCod, oBtBusAis, hData ) }
-    oChkAis:lTabStop := .F.
 
     // -- FILA 16: Mat Aislante + buscar (deshabilitado si no Ais) --
-    oWin:AddCtrl( TLabel():New( 16, 2, "Aislante..:", oWin ) )
-    oGAisCod := TGet():New( 16,16, hData["ID_AISLAN"], "@!", oWin )
-    oGAisCod:lEnabled := .F.
-    oBtBusAis := TButton():New( 16,48, 16,62, oWin, "BUSCAR", {|| _BtnPick(oGAisCod,hData,"ID_AISLAN","AISLAN") } )
-    oBtBusAis:lEnabled := .F.
+    oWin:AddCtrl( TLabel():New( 17, 2, "Aislante..:", oWin ) )
+    oGAisCod := TGet():New( 17,16, hData["ID_AISLAN"], "@!", oWin )
+    oGAisCod:lEnabled := lAis
+    oBtBusAis := TButton():New( 17,48, 17,62, oWin, "BUSCAR", {|| _BtnPick(oGAisCod,hData,"ID_AISLAN","AISLAN") } )
+    oBtBusAis:lEnabled := lAis
 
     // -- FILA 18: Banda Acustica (checkbox) --
-    oChkBand := TCheck():New( 18,16, "Banda Acustica", .F., oWin )
+    oChkBand := TCheck():New( 19,16, "Banda Acustica", lBand, oWin )
     oChkBand:bChange := {|| hData["BANDA"] := If( oChkBand:GetValue(), "S", "N" ) }
-    oChkBand:lTabStop := .F.
 
     // -- Botones --
-    oBtGua := TButton():New( 23,30, 24,49, oWin, "GUARDAR", {|| lSave := .T., oWin:Close() } )
+    oBtGua := TButton():New( 23,30, 24,49, oWin, cBoton, {|| lSave := .T., oWin:Close() } )
     oBtCan := TButton():New( 23,52, 24,71, oWin, "CANCELAR", {|| oWin:Close() } )
 
     // -- AddCtrl ordenado para foco correcto --
@@ -114,12 +123,12 @@ FUNCTION Add_Tabique( cTit )
     oWin:AddCtrl( oGPla1 )
     oWin:AddCtrl( oBtBusA )
     oWin:AddCtrl( oGNumP )
+    oWin:AddCtrl( oChkSame )
     oWin:AddCtrl( oGPla2 )
     oWin:AddCtrl( oBtBusB )
+    oWin:AddCtrl( oChkAis )
     oWin:AddCtrl( oGAisCod )
     oWin:AddCtrl( oBtBusAis )
-    oWin:AddCtrl( oChkSame )
-    oWin:AddCtrl( oChkAis )
     oWin:AddCtrl( oChkBand )
     oWin:AddCtrl( oBtGua )
     oWin:AddCtrl( oBtCan )
@@ -131,32 +140,44 @@ FUNCTION Add_Tabique( cTit )
         hData["LARGO"]       := oGLar:GetValue()
         hData["ALTO"]        := oGAlt:GetValue()
         hData["MODUL"]       := oGMod:GetValue()
-        hData["SISTEMA"]     := AllTrim(oGSis:GetValue())
+        hData["SISTEMA"]     := _SysAncho( oGSis:GetValue() )
         hData["ID_PERFIL"]   := oGPer1:GetValue()
         hData["ID_PERFIL2"]  := oGPer2:GetValue()
         hData["ID_PLACA_A"]  := oGPla1:GetValue()
         hData["NUM_PLACAS"]  := oGNumP:GetValue()
+        hData["SAME_B"]      := If( oChkSame:GetValue(), "N", "S" )
         IF oChkSame:GetValue()
-            hData["ID_PLACA_B"] := hData["ID_PLACA_A"]
-        ELSE
             hData["ID_PLACA_B"] := oGPla2:GetValue()
+        ELSE
+            hData["ID_PLACA_B"] := hData["ID_PLACA_A"]
         ENDIF
+        hData["AIS"] := If( oChkAis:GetValue(), "S", "N" )
+        IF oChkAis:GetValue()
+            hData["ID_AISLAN"] := oGAisCod:GetValue()
+        ELSE
+            hData["ID_AISLAN"] := Space(15)
+        ENDIF
+        hData["BANDA"] := If( oChkBand:GetValue(), "S", "N" )
         hData["CARAS_REALES"] := 2
-        _CoreSave( hData )
-        RETURN .T.
+        IF lNuevo
+            RETURN _CoreSave( hData )
+        ENDIF
+        RETURN UpdateTramoData( hData )
     ENDIF
 
 RETURN .F.
 
 
 STATIC FUNCTION _TabqToggleSame( oChk, oGPlB, oBtnB, hData )
-    LOCAL lSame := oChk:GetValue()
-    oGPlB:lEnabled := !lSame
-    oBtnB:lEnabled := !lSame
-    IF lSame
+    LOCAL lDiff := oChk:GetValue()
+    oGPlB:lEnabled := lDiff
+    oBtnB:lEnabled := lDiff
+    IF !lDiff
         oGPlB:SetValue( Space(15) )
     ENDIF
-    hData["SAME_B"] := If( lSame, "S", "N" )
+    oGPlB:Paint()
+    oBtnB:Paint()
+    hData["SAME_B"] := If( lDiff, "N", "S" )
 RETURN NIL
 
 
@@ -167,6 +188,8 @@ STATIC FUNCTION _TabqToggleAis( oChk, oGAisCod, oBtnAis, hData )
     IF !lAis
         oGAisCod:SetValue( Space(15) )
     ENDIF
+    oGAisCod:Paint()
+    oBtnAis:Paint()
     hData["AIS"] := If( lAis, "S", "N" )
 RETURN NIL
 
@@ -203,6 +226,7 @@ FUNCTION Add_Techo( cTit )
     hData["MODUL"]      := 0.50
     hData["SEP_PRIM"]   := 1.00
     hData["NUM_PLACAS"] := 1
+    hData["ID_PERFIL2"] := "0"
 
     oWin := TWindow():New( 2, 5, 24, 95, "NUEVO TECHO CONTINUO" )
 
@@ -212,7 +236,7 @@ FUNCTION Add_Techo( cTit )
     oWin:AddCtrl( TLabel():New(  6,  2, "Sep. Secundar:", oWin ) )
     oWin:AddCtrl( TLabel():New(  6, 30, "Sep. Primario:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8,  2, "Secundario...:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  8, 40, "Primario(opc):", oWin ) )
+    oWin:AddCtrl( TLabel():New(  9,  2, "Primario....:", oWin ) )
     oWin:AddCtrl( TLabel():New( 11,  2, "Placa........:", oWin ) )
     oWin:AddCtrl( TLabel():New( 11, 40, "Num. Capas...:", oWin ) )
     oWin:AddCtrl( TLabel():New( 13,  2, "Lleva Aislan?:", oWin ) )
@@ -227,8 +251,10 @@ FUNCTION Add_Techo( cTit )
     oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"],  "@!", oWin )
     oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
 
-    oGPer2 := TGet():New( 8, 56, hData["ID_PERFIL2"], "@!", oWin )
-    oBtBusP2 := TButton():New( 8, 72, 8, 86, oWin, "BUSCAR", {|| _BtnPick( oGPer2, hData, "ID_PERFIL2", "PERFIL" ) } )
+    oGPer2 := TGet():New( 9, 18, hData["ID_PERFIL2"], "@!", oWin )
+    oBtBusP2 := TButton():New( 9, 48, 9, 62, oWin, "BUSCAR", {|| _BtnPick( oGPer2, hData, "ID_PERFIL2", "PERFIL" ) } )
+    oBtBusP2:lEnabled := !_OptionalCode( hData["ID_PERFIL2"] )
+    oGPer2:bValid := {|o| _TechoValidPrim( o, oBtBusP2, hData ) }
 
     oGPla1 := TGet():New( 11, 18, hData["ID_PLACA_A"], "@!", oWin )
     oBtBusA := TButton():New( 11, 33, 11, 47, oWin, "BUSCAR", {|| _BtnPick( oGPla1, hData, "ID_PLACA_A", "PLACA" ) } )
@@ -264,7 +290,11 @@ FUNCTION Add_Techo( cTit )
         hData["MODUL"]     := oGMod:GetValue()
         hData["SEP_PRIM"]  := oGSepP:GetValue()
         hData["ID_PERFIL"] := oGPer1:GetValue()
-        hData["ID_PERFIL2"]:= oGPer2:GetValue()
+        IF _OptionalCode( oGPer2:GetValue() )
+            hData["ID_PERFIL2"] := "0"
+        ELSE
+            hData["ID_PERFIL2"] := oGPer2:GetValue()
+        ENDIF
         hData["ID_PLACA_A"]:= oGPla1:GetValue()
         hData["NUM_PLACAS"]:= oGNumP:GetValue()
         hData["CARAS_REALES"] := 1
@@ -273,6 +303,22 @@ FUNCTION Add_Techo( cTit )
     ENDIF
 
 RETURN .F.
+
+
+STATIC FUNCTION _TechoValidPrim( oGet, oBtn, hData )
+    LOCAL lPrim := !_OptionalCode( oGet:uVar )
+
+    oBtn:lEnabled := lPrim
+    IF !lPrim
+        oGet:SetValue( "0" )
+        hData["ID_PERFIL2"] := "0"
+    ELSE
+        hData["ID_PERFIL2"] := oGet:uVar
+    ENDIF
+    oGet:Paint()
+    oBtn:Paint()
+
+RETURN .T.
 
 
 // ============================================================================
@@ -291,6 +337,7 @@ FUNCTION Add_Trasdosado( cTipo, cTit )
     LOCAL lSave := .F.
     LOCAL cLbl1 := "Perfil.......:"
     LOCAL cLbl2 := "Canal........:"
+    LOCAL lPidePerfil := .T.
     LOCAL lPideCanal := .T.
 
     hData := _InitData( cTipo, cTit )
@@ -299,16 +346,21 @@ FUNCTION Add_Trasdosado( cTipo, cTit )
     DO CASE
     CASE cTipo == "TRASDOSADO"
         cLbl1 := "Montante.....:"
+        cLbl2 := ""
+        lPideCanal := .F.
+        hData["ID_PERFIL2"] := "0"
+    CASE cTipo == "TRASDOSADO_DIR"
+        cLbl1 := ""
+        cLbl2 := ""
+        lPidePerfil := .F.
+        lPideCanal := .F.
+        hData["MODUL"] := 0.00
+        hData["ID_PERFIL"] := "0"
+        hData["ID_PERFIL2"] := "0"
+    CASE cTipo == "TRASDOSADO_AUT"
+        cLbl1 := "Montante.....:"
         cLbl2 := "Canal........:"
         lPideCanal := .T.
-    CASE cTipo == "TRASDOSADO_DIR"
-        cLbl1 := "Montante.....:"
-        cLbl2 := ""
-        lPideCanal := .F.
-    CASE cTipo == "TRASDOSADO_AUT"
-        cLbl1 := "Autoportante.:"
-        cLbl2 := ""
-        lPideCanal := .F.
     ENDCASE
 
     oWin := TWindow():New( 2, 5, 22, 95, "NUEVO TRASDOSADO - " + cTit )
@@ -316,8 +368,10 @@ FUNCTION Add_Trasdosado( cTipo, cTit )
     oWin:AddCtrl( TLabel():New(  2,  2, "Concepto.....:", oWin ) )
     oWin:AddCtrl( TLabel():New(  4,  2, "Largo (m)....:", oWin ) )
     oWin:AddCtrl( TLabel():New(  4, 30, "Alto (m).....:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  6,  2, "Modulacion...:", oWin ) )
-    oWin:AddCtrl( TLabel():New(  8,  2, cLbl1, oWin ) )
+    IF lPidePerfil
+        oWin:AddCtrl( TLabel():New(  6,  2, "Modulacion...:", oWin ) )
+        oWin:AddCtrl( TLabel():New(  8,  2, cLbl1, oWin ) )
+    ENDIF
     IF lPideCanal
         oWin:AddCtrl( TLabel():New(  8, 40, cLbl2, oWin ) )
     ENDIF
@@ -328,10 +382,12 @@ FUNCTION Add_Trasdosado( cTipo, cTit )
     oGCon  := TGet():New( 2, 18, hData["CONCEPTO"], "@!",     oWin )
     oGLar  := TGet():New( 4, 18, hData["LARGO"],    "999.99", oWin )
     oGAlt  := TGet():New( 4, 43, hData["ALTO"],     "999.99", oWin )
-    oGMod  := TGet():New( 6, 18, hData["MODUL"],    "9.99",   oWin )
+    IF lPidePerfil
+        oGMod := TGet():New( 6, 18, hData["MODUL"], "9.99", oWin )
 
-    oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"], "@!", oWin )
-    oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
+        oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"], "@!", oWin )
+        oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
+    ENDIF
 
     IF lPideCanal
         oGPer2 := TGet():New( 8, 56, hData["ID_PERFIL2"], "@!", oWin )
@@ -349,9 +405,11 @@ FUNCTION Add_Trasdosado( cTipo, cTit )
     oWin:AddCtrl( oGCon  )
     oWin:AddCtrl( oGLar  )
     oWin:AddCtrl( oGAlt  )
-    oWin:AddCtrl( oGMod  )
-    oWin:AddCtrl( oGPer1 )
-    oWin:AddCtrl( oBtBusP1 )
+    IF lPidePerfil
+        oWin:AddCtrl( oGMod  )
+        oWin:AddCtrl( oGPer1 )
+        oWin:AddCtrl( oBtBusP1 )
+    ENDIF
     IF lPideCanal
         oWin:AddCtrl( oGPer2 )
         oWin:AddCtrl( oBtBusP2 )
@@ -367,10 +425,17 @@ FUNCTION Add_Trasdosado( cTipo, cTit )
         hData["CONCEPTO"]  := oGCon:GetValue()
         hData["LARGO"]     := oGLar:GetValue()
         hData["ALTO"]      := oGAlt:GetValue()
-        hData["MODUL"]     := oGMod:GetValue()
-        hData["ID_PERFIL"] := oGPer1:GetValue()
+        IF lPidePerfil
+            hData["MODUL"] := oGMod:GetValue()
+            hData["ID_PERFIL"] := oGPer1:GetValue()
+        ELSE
+            hData["MODUL"] := 0.00
+            hData["ID_PERFIL"] := "0"
+        ENDIF
         IF lPideCanal
             hData["ID_PERFIL2"] := oGPer2:GetValue()
+        ELSE
+            hData["ID_PERFIL2"] := "0"
         ENDIF
         hData["ID_PLACA_A"] := oGPla1:GetValue()
         hData["CARAS_REALES"] := 1
@@ -498,11 +563,24 @@ STATIC FUNCTION _CoreSave( hData )
     ENDIF
 
     IF cTipo != "GENERICO"
-        IF !_RequireCode( hData["ID_PERFIL"], "perfil principal" )
-            RETURN .F.
+        IF !( "DIR" $ cTipo )
+            IF !_RequireCode( hData["ID_PERFIL"], "perfil principal" )
+                RETURN .F.
+            ENDIF
         ENDIF
 
-        IF cTipo $ "TABIQUE,TECHO,TRASDOSADO" .AND. !_RequireCode( hData["ID_PERFIL2"], "perfil secundario/canal" )
+        IF cTipo == "TECHO"
+            IF !_OptionalCode( hData["ID_PERFIL2"] ) .AND. ;
+               !_RequireCode( hData["ID_PERFIL2"], "perfil primario" )
+                RETURN .F.
+            ENDIF
+        ELSEIF cTipo == "TABIQUE" .AND. !_RequireCode( hData["ID_PERFIL2"], "perfil secundario/canal" )
+            RETURN .F.
+        ELSEIF cTipo == "TRASDOSADO_AUT" .AND. ;
+               !_RequireCode( hData["ID_PERFIL2"], "canal" )
+            RETURN .F.
+        ELSEIF "TRAS" $ cTipo .AND. !_OptionalCode( hData["ID_PERFIL2"] ) .AND. ;
+               !_RequireCode( hData["ID_PERFIL2"], "perfil secundario/canal" )
             RETURN .F.
         ENDIF
     ENDIF
@@ -606,12 +684,17 @@ RETURN .F.
 
 STATIC FUNCTION _RequireCode( cCod, cLabel )
 
-    IF Empty( AllTrim( cCod ) )
+    IF Empty( AllTrim( cCod ) ) .OR. AllTrim( cCod ) == "0"
         MsgStop( "Falta seleccionar " + cLabel + ".", "Validacion" )
         RETURN .F.
     ENDIF
 
 RETURN .T.
+
+
+STATIC FUNCTION _OptionalCode( cCod )
+
+RETURN Empty( AllTrim( cCod ) ) .OR. AllTrim( cCod ) == "0"
 
 
 STATIC FUNCTION _ValPick( hData, cKey, cFam )

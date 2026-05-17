@@ -12,6 +12,9 @@ FUNCTION Main()
 
     rddSetDefault( "DBFCDX" )
     ErrorBlock( { |e| ErrSys( e ) } )
+    SET DATE BRIT
+    SET DATE FORMAT TO "DD/MM/YYYY"
+    SET CENTURY ON
 
     GfxSetFont( "Lucida Console", 16, 8 )
     SetMode( 40, 132 )
@@ -50,6 +53,7 @@ STATIC FUNCTION _DrywallMenu()
 
     AAdd( aProyecto, { "Definir Tramos",    {|| VerTareas() },        NIL, "Panel de diseno de tramos" } )
     AAdd( aProyecto, { "Calcular Material", {|| Procesa()  },         NIL, "Generar despiece y computo" } )
+    AAdd( aProyecto, { "Ver Resultado",     {|| ResultadoCalculo() }, NIL, "Resumen y despiece calculado" } )
     AAdd( aProyecto, { "Valorar Economico", {|| Valorar()  },         NIL, "Ajuste final de precios" } )
     AAdd( aProyecto, { "Guardar Historico", {|| GrabaPres() },        NIL, "Cerrar presupuesto definitivo" } )
     AAdd( aProyecto, { "Nuevo Proyecto",    {|| _DrywallLimpiar() }, NIL, "Borrar borrador" } )
@@ -63,6 +67,8 @@ STATIC FUNCTION _DrywallMenu()
     AAdd( aMaestros, { "Tablas Aux", NIL, aAux, "Configuracion general" } )
 
     AAdd( aInformes, { "Proyectos",       {|| InformeProyectos() },     NIL, "Listado de proyectos y tramos" } )
+    AAdd( aInformes, { "Resultado Calculo", {|| ResultadoCalculo() },   NIL, "Resumen de materiales calculados" } )
+    AAdd( aInformes, { "Despiece Calculo",  {|| ResultadoDetalle() },   NIL, "Detalle de materiales por tramo" } )
     AAdd( aInformes, { "Articulos",       {|| InformeArticulos() },     NIL, "Listado de articulos" } )
     AAdd( aInformes, { "Stock Minimo",    {|| InformeStockMinimo() },   NIL, "Alertas de stock" } )
 

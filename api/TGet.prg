@@ -42,6 +42,7 @@ ENDCLASS
 METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 
     LOCAL nScroll
+    LOCAL cDatePicture
 
     DEFAULT cPic TO ""
 
@@ -49,9 +50,14 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
     ::cPicture := cPic
     ::cType    := ValType( uValue )
     ::lPassword := .F.
+    cDatePicture := If( ::cType == "D", _GetDatePicture(), "" )
     nScroll := _TGetScrollLen( cPic )
 
     DO CASE
+
+    CASE ::cType == "D"
+        ::cPicture := cDatePicture
+        ::nLen := Len( ::cPicture )
 
 	CASE ! Empty( cPic ) .AND. Left( cPic, 1 ) != "@"
 		::nLen := Len( cPic )
@@ -65,9 +71,6 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
 
 	CASE ::cType == "N"
 		::nLen := 8
-
-	CASE ::cType == "D"
-		::nLen := 10
 
 	CASE ::cType == "L"
 		::nLen := 3
@@ -103,8 +106,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
         ::cBuffer := _TGetFormatNum( uValue, ::cPicture, ::nLen )
 
     CASE ::cType == "D"
-        ::cBuffer := DToC( uValue )
-        ::cPicture := _GetDatePicture()
+        ::cBuffer := PadR( DToC( uValue ), ::nBufLen )
 
     CASE ::cType == "L"
         ::cBuffer := If( uValue, "Si ", "No " )
@@ -365,7 +367,7 @@ METHOD HandleKey( nKey ) CLASS TGet
             RETURN .T.
         ENDIF
 
-        IF ::lFresh .AND. ::cType == "C"
+        IF ::lFresh .AND. ( ::cType == "C" .OR. ::cType == "D" )
             ::cBuffer := Space( ::nBufLen )
             ::nPos := 1
             ::lFresh := .F.
@@ -406,7 +408,10 @@ METHOD SetValue( uValue ) CLASS TGet
         ::cBuffer := _TGetFormatNum( uValue, ::cPicture, ::nLen )
 
     CASE ::cType == "D"
-        ::cBuffer := DToC( uValue )
+        ::cPicture := _GetDatePicture()
+        ::nLen     := Len( ::cPicture )
+        ::nBufLen  := ::nLen
+        ::cBuffer  := PadR( DToC( uValue ), ::nBufLen )
 
     CASE ::cType == "L"
         ::cBuffer := If( uValue, "Si ", "No " )
@@ -516,16 +521,22 @@ RETURN cNum
 STATIC FUNCTION _GetDatePicture()
 
     LOCAL cFmt := Set( _SET_DATEFORMAT )
-    LOCAL cSep := "/"
+    LOCAL cPic := ""
     LOCAL i
+    LOCAL cChr
 
-    IF !Empty( cFmt )
-        FOR i := 1 TO Len( cFmt )
-            IF !IsAlpha( SubStr( cFmt, i, 1 ) )
-                cSep := SubStr( cFmt, i, 1 )
-                EXIT
-            ENDIF
-        NEXT
+    IF Empty( cFmt )
+        RETURN "99/99/9999"
     ENDIF
 
-RETURN "99" + cSep + "99" + cSep + "9999"
+    cFmt := Upper( cFmt )
+    FOR i := 1 TO Len( cFmt )
+        cChr := SubStr( cFmt, i, 1 )
+        IF cChr $ "DMY"
+            cPic += "9"
+        ELSE
+            cPic += cChr
+        ENDIF
+    NEXT
+
+RETURN cPic

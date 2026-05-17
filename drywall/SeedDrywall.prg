@@ -156,7 +156,11 @@ STATIC FUNCTION _SeedArticulos()
 RETURN NIL
 
 
-STATIC FUNCTION _Art( cCod, cDesc, cFam, cUd, nPre, nEsp, nLar, nAnc )
+STATIC FUNCTION _Art( cCod, cDesc, cFam, cUd, nPre, nEsp, nLar, nAnc, nPeso )
+
+    IF ValType( nPeso ) != "N"
+        nPeso := 0
+    ENDIF
 
     IF Select( "ARTICULOS" ) == 0
         USE ARTICULOS NEW SHARED VIA "DBFCDX"
@@ -179,6 +183,7 @@ STATIC FUNCTION _Art( cCod, cDesc, cFam, cUd, nPre, nEsp, nLar, nAnc )
         REPLACE FIELD->ESPESOR  WITH nEsp
         REPLACE FIELD->LARGO    WITH nLar
         REPLACE FIELD->ANCHO    WITH nAnc
+        REPLACE FIELD->PESO_UNI WITH nPeso
         DbCommit()
         dbUnlock()
     ENDIF

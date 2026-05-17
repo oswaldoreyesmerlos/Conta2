@@ -75,11 +75,6 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
       dbSkip()
    ENDDO
    
-   // <--- PUNTO CLAVE: Si hubo errores, avisamos al final
-   IF ::nErrores > 0
-      ::MostrarErrores()
-   ENDIF
-
    dbSelectArea( nArea )
 
 RETURN NIL
@@ -187,7 +182,7 @@ METHOD Calc_Techo() CLASS OOPTRAMO
 
    ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMetSec * K_DESP_PER, "Perfil Secundario" )
 
-   IF nSepPrim > 0
+   IF nSepPrim > 0 .AND. !_OptionalCode( FIELD->ID_PER_HOR )
        nMetPri := nArea / nSepPrim
        nCruces := nArea / ( nMod * nSepPrim )
        ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetPri * K_DESP_PER, "Perfil Primario" )
@@ -214,17 +209,21 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    LOCAL nArea  := nLargo * nAlto
    LOCAL nMod   := FIELD->MODUL
    
-   LOCAL nMetVert
-   LOCAL nMetHor
+   LOCAL nMetVert := 0
+   LOCAL nMetHor  := 0
    
-   nMetVert := ( ( nLargo / nMod ) + 1 ) * nAlto
-   nMetHor  := nLargo * 2
-   
-    ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMetVert * K_DESP_PER, "Maestra/Montante" )
+   IF ! "DIR" $ FIELD->TIPO_OBRA
+      IF nMod == 0; nMod := 0.60; ENDIF
 
-    IF ! "DIR" $ FIELD->TIPO_OBRA
-       ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetHor * K_DESP_PER, "Canal Suelo/Techo" )
-    ENDIF
+      nMetVert := ( ( nLargo / nMod ) + 1 ) * nAlto
+      nMetHor  := nLargo * 2
+
+      ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMetVert * K_DESP_PER, "Maestra/Montante" )
+
+      IF !_OptionalCode( FIELD->ID_PER_HOR )
+         ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetHor * K_DESP_PER, "Canal Suelo/Techo" )
+      ENDIF
+   ENDIF
    
    ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, "Trasdosado" )
    ::AddMat( "TORNILLO", "TORN_PM_25", nArea * K_TORN_M2, "Fijacion" )
@@ -294,7 +293,7 @@ METHOD AddMat( cFam, cCod, nCant, cDet ) CLASS OOPTRAMO
    LOCAL nAreaArt
    LOCAL cMsgErr := ""
    
-   IF Empty( cCod )
+   IF _OptionalCode( cCod )
       RETURN NIL
    ENDIF
    
@@ -339,7 +338,13 @@ METHOD AddMat( cFam, cCod, nCant, cDet ) CLASS OOPTRAMO
    REPLACE FIELD->PRECIO    WITH nPrecio
    REPLACE FIELD->IMPORTE   WITH ( nCant * nPrecio )
    REPLACE FIELD->DETALLE   WITH cDet
+   dbCommit()
    
    dbSelectArea( nAreaArt )
 
 RETURN NIL
+
+
+STATIC FUNCTION _OptionalCode( cCod )
+
+RETURN Empty( AllTrim( cCod ) ) .OR. AllTrim( cCod ) == "0"

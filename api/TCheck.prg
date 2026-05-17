@@ -109,8 +109,8 @@ METHOD HandleKey( nKey ) CLASS TCheck
         RETURN .F.
     ENDIF
 
-    // Espacio o ENTER alternan
-    IF nKey == K_SPACE .OR. nKey == K_ENTER
+    // Espacio, ENTER o click de raton alternan
+    IF nKey == K_SPACE .OR. nKey == K_ENTER .OR. nKey == K_LBUTTONDOWN
         ::Toggle()
         RETURN .T.
     ENDIF
