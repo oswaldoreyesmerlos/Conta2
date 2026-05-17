@@ -9,8 +9,21 @@
 FUNCTION Main()
 
     LOCAL oMenu, aMenuDef
+    LOCAL cArg := Lower( hb_ArgV( 1 ) )
 
     rddSetDefault( "DBFCDX" )
+
+    // Modo seed desde linea de comandos
+    IF "seed" $ cArg
+        SET DATE BRIT
+        SET DATE FORMAT TO "DD/MM/YYYY"
+        SET CENTURY ON
+        InicioDrywall()
+        SeedDrywall()
+        ? "Seed completado."
+        RETURN 0
+    ENDIF
+
     ErrorBlock( { |e| ErrSys( e ) } )
     SET DATE BRIT
     SET DATE FORMAT TO "DD/MM/YYYY"
