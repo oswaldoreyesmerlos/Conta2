@@ -543,12 +543,15 @@ RETURN lSub
 
 METHOD Close() CLASS TMenuPop
 
-    GfxRestore( ;
-        Max( 0,           ::nTop    - PADWIN ), ;
-        Max( 0,           ::nLeft   - PADWIN ), ;
-        Min( GfxMaxRow(), ::nBottom + PADWIN ), ;
-        Min( GfxMaxCol(), ::nRight  + PADWIN ), ;
-        ::cBack )
+    // Restaurar fondo solo si no fue invalidado por cambio de tema
+    IF ::cBack != NIL
+        GfxRestore( ;
+            Max( 0,           ::nTop    - PADWIN ), ;
+            Max( 0,           ::nLeft   - PADWIN ), ;
+            Min( GfxMaxRow(), ::nBottom + PADWIN ), ;
+            Min( GfxMaxCol(), ::nRight  + PADWIN ), ;
+            ::cBack )
+    ENDIF
 
     IF !Empty( aPopStack ) .AND. ATail( aPopStack ) == Self
         ASize( aPopStack, Len( aPopStack ) - 1 )
@@ -655,6 +658,20 @@ STATIC FUNCTION _MenuCol( aItems, nPos )
     NEXT
 
 RETURN nC
+
+
+// ============================================================================
+// INVALIDAR FONDOS DE POPUP (usar tras cambio de tema)
+// ============================================================================
+FUNCTION TMenuInvalidateBack()
+
+    LOCAL nI
+
+    FOR nI := 1 TO Len( aPopStack )
+        aPopStack[nI]:cBack := NIL
+    NEXT
+
+RETURN NIL
 
 
 // ============================================================================

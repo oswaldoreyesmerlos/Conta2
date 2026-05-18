@@ -123,6 +123,10 @@ STATIC FUNCTION _DrywallTemaVisual()
     ENDIF
 
     GfxThemeSet( cSel )
+
+    // Invalidar fondos guardados del popup para que Close() no restaure colores viejos
+    TMenuInvalidateBack()
+
     CLS
 
     IF s_oDryMenu != NIL
