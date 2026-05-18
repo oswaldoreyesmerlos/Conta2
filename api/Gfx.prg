@@ -70,7 +70,37 @@ FUNCTION GfxThemeSet( cTheme )
 
     SetColor( GfxThemeColor( "WINDOW" ) )
 
+    // Persistir cambio
+    GfxThemeSave()
+
 RETURN s_cTheme
+
+
+FUNCTION GfxThemeLoad()
+
+    LOCAL cFile := hb_DirBase() + "gfx_theme.ini"
+    LOCAL cTheme
+
+    IF File( cFile )
+        cTheme := AllTrim( Memoread( cFile ) )
+    ENDIF
+
+    GfxThemeSet( cTheme )
+
+RETURN NIL
+
+
+FUNCTION GfxThemeSave()
+
+    LOCAL cFile := hb_DirBase() + "gfx_theme.ini"
+
+    // SILENT — si no se puede escribir, no importa
+    BEGIN SEQUENCE
+        Memowrit( cFile, s_cTheme + hb_eol() )
+    RECOVER
+    END SEQUENCE
+
+RETURN NIL
 
 
 FUNCTION GfxThemeName()

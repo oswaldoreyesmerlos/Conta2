@@ -34,7 +34,7 @@ FUNCTION Main()
     GfxSetFont( "Lucida Console", 16, 8 )
     SetMode( 40, 132 )
     GfxFixSize( .T. )
-    GfxThemeSet( "CLASICO" )
+    GfxThemeLoad()
     CLS
     GfxCursor( SC_NONE )
 
