@@ -13,7 +13,7 @@
 // FUNCION: GrabaPres
 // Descripción: Mueve los datos de las tablas TMP_* a las tablas HIS_*.
 // ============================================================================
-FUNCTION GrabaPres()
+FUNCTION GrabaPres( lConfirmar, lLimpiar )
     // --- REGLA DEL BOY SCOUT: VARIABLES DE ESTADO LOCAL ---
     LOCAL nAreaOri
     LOCAL nOrdOri
@@ -22,6 +22,13 @@ FUNCTION GrabaPres()
     LOCAL cNueNum
     LOCAL nTotal := 0
     LOCAL lOk := .T.
+
+    IF ValType( lConfirmar ) != "L"
+        lConfirmar := .T.
+    ENDIF
+    IF ValType( lLimpiar ) != "L"
+        lLimpiar := .T.
+    ENDIF
 
     // 1. GUARDAMOS EL ESTADO ACTUAL
     nAreaOri := Select()
@@ -290,4 +297,193 @@ STATIC FUNCTION _MoverResumen( cDoc )
         dbSkip()
     ENDDO
     dbSelectArea( nArea )
+RETURN NIL
+
+
+FUNCTION DrywallGuardarGenerar()
+
+    LOCAL nArea := Select()
+    LOCAL cProyecto := ""
+    LOCAL cHist := ""
+
+    IF !_ValidaCierreProyecto( @cProyecto )
+        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        RETURN .F.
+    ENDIF
+
+    IF !MsgYesNo( "Se guardara el proyecto en firme y se generara el presupuesto." + Chr(13) + ;
+                  "Esta operacion no debe repetirse para el mismo proyecto." + Chr(13) + ;
+                  "Desea continuar?", "Guardar en Firme" )
+        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        RETURN .F.
+    ENDIF
+
+    IF !DrywallGenPresupuesto( cProyecto )
+        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        RETURN .F.
+    ENDIF
+
+    IF !_EnsureHistoricoTables()
+        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        RETURN .F.
+    ENDIF
+
+    cHist := _GetNextDoc()
+    IF Empty( cHist )
+        MsgStop( "No se pudo generar numero de historico.", "Guardar en Firme" )
+        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        RETURN .F.
+    ENDIF
+
+    _MoverCabecera( cHist, _TotalTmpRes() )
+    _MoverTramos( cHist )
+    _MoverResumen( cHist )
+    _MoverMateriales( cHist )
+    _MarkTmpGuardado()
+
+    MsgInfo( "Proyecto guardado en firme. Historico: " + cHist, "Guardar en Firme" )
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN .T.
+
+
+STATIC FUNCTION _MarkTmpGuardado()
+
+    LOCAL nArea := Select()
+
+    IF Select( "TMP_CAB" ) > 0
+        dbSelectArea( "TMP_CAB" )
+        dbGoTop()
+        IF NetRLock()
+            REPLACE FIELD->ESTADO WITH "G"
+            IF FieldPos( "L_SUCIO" ) > 0
+                REPLACE FIELD->L_SUCIO WITH .F.
+            ENDIF
+            dbCommit()
+            dbUnlock()
+        ENDIF
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _EnsureHistoricoTables()
+
+    IF !ABRIR_TABLA( "HIS_CAB", "HIS_CAB", "HIS_NUM" )
+        RETURN .F.
+    ENDIF
+    IF !ABRIR_TABLA( "HIS_TRA", "HIS_TRA", "HTRA_NUM" )
+        RETURN .F.
+    ENDIF
+    IF !ABRIR_TABLA( "HIS_MAT", "HIS_MAT", "HMAT_LIN" )
+        RETURN .F.
+    ENDIF
+    IF !ABRIR_TABLA( "HIS_RES", "HIS_RES", "HRES_PK" )
+        RETURN .F.
+    ENDIF
+
+RETURN .T.
+
+
+STATIC FUNCTION _ValidaCierreProyecto( cProyecto )
+
+    cProyecto := ""
+
+    IF Select( "TMP_CAB" ) == 0 .OR. Select( "TMP_TRA" ) == 0 .OR. ;
+       Select( "TMP_MAT" ) == 0 .OR. Select( "TMP_RES" ) == 0
+        MsgStop( "Faltan tablas temporales abiertas. Abra el proyecto antes de cerrar.", "Guardar en Firme" )
+        RETURN .F.
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    IF LastRec() == 0
+        MsgStop( "No hay cabecera de proyecto activa.", "Guardar en Firme" )
+        RETURN .F.
+    ENDIF
+    dbGoTop()
+    cProyecto := AllTrim( FIELD->NUMERO )
+
+    IF FieldPos( "L_SUCIO" ) > 0 .AND. FIELD->L_SUCIO
+        MsgStop( "El proyecto tiene cambios sin recalcular. Ejecute Calcular Material antes de guardar.", ;
+                 "Guardar en Firme" )
+        RETURN .F.
+    ENDIF
+
+    dbSelectArea( "TMP_TRA" )
+    IF LastRec() == 0
+        MsgStop( "No hay tramos cargados.", "Guardar en Firme" )
+        RETURN .F.
+    ENDIF
+
+    dbSelectArea( "TMP_MAT" )
+    IF LastRec() == 0
+        MsgStop( "No hay despiece de materiales. Ejecute Calcular Material.", "Guardar en Firme" )
+        RETURN .F.
+    ENDIF
+
+    dbSelectArea( "TMP_RES" )
+    IF LastRec() == 0
+        MsgStop( "No hay resumen economico. Ejecute Calcular Material.", "Guardar en Firme" )
+        RETURN .F.
+    ENDIF
+
+RETURN .T.
+
+
+STATIC FUNCTION _TotalTmpRes()
+
+    LOCAL nArea := Select()
+    LOCAL nTotal := 0
+
+    dbSelectArea( "TMP_RES" )
+    SUM Field->IMP_TOT TO nTotal
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN nTotal
+
+
+STATIC FUNCTION _MoverMateriales( cDoc )
+
+    LOCAL nArea := Select()
+
+    dbSelectArea( "TMP_MAT" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            dbSelectArea( "HIS_MAT" )
+            dbAppend()
+            REPLACE Field->NUMERO    WITH cDoc
+            REPLACE Field->ID_LINEA  WITH TMP_MAT->ID_LINEA
+            REPLACE Field->L_MANUAL  WITH TMP_MAT->L_MANUAL
+            REPLACE Field->ORIGEN    WITH TMP_MAT->ORIGEN
+            REPLACE Field->FAMILIA   WITH TMP_MAT->FAMILIA
+            REPLACE Field->CODIGO    WITH TMP_MAT->CODIGO
+            REPLACE Field->DESCRIP   WITH TMP_MAT->DESCRIP
+            REPLACE Field->UNIDAD    WITH TMP_MAT->UNIDAD
+            REPLACE Field->PESO_TOT  WITH TMP_MAT->PESO_TOT
+            REPLACE Field->RENDIM    WITH TMP_MAT->RENDIM
+            REPLACE Field->CANTIDAD  WITH TMP_MAT->CANTIDAD
+            REPLACE Field->PRECIO    WITH TMP_MAT->PRECIO
+            REPLACE Field->IMPORTE   WITH TMP_MAT->IMPORTE
+            REPLACE Field->DETALLE   WITH TMP_MAT->DETALLE
+            dbCommit()
+        ENDIF
+        dbSelectArea( "TMP_MAT" )
+        dbSkip()
+    ENDDO
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
 RETURN NIL

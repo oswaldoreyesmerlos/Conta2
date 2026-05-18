@@ -62,9 +62,9 @@ METHOD New( aDef, nTop ) CLASS TMenu
     ::nTop   := If( nTop == NIL, 0, nTop )
     ::nAct   := 1
     ::aItems := {}
-    ::cN     := "N/W"
-    ::cS     := "W+/B"
-    ::cM     := "N/W"
+    ::cN     := CLR_MENU
+    ::cS     := CLR_MENU_SEL
+    ::cM     := CLR_MENU_MSG
 
     ::Build( aDef )
 
@@ -103,6 +103,10 @@ METHOD Paint() CLASS TMenu
     LOCAL cCol
 
     GfxLock()
+    ::cN := CLR_MENU
+    ::cS := CLR_MENU_SEL
+    ::cM := CLR_MENU_MSG
+
     GfxClear( ::nTop, 0, ::nTop, GfxMaxCol(), ::cN )
 
     FOR nI := 1 TO Len( ::aItems )
@@ -371,7 +375,7 @@ METHOD Paint() CLASS TMenuPop
     LOCAL lSep
 
     GfxLock()
-    GfxClear( ::nTop, ::nLeft, ::nBottom, ::nRight, "N/W" )
+    GfxClear( ::nTop, ::nLeft, ::nBottom, ::nRight, CLR_MENU )
     GfxRaised( ::nTop, ::nLeft, ::nBottom, ::nRight )
 
     FOR nI := 1 TO Len( ::aItems )
@@ -380,9 +384,9 @@ METHOD Paint() CLASS TMenuPop
 
         IF lSep
             GfxText( ::nTop + nI, ::nLeft + 1, ;
-                Replicate( Chr( 196 ), ::nRight - ::nLeft - 1 ), "N/W" )
+                Replicate( Chr( 196 ), ::nRight - ::nLeft - 1 ), CLR_MENU )
         ELSE
-            cCol := If( nI == ::nSel, "W+/B", "N/W" )
+            cCol := If( nI == ::nSel, CLR_MENU_SEL, CLR_MENU )
             GfxText( ::nTop + nI, ::nLeft + 1, cTit, cCol )
         ENDIF
     NEXT

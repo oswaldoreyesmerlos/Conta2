@@ -55,6 +55,7 @@ drywall\TARE_MOD.prg
 drywall\VAL_MOD.prg
 drywall\M_Articulos.prg
 drywall\M_Familias.prg
+drywall\GenPresupuesto.prg
 drywall\Informes_Inventario.prg
 ReglasNegocio.prg
 

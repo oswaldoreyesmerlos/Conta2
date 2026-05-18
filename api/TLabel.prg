@@ -39,7 +39,7 @@ METHOD Paint() CLASS TLabel
 
     ::Lock()
 
-    ::DrawText( 0, 0, ::cCaption, ::cColor )
+    ::DrawText( 0, 0, ::cCaption, CLR_WINDOW )
 
     GfxCursor( SC_NONE )
 

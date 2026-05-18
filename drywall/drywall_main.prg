@@ -6,6 +6,8 @@
 #include "OOp.ch"
 #include "inkey.ch"
 
+STATIC s_oDryMenu := NIL
+
 FUNCTION Main()
 
     LOCAL oMenu, aMenuDef
@@ -32,7 +34,7 @@ FUNCTION Main()
     GfxSetFont( "Lucida Console", 16, 8 )
     SetMode( 40, 132 )
     GfxFixSize( .T. )
-    SetColor( "N/W" )
+    GfxThemeSet( "CLASICO" )
     CLS
     GfxCursor( SC_NONE )
 
@@ -50,6 +52,7 @@ FUNCTION Main()
 
     aMenuDef := _DrywallMenu()
     oMenu := TMenu():New( aMenuDef, 0 )
+    s_oDryMenu := oMenu
     oMenu:Activate()
 
 RETURN 0
@@ -66,10 +69,8 @@ STATIC FUNCTION _DrywallMenu()
 
     AAdd( aProyecto, { "Definir Tramos",    {|| VerTareas() },        NIL, "Panel de diseno de tramos" } )
     AAdd( aProyecto, { "Calcular Material", {|| Procesa()  },         NIL, "Generar despiece y computo" } )
-    AAdd( aProyecto, { "Ver Resultado",     {|| ResultadoCalculo() }, NIL, "Resumen y despiece calculado" } )
     AAdd( aProyecto, { "Valorar Economico", {|| Valorar()  },         NIL, "Ajuste final de precios" } )
-    AAdd( aProyecto, { "Guardar Historico", {|| GrabaPres() },        NIL, "Cerrar presupuesto definitivo" } )
-    AAdd( aProyecto, { "Nuevo Proyecto",    {|| _DrywallLimpiar() }, NIL, "Borrar borrador" } )
+    AAdd( aProyecto, { "Nuevo Proyecto",          {|| _DrywallLimpiar() },       NIL, "Borrar borrador" } )
 
     AAdd( aAux, { "Familias Art.", {|| EditAux("FAMILIA") }, NIL, "Placas, Perfiles..." } )
     AAdd( aAux, { "Unidad Medida", {|| EditAux("UNIDAD")  }, NIL, "Metros, Unidades..." } )
@@ -86,7 +87,8 @@ STATIC FUNCTION _DrywallMenu()
     AAdd( aInformes, { "Articulos",          {|| InformeArticulos() },         NIL, "Listado de articulos" } )
     AAdd( aInformes, { "Stock Minimo",       {|| InformeStockMinimo() },       NIL, "Alertas de stock" } )
 
-    AAdd( aSistema, { "Salir", {|| __Quit() }, NIL, "Cerrar aplicacion" } )
+    AAdd( aSistema, { "Tema Visual", {|| _DrywallTemaVisual() }, NIL, "Cambiar colores de la interfaz" } )
+    AAdd( aSistema, { "Salir",       {|| __Quit() },             NIL, "Cerrar aplicacion" } )
 
     AAdd( aMenu, { "Proyecto", NIL, aProyecto, "Ciclo de Presupuestacion" } )
     AAdd( aMenu, { "Maestros", NIL, aMaestros, "Bases de Datos" } )
@@ -99,5 +101,32 @@ RETURN aMenu
 STATIC FUNCTION _DrywallLimpiar()
 
     _LimpiaTemporales()
+
+RETURN NIL
+
+
+STATIC FUNCTION _DrywallTemaVisual()
+
+    LOCAL aData := { ;
+        { "CLASICO", "Clasico N/W", "Negro sobre blanco" }, ;
+        { "AZUL",    "Azul W/B",    "Blanco sobre azul" }, ;
+        { "CYAN",    "Cyan N/BG",   "Negro sobre cyan" } }
+    LOCAL cSel
+
+    cSel := PopupSelect( "TEMA VISUAL", aData, ;
+        { { "Codigo", 10, "@!", 1 }, ;
+          { "Tema",   22, "@!", 2 }, ;
+          { "Detalle", 28, "@!", 3 } }, 2 )
+
+    IF Empty( cSel )
+        RETURN NIL
+    ENDIF
+
+    GfxThemeSet( cSel )
+    CLS
+
+    IF s_oDryMenu != NIL
+        s_oDryMenu:Paint()
+    ENDIF
 
 RETURN NIL

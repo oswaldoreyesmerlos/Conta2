@@ -6,12 +6,14 @@
  * LLAMAR DESDE Main() después de InicioDBF().
  *
  * Tablas:
- *   TMP_TRA   - Tramos temporales (parametros de calculo)
- *   TMP_MAT   - Materiales calculados
- *   TMP_RES   - Resumen valorado
- *   TMP_CAB   - Cabecera temporal
- *   ARTICULO  - Catalogo de materiales Drywall
- *   TABLAS_AUX- Tablas auxiliares (perfiles, placas, aislamientos, etc.)
+ *   TMP_TRA    - Tramos temporales (parametros de calculo)
+ *   TMP_MAT    - Materiales calculados
+ *   TMP_RES    - Resumen valorado
+ *   TMP_CAB    - Cabecera temporal
+ *   ARTICULOS  - Catalogo de materiales Drywall
+ *   TABLAS_AUX - Tablas auxiliares (perfiles, placas, aislamientos, etc.)
+ *   PRESUPUEST - Cabecera de presupuesto (AppGestion)
+ *   PRESUP_DE  - Lineas de presupuesto (AppGestion)
  */
 
 #include "OOp.ch"
@@ -286,6 +288,55 @@ FUNCTION InicioDrywall()
         AAdd( aInds, { "AUX_PK", "Upper(TIPO) + Upper(CODIGO)" } )
 
         AAdd( aAllDefs, { "TABLAS_AUX", aFlds, aInds } )
+
+        // =========================================================
+        // 13. PRESUPUEST   (Cabecera de presupuesto AppGestion)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",   "C", 10, 0 } )
+        AAdd( aFlds, { "FECHA",    "D",  8, 0 } )
+        AAdd( aFlds, { "VALIDEZ",  "D",  8, 0 } )
+        AAdd( aFlds, { "CLIENTE_", "C", 10, 0 } )
+        AAdd( aFlds, { "VENDEDOR", "C", 10, 0 } )
+        AAdd( aFlds, { "SUBTOTAL", "N", 12, 2 } )
+        AAdd( aFlds, { "IVA",      "N", 12, 2 } )
+        AAdd( aFlds, { "TOTAL",    "N", 12, 2 } )
+        AAdd( aFlds, { "ESTADO",   "C",  1, 0 } )
+        AAdd( aFlds, { "OBSERVA",  "C", 60, 0 } )
+        AAdd( aFlds, { "PIE_DOC",  "M", 10, 0 } )
+        AAdd( aFlds, { "NUM_FAC",  "C", 10, 0 } )
+        AAdd( aFlds, { "ID_OBRA",  "C", 12, 0 } )
+        AAdd( aFlds, { "TIPO",     "C",  1, 0 } )
+        AAdd( aFlds, { "FORMA_PA", "C",  3, 0 } )
+        AAdd( aFlds, { "DIAS_PAG", "N",  3, 0 } )
+        AAdd( aFlds, { "RETENCIO", "N", 12, 2 } )
+        AAdd( aFlds, { "PORC_RET", "N",  5, 2 } )
+        AAdd( aFlds, { "INVERSION","L",  1, 0 } )
+        AAdd( aFlds, { "FECHA_ACE","D",  8, 0 } )
+        AAdd( aFlds, { "ACEPTA_POR","C",30, 0 } )
+        aInds := {}
+        AAdd( aInds, { "PRE_NUM", "NUMERO" } )
+        AAdd( aInds, { "PRE_CLI", "CLIENTE_" } )
+        AAdd( aInds, { "PRE_FEC", "DtoS(FECHA)" } )
+        AAdd( aInds, { "PRE_OBR", "ID_OBRA" } )
+        AAdd( aAllDefs, { "PRESUPUEST", aFlds, aInds } )
+
+        // =========================================================
+        // 14. PRESUP_DE   (Lineas de presupuesto AppGestion)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "NUMERO",   "C", 10, 0 } )
+        AAdd( aFlds, { "LINEA",    "N",  3, 0 } )
+        AAdd( aFlds, { "ARTICULO", "C", 10, 0 } )
+        AAdd( aFlds, { "DESCRIPC", "C", 60, 0 } )
+        AAdd( aFlds, { "CANTIDAD", "N", 10, 4 } )
+        AAdd( aFlds, { "PRECIO",   "N", 12, 2 } )
+        AAdd( aFlds, { "DESCUENT", "N",  5, 2 } )
+        AAdd( aFlds, { "IMPORTE",  "N", 12, 2 } )
+        AAdd( aFlds, { "PORC_IVA", "N",  5, 2 } )
+        aInds := {}
+        AAdd( aInds, { "PRD_LIN", "NUMERO+Str(LINEA,3)" } )
+        AAdd( aAllDefs, { "PRESUP_DE", aFlds, aInds } )
 
     // =========================================================================
     // CREACION FISICA DE TABLAS E INDICES

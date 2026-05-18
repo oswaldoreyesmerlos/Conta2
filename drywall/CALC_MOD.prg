@@ -19,6 +19,9 @@ FUNCTION Procesa()
     LOCAL cAreaAct := Alias()
     LOCAL oCalc
     LOCAL lOk := .T.
+    LOCAL nTramos := 0
+    LOCAL nMat := 0
+    LOCAL nRes := 0
 
     lOk := _EnsureCalcTables()
 
@@ -68,6 +71,20 @@ FUNCTION Procesa()
     // 5. CONSOLIDACIÓN DE RESULTADOS
     // Generamos el resumen agrupado por artículo
     _GeneraResumen()
+    nTramos := _CountAlias( "TMP_TRA" )
+    nMat    := _CountAlias( "TMP_MAT" )
+    nRes    := _CountAlias( "TMP_RES" )
+
+    IF oCalc:nErrores == 0 .AND. ( nTramos == 0 .OR. nMat == 0 .OR. nRes == 0 )
+        MsgStop( "Calculo incompleto." + Chr(13) + ;
+                 "Tramos: " + AllTrim( Str( nTramos ) ) + Chr(13) + ;
+                 "Materiales: " + AllTrim( Str( nMat ) ) + Chr(13) + ;
+                 "Resumen: " + AllTrim( Str( nRes ) ), "Proceso Completado" )
+        IF !Empty( cAreaAct ) .AND. Select( cAreaAct ) > 0
+            dbSelectArea( cAreaAct )
+        ENDIF
+        RETURN NIL
+    ENDIF
 
     // 6. REPORTE FINAL DE INCIDENCIAS
     IF oCalc:nErrores > 0
@@ -83,6 +100,29 @@ FUNCTION Procesa()
     ENDIF
 
 RETURN NIL
+
+
+STATIC FUNCTION _CountAlias( cAlias )
+
+    LOCAL nArea := Select()
+    LOCAL nCount := 0
+
+    IF Select( cAlias ) > 0
+        dbSelectArea( cAlias )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted()
+                nCount++
+            ENDIF
+            dbSkip()
+        ENDDO
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN nCount
 
 
 STATIC FUNCTION _EnsureCalcTables()

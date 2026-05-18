@@ -35,6 +35,111 @@
 #include "OOp.ch"
 #include "hbgtinfo.ch"
 
+// ============================================================================
+// 0) TEMA VISUAL
+// ----------------------------------------------------------------------------
+// Centraliza los colores de la API en tiempo de ejecucion.  Las constantes
+// CLR_* de OOp.ch llaman a GfxThemeColor(), de modo que los controles nuevos y
+// los repintados toman siempre la paleta activa.
+// ============================================================================
+
+STATIC s_cTheme := "CLASICO"
+
+
+FUNCTION GfxThemeSet( cTheme )
+
+    LOCAL cNew := Upper( AllTrim( hb_CStr( cTheme ) ) )
+
+    IF Empty( cNew )
+        cNew := "CLASICO"
+    ENDIF
+
+    DO CASE
+    CASE cNew == "CLASICO" .OR. cNew == "N/W"
+        s_cTheme := "CLASICO"
+
+    CASE cNew == "AZUL" .OR. cNew == "W/B"
+        s_cTheme := "AZUL"
+
+    CASE cNew == "CYAN" .OR. cNew == "N/BG"
+        s_cTheme := "CYAN"
+
+    OTHERWISE
+        s_cTheme := "CLASICO"
+    ENDCASE
+
+    SetColor( GfxThemeColor( "WINDOW" ) )
+
+RETURN s_cTheme
+
+
+FUNCTION GfxThemeName()
+RETURN s_cTheme
+
+
+FUNCTION GfxThemeColor( cKey )
+
+    LOCAL cK := Upper( AllTrim( hb_CStr( cKey ) ) )
+    LOCAL cRet := "N/W"
+
+    DO CASE
+    CASE s_cTheme == "AZUL"
+        DO CASE
+        CASE cK == "FOCUS"        ; cRet := "N/W+"
+        CASE cK == "WINDOW"       ; cRet := "W/B"
+        CASE cK == "GET"          ; cRet := "W+/B"
+        CASE cK == "GET_FOC"      ; cRet := "N/W+"
+        CASE cK == "BUTTON"       ; cRet := "W/B"
+        CASE cK == "BUTTON_FOC"   ; cRet := "N/W+"
+        CASE cK == "WIN_TITLE_ACT"; cRet := "W+/N"
+        CASE cK == "WIN_TITLE_INA"; cRet := "W/N"
+        CASE cK == "GRID_HDR"     ; cRet := "W+/N"
+        CASE cK == "GRID_SEL"     ; cRet := "N/W+"
+        CASE cK == "GRID_INA"     ; cRet := "W/BG"
+        CASE cK == "MENU"         ; cRet := "W/B"
+        CASE cK == "MENU_SEL"     ; cRet := "N/W+"
+        CASE cK == "MENU_MSG"     ; cRet := "W/B"
+        ENDCASE
+
+    CASE s_cTheme == "CYAN"
+        DO CASE
+        CASE cK == "FOCUS"        ; cRet := "W+/N"
+        CASE cK == "WINDOW"       ; cRet := "N/BG"
+        CASE cK == "GET"          ; cRet := "N/BG"
+        CASE cK == "GET_FOC"      ; cRet := "W+/N"
+        CASE cK == "BUTTON"       ; cRet := "N/BG"
+        CASE cK == "BUTTON_FOC"   ; cRet := "W+/N"
+        CASE cK == "WIN_TITLE_ACT"; cRet := "W+/B"
+        CASE cK == "WIN_TITLE_INA"; cRet := "W+/N"
+        CASE cK == "GRID_HDR"     ; cRet := "W+/B"
+        CASE cK == "GRID_SEL"     ; cRet := "W+/N"
+        CASE cK == "GRID_INA"     ; cRet := "N/W"
+        CASE cK == "MENU"         ; cRet := "N/BG"
+        CASE cK == "MENU_SEL"     ; cRet := "W+/N"
+        CASE cK == "MENU_MSG"     ; cRet := "N/BG"
+        ENDCASE
+
+    OTHERWISE
+        DO CASE
+        CASE cK == "FOCUS"        ; cRet := "W+/BG"
+        CASE cK == "WINDOW"       ; cRet := "N/W"
+        CASE cK == "GET"          ; cRet := "N/W*"
+        CASE cK == "GET_FOC"      ; cRet := "W+/BG"
+        CASE cK == "BUTTON"       ; cRet := "N/W"
+        CASE cK == "BUTTON_FOC"   ; cRet := "W+/BG"
+        CASE cK == "WIN_TITLE_ACT"; cRet := "W+/B"
+        CASE cK == "WIN_TITLE_INA"; cRet := "W+/N"
+        CASE cK == "GRID_HDR"     ; cRet := "W+/B"
+        CASE cK == "GRID_SEL"     ; cRet := "W+/BG"
+        CASE cK == "GRID_INA"     ; cRet := "N/BG"
+        CASE cK == "MENU"         ; cRet := "N/W"
+        CASE cK == "MENU_SEL"     ; cRet := "W+/B"
+        CASE cK == "MENU_MSG"     ; cRet := "N/W"
+        ENDCASE
+    ENDCASE
+
+RETURN cRet
+
 
 // ============================================================================
 // 1) BLOQUEO Y DESBLOQUEO DE REFRESCO

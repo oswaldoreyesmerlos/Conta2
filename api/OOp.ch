@@ -18,14 +18,14 @@
 // ============================================================================
 
 // Color universal de foco (control activo)
-#define CLR_FOCUS       "W+/BG"      // Blanco brillante sobre Cian
+#define CLR_FOCUS       GfxThemeColor( "FOCUS" )
 
 // Colores base
-#define CLR_WINDOW      "N/W"        // Negro sobre Blanco (fondo de ventana)
-#define CLR_GET         "N/W*"       // Get normal (Gris)
-#define CLR_GET_FOC     CLR_FOCUS    // Get con foco
-#define CLR_BUTTON      "N/W"        // Boton normal (Negro sobre Blanco)
-#define CLR_BUT_FOC     CLR_FOCUS    // Boton con foco
+#define CLR_WINDOW      GfxThemeColor( "WINDOW" )
+#define CLR_GET         GfxThemeColor( "GET" )
+#define CLR_GET_FOC     GfxThemeColor( "GET_FOC" )
+#define CLR_BUTTON      GfxThemeColor( "BUTTON" )
+#define CLR_BUT_FOC     GfxThemeColor( "BUTTON_FOC" )
 
 // Macro para conversion RGB a Entero Long
 #ifndef RGB
@@ -47,23 +47,28 @@
 // ============================================================================
 // COLORES DE VENTANAS
 // ============================================================================
-#define CLR_WIN_TITLE_ACT   "W+/B"      // Titulo ventana activa
-#define CLR_WIN_TITLE_INA   "W+/N"      // Futuro: titulo ventana inactiva
+#define CLR_WIN_TITLE_ACT   GfxThemeColor( "WIN_TITLE_ACT" )
+#define CLR_WIN_TITLE_INA   GfxThemeColor( "WIN_TITLE_INA" )
 #define CLR_WIN_BODY        CLR_WINDOW  // Cuerpo ventana
 
 
 
 // Color de la cabecera del grid
-#define CLR_GRID_HDR    "W+/B"       // Blanco brillante sobre Azul
+#define CLR_GRID_HDR    GfxThemeColor( "GRID_HDR" )
 
 // Color de la fila SELECCIONADA cuando el grid TIENE el foco.
 // Es el color universal de foco (cian).
-#define CLR_GRID_SEL    CLR_FOCUS    // Cian (W+/BG)
+#define CLR_GRID_SEL    GfxThemeColor( "GRID_SEL" )
 
 // Color de la fila SELECCIONADA cuando el grid NO tiene el foco.
 // Indica visualmente "aqui esta el cursor pero no soy el control activo".
 // Tono mas tenue para no llamar tanto la atencion.
-#define CLR_GRID_INA    "N/BG"       // Negro sobre Cian (mas suave)
+#define CLR_GRID_INA    GfxThemeColor( "GRID_INA" )
+
+// Colores de menu
+#define CLR_MENU        GfxThemeColor( "MENU" )
+#define CLR_MENU_SEL    GfxThemeColor( "MENU_SEL" )
+#define CLR_MENU_MSG    GfxThemeColor( "MENU_MSG" )
 
 #define SC_NONE         0
 #define SC_NORMAL       1

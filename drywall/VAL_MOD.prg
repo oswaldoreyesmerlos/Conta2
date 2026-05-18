@@ -43,6 +43,9 @@ FUNCTION Valorar()
     oGrid:bEnter := {|| _ValEditarPrecio( oGrid, @aData ), oGrid:aData := aData, oGrid:Paint() }
 
     oWin:AddCtrl( oGrid )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 34, oWin, ;
+        "GUARDAR Y GENERAR PRESUPUESTO", ;
+        {|| _ValGuardar( aData ), DrywallGuardarGenerar(), oWin:Close() } ) )
     oWin:Run()
 
     _ValGuardar( aData )
@@ -100,7 +103,7 @@ FUNCTION ResultadoResumen()
     oGrid:AddColumn( "PESO",        12, "999,999.999", { |a| a[8] } )
 
     oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "DESPIECE", {|| ResultadoDetalle() } ) )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "DESPIECE", {|| oWin:Close(), ResultadoDetalle() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 20, GfxMaxRow() - 5, 36, oWin, "VALORAR", {|| Valorar() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, GfxMaxCol() - 20, GfxMaxRow() - 5, GfxMaxCol() - 4, oWin, "CERRAR", {|| oWin:Close() } ) )
 
@@ -145,7 +148,7 @@ FUNCTION ResultadoDetalle()
     oGrid:AddColumn( "IMPORTE",     12, "999,999.99",  { |a| a[8] } )
 
     oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "RESUMEN", {|| ResultadoResumen() } ) )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "RESUMEN", {|| oWin:Close(), ResultadoResumen() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, GfxMaxCol() - 20, GfxMaxRow() - 5, GfxMaxCol() - 4, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()

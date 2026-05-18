@@ -113,7 +113,7 @@ METHOD Paint() CLASS TButton
         cCol := CLR_BUT_FOC
 
     OTHERWISE
-        cCol := ::cColor
+        cCol := CLR_BUTTON
     ENDCASE
 
     ::Lock()
