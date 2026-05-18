@@ -82,7 +82,11 @@ FUNCTION GfxThemeLoad()
     LOCAL cTheme
 
     IF File( cFile )
-        cTheme := AllTrim( Memoread( cFile ) )
+        cTheme := Memoread( cFile )
+        // Quitar \r, \n y espacios sobrantes
+        cTheme := StrTran( cTheme, Chr( 13 ), "" )
+        cTheme := StrTran( cTheme, Chr( 10 ), "" )
+        cTheme := AllTrim( cTheme )
     ENDIF
 
     GfxThemeSet( cTheme )
@@ -96,7 +100,7 @@ FUNCTION GfxThemeSave()
 
     // SILENT — si no se puede escribir, no importa
     BEGIN SEQUENCE
-        Memowrit( cFile, s_cTheme + hb_eol() )
+        Memowrit( cFile, s_cTheme )
     RECOVER
     END SEQUENCE
 
