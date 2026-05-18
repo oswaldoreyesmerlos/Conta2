@@ -122,10 +122,10 @@ STATIC FUNCTION _DrywallTemaVisual()
         RETURN NIL
     ENDIF
 
-    GfxThemeSet( cSel )
+    // Cerrar popups primero para que restauren sus fondos (aun en color viejo)
+    TMenuCloseAll()
 
-    // Invalidar fondos guardados del popup para que Close() no restaure colores viejos
-    TMenuInvalidateBack()
+    GfxThemeSet( cSel )
 
     CLS
 

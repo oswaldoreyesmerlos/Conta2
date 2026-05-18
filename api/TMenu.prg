@@ -551,6 +551,7 @@ METHOD Close() CLASS TMenuPop
             Min( GfxMaxRow(), ::nBottom + PADWIN ), ;
             Min( GfxMaxCol(), ::nRight  + PADWIN ), ;
             ::cBack )
+        ::cBack := NIL
     ENDIF
 
     IF !Empty( aPopStack ) .AND. ATail( aPopStack ) == Self
@@ -661,7 +662,23 @@ RETURN nC
 
 
 // ============================================================================
-// INVALIDAR FONDOS DE POPUP (usar tras cambio de tema)
+// CERRAR TODOS LOS POPUPS
+// (usar antes de cambiar tema para que Close() restaure fondos viejos y
+//  luego CLS los pise con el color nuevo)
+// ============================================================================
+FUNCTION TMenuCloseAll()
+
+    LOCAL nI
+
+    FOR nI := Len( aPopStack ) TO 1 STEP -1
+        aPopStack[nI]:Close()
+    NEXT
+
+RETURN NIL
+
+
+// ============================================================================
+// INVALIDAR FONDOS DE POPUP (alternativa ligera si no se quiere restaurar)
 // ============================================================================
 FUNCTION TMenuInvalidateBack()
 
