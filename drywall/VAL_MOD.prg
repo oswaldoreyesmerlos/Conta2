@@ -11,6 +11,7 @@ FUNCTION Valorar()
     LOCAL nAreaAnt := Select()
     LOCAL nOrdAnt  := IndexOrd()
     LOCAL oWin, oGrid, aData
+    LOCAL lSaved := .F.
 
     IF !IsDbUsed( "TMP_RES" )
         MsgStop( "No existe el resumen de materiales. Debe calcular primero.", "Atencion" )
@@ -45,12 +46,15 @@ FUNCTION Valorar()
     oWin:AddCtrl( oGrid )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 34, oWin, ;
         "GUARDAR Y GENERAR PRESUPUESTO", ;
-        {|| _ValGuardar( aData ), DrywallGuardarGenerar(), oWin:Close() } ) )
+        {|| _ValGuardar( aData ), ;
+            lSaved := DrywallGuardarGenerar(), ;
+            If( lSaved, oWin:Close(), NIL ) } ) )
     oWin:Run()
 
-    _ValGuardar( aData )
-
-    MsgInfo( "Valoracion completada.", "Valoracion" )
+    IF !lSaved
+        _ValGuardar( aData )
+        MsgInfo( "Valoracion completada.", "Valoracion" )
+    ENDIF
 
     IF nAreaAnt > 0
         dbSelectArea( nAreaAnt )
@@ -63,6 +67,11 @@ RETURN NIL
 FUNCTION ResultadoCalculo()
 
 RETURN ResultadoResumen()
+
+
+FUNCTION ResultadoDespiece()
+
+RETURN ResultadoDetalle()
 
 
 FUNCTION ResultadoResumen()
@@ -139,13 +148,14 @@ FUNCTION ResultadoDetalle()
     oGrid:aData    := aData
     oGrid:nSeekCol := 4
     oGrid:AddColumn( "TRAMO",        5, "9999",        { |a| a[1] } )
-    oGrid:AddColumn( "FAMILIA",     10, "@!",          { |a| a[2] } )
-    oGrid:AddColumn( "CODIGO",      15, "@!",          { |a| a[3] } )
-    oGrid:AddColumn( "DESCRIPCION", 34, "@!",          { |a| a[4] } )
-    oGrid:AddColumn( "DETALLE",     22, "@!",          { |a| a[5] } )
-    oGrid:AddColumn( "UD",           4, "@!",          { |a| a[6] } )
-    oGrid:AddColumn( "CANTIDAD",    12, "999,999.999", { |a| a[7] } )
-    oGrid:AddColumn( "IMPORTE",     12, "999,999.99",  { |a| a[8] } )
+    oGrid:AddColumn( "FAMILIA",      9, "@!",          { |a| a[2] } )
+    oGrid:AddColumn( "CODIGO",      14, "@!",          { |a| a[3] } )
+    oGrid:AddColumn( "DESCRIPCION", 28, "@!",          { |a| a[4] } )
+    oGrid:AddColumn( "DETALLE",     18, "@!",          { |a| a[5] } )
+    oGrid:AddColumn( "UD",           6, "@!",          { |a| a[6] } )
+    oGrid:AddColumn( "TEC",         10, "999,999.999", { |a| a[7] } )
+    oGrid:AddColumn( "COMPRA",      10, "999,999.999", { |a| a[8] } )
+    oGrid:AddColumn( "IMPORTE",     11, "999,999.99",  { |a| a[9] } )
 
     oWin:AddCtrl( oGrid )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "RESUMEN", {|| oWin:Close(), ResultadoResumen() } ) )
@@ -223,6 +233,7 @@ STATIC FUNCTION _ResultadoDetalleCargar()
                 AllTrim( FIELD->DESCRIP ), ;
                 AllTrim( FIELD->DETALLE ), ;
                 AllTrim( FIELD->UNIDAD ), ;
+                FIELD->RENDIM, ;
                 FIELD->CANTIDAD, ;
                 FIELD->IMPORTE } )
         ENDIF

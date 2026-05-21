@@ -318,12 +318,12 @@ FUNCTION DrywallGuardarGenerar()
         RETURN .F.
     ENDIF
 
-    IF !DrywallGenPresupuesto( cProyecto )
+    IF !_EnsureHistoricoTables()
         IF nArea > 0; dbSelectArea( nArea ); ENDIF
         RETURN .F.
     ENDIF
 
-    IF !_EnsureHistoricoTables()
+    IF !DrywallGenPresupuesto( cProyecto )
         IF nArea > 0; dbSelectArea( nArea ); ENDIF
         RETURN .F.
     ENDIF

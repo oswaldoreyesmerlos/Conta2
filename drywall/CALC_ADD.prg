@@ -385,17 +385,18 @@ FUNCTION Form_Trasdosado( hData, lNuevo )
     LOCAL cTipo := hData["TIPO"]
     LOCAL cLbl1 := "Perfil.......:"
     LOCAL cLbl2 := "Canal........:"
+    LOCAL cFam1 := "PERFIL"
     LOCAL lPidePerfil := .T., lPideCanal := .T., lPideMod := .T.
     LOCAL cTitulo := If( lNuevo, "NUEVO TRASDOSADO", "EDITAR TRASDOSADO" )
     LOCAL cBoton  := If( lNuevo, "GUARDAR", "ACTUALIZAR" )
 
     DO CASE
     CASE cTipo == "TRASDOSADO"      // Semi Directo
-        cLbl1 := "Perf. Omega..:"
-        cLbl2 := "Angular......:"
-        lPideCanal := .T.
+        cLbl1 := "Montante.....:"
+        lPideCanal := .F.
     CASE cTipo == "TRASDOSADO_DIR"  // Directo
         cLbl1 := "Pasta Agarre.:"
+        cFam1 := "PASTA"
         lPideCanal := .F.
         lPideMod := .F.
         lPidePerfil := .T.
@@ -428,7 +429,7 @@ FUNCTION Form_Trasdosado( hData, lNuevo )
     ENDIF
 
     oGPer1 := TGet():New( 8, 18, hData["ID_PERFIL"], "@!", oWin )
-    oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", "PERFIL" ) } )
+    oBtBusP1 := TButton():New( 8, 33, 8, 47, oWin, "BUSCAR", {|| _BtnPick( oGPer1, hData, "ID_PERFIL", cFam1 ) } )
 
     IF lPideCanal
         oGPer2 := TGet():New( 8, 56, hData["ID_PERFIL2"], "@!", oWin )
@@ -606,7 +607,11 @@ STATIC FUNCTION _CoreSave( hData )
     ENDIF
 
     IF cTipo != "GENERICO"
-        IF !( "DIR" $ cTipo )
+        IF cTipo == "TRASDOSADO_DIR"
+            IF !_RequireCode( hData["ID_PERFIL"], "pasta de agarre" )
+                RETURN .F.
+            ENDIF
+        ELSEIF !( "DIR" $ cTipo )
             IF !_RequireCode( hData["ID_PERFIL"], "perfil principal" )
                 RETURN .F.
             ENDIF

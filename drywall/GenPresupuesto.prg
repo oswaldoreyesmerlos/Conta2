@@ -111,7 +111,7 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto )
     oGCli := TGet():New( nFila, 14, PadR( cCliId, 10 ), "@!", oWin )
 
     oBtBus := TButton():New( nFila, 26, nFila + 1, 38, oWin, "BUSCAR", ;
-        {|| cCliId := _CliSeleccionar(), oGCli:SetText( PadR( cCliId, 10 ) ) } )
+        {|| cCliId := _CliSeleccionar(), oGCli:SetValue( PadR( cCliId, 10 ) ) } )
 
     nFila++
     oWin:AddCtrl( TLabel():New( nFila, 2, "Nombre:", oWin ) )
@@ -255,15 +255,6 @@ STATIC FUNCTION _PreGuardarDrywall( cProy, cCli, dFec, dVal, nIvaPct, nRetPct, ;
         RETURN .F.
     ENDIF
 
-    DbAppend()
-
-    IF NetErr()
-        PRE_DRY->( DbUnlock() )
-        PRE_DRY->( DbCloseArea() )
-        MsgStop( "Error al crear el presupuesto.", "Guardar" )
-        RETURN .F.
-    ENDIF
-
     IF !ABRIR_TABLA( "PRESUP_DE", "PRD_DRY", "PRD_LIN" )
         PRE_DRY->( DbUnlock() )
         PRE_DRY->( DbCloseArea() )
@@ -283,6 +274,11 @@ STATIC FUNCTION _PreGuardarDrywall( cProy, cCli, dFec, dVal, nIvaPct, nRetPct, ;
         BEGIN TRANSACTION
 
             dbSelectArea( "PRE_DRY" )
+            DbAppend()
+            IF NetErr()
+                Break( NIL )
+            ENDIF
+
             REPLACE PRE_DRY->NUMERO   WITH cNum
             REPLACE PRE_DRY->FECHA    WITH dFec
             REPLACE PRE_DRY->VALIDEZ  WITH dVal

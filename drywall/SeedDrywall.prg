@@ -257,7 +257,7 @@ STATIC FUNCTION _SeedArticulos()
     // ============================
     // ACCESORIOS
     // ============================
-    _Art( "BANDA_ACUS","Banda estanqueidad acustica",  "ACCESORIO","m",  2.50, 0, 0, 0, 0.050 )
+    _Art( "BANDA_ACUS","Banda estanqueidad acustica",  "ACCESORIO","rollo", 2.50, 0, 30000, 0, 0.050 )
     _Art( "PIEZA_CRUCE","Pieza cruce primario-sec",    "ACCESORIO","ud", 1.20, 0, 0, 0, 0.020 )
     _Art( "ESQUINERO", "Esquinero metalico",            "ACCESORIO","ud", 0.90, 0, 0, 0, 0.030 )
 

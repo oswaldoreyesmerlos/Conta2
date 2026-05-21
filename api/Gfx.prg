@@ -83,7 +83,8 @@ FUNCTION GfxThemeLoad()
 
     IF File( cFile )
         cTheme := Memoread( cFile )
-        // Quitar \r, \n y espacios sobrantes
+        // Quitar marcas clasicas de texto DOS, \r, \n y espacios sobrantes
+        cTheme := StrTran( cTheme, Chr( 26 ), "" )
         cTheme := StrTran( cTheme, Chr( 13 ), "" )
         cTheme := StrTran( cTheme, Chr( 10 ), "" )
         cTheme := AllTrim( cTheme )
