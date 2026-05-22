@@ -61,7 +61,7 @@ FUNCTION InicioDrywall()
 		// --- Identificación ---
 		AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
 		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
-		AAdd( aFlds, { "TIPO_OBRA",     "C", 10, 0 } ) // TABIQUE, TECHO, TRAS_SEM...
+		AAdd( aFlds, { "TIPO_OBRA",     "C", 15, 0 } ) // TABIQUE, TECHO, TRASDOSADO_...
 		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
 		
 		// --- Geometría ---
@@ -116,7 +116,7 @@ FUNCTION InicioDrywall()
         
         AAdd( aFlds, { "CODIGO",    "C", 15, 0 } ) 
         AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) 
-        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
         
         // --- LOGISTICA ---
         AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Peso Total Línea (Kg)
@@ -143,7 +143,7 @@ FUNCTION InicioDrywall()
         AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) 
         AAdd( aFlds, { "CODIGO",    "C", 15, 0 } ) 
         AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) 
-        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
         AAdd( aFlds, { "CANT_TOT",  "N", 12, 3 } )
 		
 		// --- LOGISTICA ---
@@ -181,7 +181,7 @@ FUNCTION InicioDrywall()
 		aFlds := {}
 		AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
 		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
-		AAdd( aFlds, { "TIPO_OBRA",     "C", 10, 0 } ) // TABIQUE, TECHO, TRAS_SEM...
+		AAdd( aFlds, { "TIPO_OBRA",     "C", 15, 0 } ) // TABIQUE, TECHO, TRASDOSADO_...
 		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
 
 		// --- Geometría ---
@@ -238,7 +238,7 @@ FUNCTION InicioDrywall()
         
         AAdd( aFlds, { "CODIGO",    "C", 15, 0 } ) 
         AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) 
-        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
         
         // --- LOGISTICA ---
         AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Peso Total Línea (Kg)
@@ -263,7 +263,7 @@ FUNCTION InicioDrywall()
         AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) // Antes faltaba
         AAdd( aFlds, { "CODIGO",    "C", 15, 0 } )
         AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) // Antes 60, ahora 40 (igual que TMP)
-        AAdd( aFlds, { "UNIDAD",    "C",  3, 0 } ) 
+        AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
         
         // Nombres unificados
         AAdd( aFlds, { "CANT_TOT",  "N", 12, 3 } ) // Antes CANT_T
@@ -281,7 +281,7 @@ FUNCTION InicioDrywall()
         // =========================================================
         aFlds := {}
         AAdd( aFlds, { "TIPO",    "C", 10, 0 } )
-        AAdd( aFlds, { "CODIGO",  "C", 10, 0 } )
+        AAdd( aFlds, { "CODIGO",  "C", 15, 0 } )
         AAdd( aFlds, { "DESCRIP", "C", 40, 0 } )
 
         aInds := {}
@@ -327,7 +327,7 @@ FUNCTION InicioDrywall()
         aFlds := {}
         AAdd( aFlds, { "NUMERO",   "C", 10, 0 } )
         AAdd( aFlds, { "LINEA",    "N",  3, 0 } )
-        AAdd( aFlds, { "ARTICULO", "C", 10, 0 } )
+        AAdd( aFlds, { "ARTICULO", "C", 15, 0 } )
         AAdd( aFlds, { "DESCRIPC", "C", 60, 0 } )
         AAdd( aFlds, { "CANTIDAD", "N", 10, 4 } )
         AAdd( aFlds, { "PRECIO",   "N", 12, 2 } )
@@ -342,6 +342,17 @@ FUNCTION InicioDrywall()
     // CREACION FISICA DE TABLAS E INDICES
     // =========================================================================
 
+    IF File( "ARTICULOS.DBF" )
+        IF !_EnsureFieldWidths( "ARTICULOS", ;
+                                { { "CODIGO", 15 }, { "UNIDAD", 5 }, ;
+                                  { "LARGO", 9 }, { "ANCHO", 9 } } )
+            RETURN .F.
+        ENDIF
+        IF !_EnsureArticulosIndex()
+            RETURN .F.
+        ENDIF
+    ENDIF
+
     FOR i := 1 TO Len( aAllDefs )
 
         cDbf        := aAllDefs[i, 1]
@@ -352,6 +363,10 @@ FUNCTION InicioDrywall()
             DbCreate( cDbf, aCamposR, "DBFCDX", .T., "DRYWALL" )
             IF NetErr()
                 MsgStop( "Error creando " + cDbf, "InicioDrywall" )
+                RETURN .F.
+            ENDIF
+        ELSEIF _NeedsStructCheck( cDbf )
+            IF !_EnsureDbfStruct( cDbf, aCamposR )
                 RETURN .F.
             ENDIF
         ENDIF
@@ -389,3 +404,277 @@ FUNCTION InicioDrywall()
     NEXT
 
 RETURN .T.
+
+
+STATIC FUNCTION _NeedsStructCheck( cDbf )
+
+    cDbf := Upper( AllTrim( cDbf ) )
+
+RETURN AScan( { "TMP_TRA", "HIS_TRA", "TMP_MAT", "TMP_RES", ;
+                "HIS_MAT", "HIS_RES", "TABLAS_AUX", "PRESUP_DE" }, cDbf ) > 0
+
+
+STATIC FUNCTION _EnsureFieldWidths( cDbf, aWidths )
+
+    LOCAL aWanted := {}
+    LOCAL aOld := {}
+    LOCAL nArea := Select()
+    LOCAL nPos
+    LOCAL i
+    LOCAL cField
+
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+        USE ( cDbf ) NEW EXCLUSIVE VIA "DBFCDX" ALIAS WIDMIG
+        aOld := DbStruct()
+
+        FOR i := 1 TO Len( aOld )
+            AAdd( aWanted, AClone( aOld[i] ) )
+        NEXT
+
+        FOR i := 1 TO Len( aWidths )
+            cField := Upper( AllTrim( aWidths[i, 1] ) )
+            nPos := _StructFieldPos( aWanted, cField )
+            IF nPos > 0 .AND. aWanted[nPos, 3] < aWidths[i, 2]
+                aWanted[nPos, 3] := aWidths[i, 2]
+            ENDIF
+        NEXT
+
+        dbCloseArea()
+    RECOVER
+        IF Select( "WIDMIG" ) > 0
+            dbSelectArea( "WIDMIG" )
+            dbCloseArea()
+        ENDIF
+        MsgStop( "No se pudo verificar la estructura de " + cDbf + ".", "InicioDrywall" )
+        RETURN .F.
+    END SEQUENCE
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN _EnsureDbfStruct( cDbf, aWanted )
+
+
+STATIC FUNCTION _EnsureArticulosIndex()
+
+    LOCAL nArea := Select()
+    LOCAL lOk := .T.
+
+    IF !File( "ARTICULOS.DBF" ) .OR. File( "ARTICULOS.CDX" )
+        RETURN .T.
+    ENDIF
+
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+        USE ARTICULOS NEW EXCLUSIVE VIA "DBFCDX" ALIAS ARTIDX
+
+        IF FieldPos( "CODIGO" ) > 0
+            INDEX ON CODIGO TAG ART_COD
+        ENDIF
+        IF FieldPos( "DESCRIP" ) > 0
+            INDEX ON Upper( DESCRIP ) TAG ART_DES
+        ENDIF
+        IF FieldPos( "FAMILIA" ) > 0
+            INDEX ON FAMILIA TAG ART_FAM
+        ENDIF
+        IF FieldPos( "COD_BARR" ) > 0
+            INDEX ON COD_BARR TAG ART_BAR
+        ENDIF
+
+        dbCloseArea()
+    RECOVER
+        lOk := .F.
+    END SEQUENCE
+
+    IF Select( "ARTIDX" ) > 0
+        dbSelectArea( "ARTIDX" )
+        dbCloseArea()
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+    IF !lOk
+        MsgStop( "No se pudieron regenerar los indices de ARTICULOS.", "InicioDrywall" )
+    ENDIF
+
+RETURN lOk
+
+
+STATIC FUNCTION _EnsureDbfStruct( cDbf, aWanted )
+
+    LOCAL aOld := {}
+    LOCAL aTarget := {}
+    LOCAL lNeed := .F.
+    LOCAL nArea := Select()
+
+    IF !File( cDbf + ".DBF" )
+        RETURN .T.
+    ENDIF
+
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+        USE ( cDbf ) NEW EXCLUSIVE VIA "DBFCDX" ALIAS OLDMIG
+        aOld := DbStruct()
+        aTarget := _MergeStruct( aOld, aWanted, @lNeed )
+        dbCloseArea()
+    RECOVER
+        IF Select( "OLDMIG" ) > 0
+            dbSelectArea( "OLDMIG" )
+            dbCloseArea()
+        ENDIF
+        MsgStop( "No se pudo abrir " + cDbf + " en modo exclusivo para migrar.", "InicioDrywall" )
+        RETURN .F.
+    END SEQUENCE
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+    IF !lNeed
+        RETURN .T.
+    ENDIF
+
+RETURN _RebuildDbf( cDbf, aTarget )
+
+
+STATIC FUNCTION _MergeStruct( aOld, aWanted, lNeed )
+
+    LOCAL aTarget := {}
+    LOCAL nPos
+    LOCAL i
+
+    lNeed := .F.
+
+    FOR i := 1 TO Len( aOld )
+        AAdd( aTarget, AClone( aOld[i] ) )
+    NEXT
+
+    FOR i := 1 TO Len( aWanted )
+        nPos := _StructFieldPos( aTarget, aWanted[i, 1] )
+        IF nPos == 0
+            AAdd( aTarget, AClone( aWanted[i] ) )
+            lNeed := .T.
+        ELSEIF Upper( aTarget[nPos, 2] ) == Upper( aWanted[i, 2] )
+            IF aTarget[nPos, 3] < aWanted[i, 3]
+                aTarget[nPos, 3] := aWanted[i, 3]
+                lNeed := .T.
+            ENDIF
+            IF Len( aTarget[nPos] ) >= 4 .AND. Len( aWanted[i] ) >= 4 .AND. ;
+               aTarget[nPos, 4] < aWanted[i, 4]
+                aTarget[nPos, 4] := aWanted[i, 4]
+                lNeed := .T.
+            ENDIF
+        ENDIF
+    NEXT
+
+RETURN aTarget
+
+
+STATIC FUNCTION _StructFieldPos( aStruct, cField )
+
+    LOCAL i
+
+    cField := Upper( AllTrim( cField ) )
+
+    FOR i := 1 TO Len( aStruct )
+        IF Upper( AllTrim( aStruct[i, 1] ) ) == cField
+            RETURN i
+        ENDIF
+    NEXT
+
+RETURN 0
+
+
+STATIC FUNCTION _RebuildDbf( cDbf, aStruct )
+
+    LOCAL cTmp := "MIG_TMP"
+    LOCAL cBak := cDbf + ".BAK"
+    LOCAL nArea := Select()
+    LOCAL i
+    LOCAL nOldPos
+    LOCAL xValue
+    LOCAL lOk := .T.
+
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+        IF File( cTmp + ".DBF" )
+            FErase( cTmp + ".DBF" )
+        ENDIF
+        IF File( cTmp + ".CDX" )
+            FErase( cTmp + ".CDX" )
+        ENDIF
+
+        USE ( cDbf ) NEW EXCLUSIVE VIA "DBFCDX" ALIAS OLDMIG
+        DbCreate( cTmp, aStruct, "DBFCDX" )
+        USE ( cTmp ) NEW EXCLUSIVE VIA "DBFCDX" ALIAS NEWMIG
+
+        dbSelectArea( "OLDMIG" )
+        dbGoTop()
+        DO WHILE !Eof()
+            dbSelectArea( "NEWMIG" )
+            dbAppend()
+
+            FOR i := 1 TO Len( aStruct )
+                dbSelectArea( "OLDMIG" )
+                nOldPos := FieldPos( aStruct[i, 1] )
+                IF nOldPos > 0
+                    xValue := FieldGet( nOldPos )
+                    dbSelectArea( "NEWMIG" )
+                    FieldPut( i, xValue )
+                ENDIF
+            NEXT
+
+            dbSelectArea( "OLDMIG" )
+            dbSkip()
+        ENDDO
+
+        dbSelectArea( "NEWMIG" )
+        dbCommit()
+        dbCloseArea()
+        dbSelectArea( "OLDMIG" )
+        dbCloseArea()
+
+        IF File( cBak )
+            FErase( cBak )
+        ENDIF
+        IF File( cDbf + ".CDX" )
+            FErase( cDbf + ".CDX" )
+        ENDIF
+
+        IF FRename( cDbf + ".DBF", cBak ) != 0
+            Break( NIL )
+        ENDIF
+        IF FRename( cTmp + ".DBF", cDbf + ".DBF" ) != 0
+            FRename( cBak, cDbf + ".DBF" )
+            Break( NIL )
+        ENDIF
+
+        IF File( cBak )
+            FErase( cBak )
+        ENDIF
+    RECOVER
+        lOk := .F.
+    END SEQUENCE
+
+    IF Select( "NEWMIG" ) > 0
+        dbSelectArea( "NEWMIG" )
+        dbCloseArea()
+    ENDIF
+    IF Select( "OLDMIG" ) > 0
+        dbSelectArea( "OLDMIG" )
+        dbCloseArea()
+    ENDIF
+
+    IF File( cTmp + ".DBF" )
+        FErase( cTmp + ".DBF" )
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+    IF !lOk
+        MsgStop( "No se pudo migrar la estructura de " + cDbf + ".", "InicioDrywall" )
+    ENDIF
+
+RETURN lOk

@@ -705,18 +705,6 @@ STATIC FUNCTION _CoreSave( hData )
 RETURN .T.
 
 
-STATIC FUNCTION _SysAncho( xSistema )
-
-    DO CASE
-    CASE ValType( xSistema ) == "N"
-        RETURN xSistema
-    CASE ValType( xSistema ) == "C"
-        RETURN Val( AllTrim( xSistema ) )
-    ENDCASE
-
-RETURN 0
-
-
 STATIC FUNCTION _ValidSistema( oGet )
 
     LOCAL nSistema := _SysAncho( oGet:uVar )
@@ -740,9 +728,7 @@ STATIC FUNCTION _RequireCode( cCod, cLabel )
 RETURN .T.
 
 
-STATIC FUNCTION _OptionalCode( cCod )
 
-RETURN Empty( AllTrim( cCod ) ) .OR. AllTrim( cCod ) == "0"
 
 
 STATIC FUNCTION _ValPick( hData, cKey, cFam )

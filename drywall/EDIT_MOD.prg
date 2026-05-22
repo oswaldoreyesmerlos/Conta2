@@ -56,8 +56,6 @@ FUNCTION EditAux( cTipo )
 
     IF nArea > 0; dbSelectArea( nArea ); dbSetOrder( nOrd ); ENDIF
 RETURN NIL
-
-
 FUNCTION AuxForm( lNew, cTipo )
 
     LOCAL nArea, oWin, lSave := .F.
@@ -150,19 +148,3 @@ STATIC FUNCTION _AuxSave( lNew, hData )
     ENDIF
 
 RETURN NIL
-
-
-STATIC FUNCTION _GetAuxTitle( cTipo )
-
-    DO CASE
-    CASE cTipo == "PERFIL"   ; RETURN "PERFILES"
-    CASE cTipo == "PLACA"    ; RETURN "PLACAS DE YESO"
-    CASE cTipo == "AISLAN"   ; RETURN "AISLAMIENTOS"
-    CASE cTipo == "ANCLAJE"  ; RETURN "SISTEMAS ANCLAJE"
-    CASE cTipo == "TORNILLO" ; RETURN "TORNILLERIA"
-    CASE cTipo == "PASTA"    ; RETURN "PASTAS"
-    CASE cTipo == "CINTA"    ; RETURN "CINTAS"
-    CASE cTipo == "ACCESORIO"; RETURN "ACCESORIOS"
-    ENDCASE
-
-RETURN cTipo

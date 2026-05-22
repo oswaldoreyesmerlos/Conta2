@@ -43,7 +43,10 @@ RETURN Self
 METHOD Procesar( lTodo ) CLASS OOPTRAMO
 
    LOCAL nArea := Select()
+   LOCAL cTipo
    
+   DEFAULT lTodo TO .T.
+
    // Limpiamos errores previos al iniciar proceso
    ::nErrores := 0
    ::aLog     := {}
@@ -58,19 +61,30 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
    WHILE !Eof()
       
       ::LimpiarLinea( FIELD->ID_LINEA )
+      cTipo := Upper( AllTrim( FIELD->TIPO_OBRA ) )
 
       DO CASE
-         CASE AllTrim( FIELD->TIPO_OBRA ) == "TABIQUE"
+         CASE cTipo == "TABIQUE"
             ::Calc_Tabique()
             
-         CASE AllTrim( FIELD->TIPO_OBRA ) == "TECHO"
+         CASE cTipo == "TECHO"
             ::Calc_Techo()
             
-      CASE "TRAS" $ AllTrim( FIELD->TIPO_OBRA )
-         ::Calc_Trasdos()
-      CASE AllTrim( FIELD->TIPO_OBRA ) == "GENERICO"
-         ::Calc_Generico()
+         CASE "TRAS" $ cTipo
+            ::Calc_Trasdos()
+
+         CASE cTipo == "GENERICO"
+            ::Calc_Generico()
+
+         OTHERWISE
+            ::nErrores++
+            AAdd( ::aLog, "Lin " + AllTrim( Str( FIELD->ID_LINEA ) ) + ;
+                           ": Tipo de obra [" + cTipo + "] no soportado." )
       ENDCASE
+
+      IF !lTodo
+         EXIT
+      ENDIF
 
       dbSkip()
    ENDDO
@@ -107,13 +121,15 @@ RETURN NIL
 // ----------------------------------------------------------------------------
 METHOD LimpiarLinea( nIdLin ) CLASS OOPTRAMO
    
-   LOCAL nOrdAnt := IndexOrd()
+   LOCAL nOrdAnt := 0
+   LOCAL cNum := TMP_TRA->NUMERO
    
    dbSelectArea( "TMP_MAT" )
-   dbSetOrder( 1 ) 
+   nOrdAnt := IndexOrd()
+   dbSetOrder( 2 )
    
-   IF dbSeek( TMP_TRA->NUMERO + Str( nIdLin, 4 ) )
-      WHILE !Eof() .AND. TMP_MAT->ID_LINEA == nIdLin
+   IF dbSeek( cNum + Str( nIdLin, 4 ) )
+      WHILE !Eof() .AND. TMP_MAT->NUMERO == cNum .AND. TMP_MAT->ID_LINEA == nIdLin
          IF !FIELD->L_MANUAL
             dbDelete()
          ENDIF
@@ -133,13 +149,17 @@ METHOD Calc_Tabique() CLASS OOPTRAMO
    LOCAL nArea    := nLargo * nAlto
    LOCAL nCapas   := FIELD->PLAC_CARA
    LOCAL nMont, nMetCan, nM2Total
+   LOCAL nCaras   := FIELD->CARAS
+   LOCAL lCaraB   := ( !_OptionalCode( FIELD->ID_PLACA_B ) .AND. ;
+                        ( nCaras == 0 .OR. nCaras > 1 ) )
    LOCAL nCapa
 
    IF nMod == 0; nMod := 0.60; ENDIF
+   nCaras := If( lCaraB, 2, 1 )
 
    nMont   := Ceiling( ( nLargo / nMod ) + 1 )
    nMetCan  := nLargo * 2
-   nM2Total := nArea * 2 * Max( nCapas, 1 )
+   nM2Total := nArea * nCaras * Max( nCapas, 1 )
    
    ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMont, "Montantes verticales", "UD" )
    ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetCan * K_DESP_PER, "Guia Suelo/Techo", "ML" )
@@ -152,13 +172,13 @@ METHOD Calc_Tabique() CLASS OOPTRAMO
       ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, ;
          If( nCapa == 1, "Revestimiento Cara A", AllTrim( Str( nCapa ) ) + "a Capa Cara A" ), "M2" )
 
-      IF !Empty( FIELD->ID_PLACA_B )
+      IF lCaraB
          ::AddMat( "PLACA", FIELD->ID_PLACA_B, nArea * K_DESP_PLA, ;
             If( nCapa == 1, "Revestimiento Cara B", AllTrim( Str( nCapa ) ) + "a Capa Cara B" ), "M2" )
       ENDIF
 
       ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
-         nArea * 2 * K_TORN_M2, "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
+         nArea * nCaras * K_TORN_M2, "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
    NEXT
    
    ::AddMat( "PASTA", "PASTA_JUNT", nM2Total * K_PASTA_M2, "Tratamiento Juntas", "KG" )
@@ -219,11 +239,12 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    LOCAL nMod   := FIELD->MODUL
    LOCAL nCapas := Max( FIELD->PLAC_CARA, 1 )
    LOCAL nCapa
+   LOCAL lDirect := ( "DIR" $ Upper( AllTrim( FIELD->TIPO_OBRA ) ) )
    
    LOCAL nMont := 0
    LOCAL nMetHor  := 0
    
-   IF "DIR" $ FIELD->TIPO_OBRA
+   IF lDirect
       ::AddMat( "PASTA", FIELD->ID_PER_VER, nArea * K_PASTA_M2, "Pasta Agarre", "KG" )
    ELSE
       IF nMod == 0; nMod := 0.60; ENDIF
@@ -241,8 +262,10 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    FOR nCapa := 1 TO nCapas
       ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, ;
          If( nCapa == 1, "Trasdosado", AllTrim( Str( nCapa ) ) + "a Capa Trasdosado" ), "M2" )
-      ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
-         nArea * K_TORN_M2, "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
+      IF !lDirect
+         ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
+            nArea * K_TORN_M2, "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
+      ENDIF
    NEXT
 
    ::AddMat( "PASTA", "PASTA_JUNT", nArea * nCapas * K_PASTA_M2, "Juntas", "KG" )
@@ -273,9 +296,13 @@ RETURN NIL
 
 METHOD DesgloseAnclaje( cIdAnc, nArea, nSepPrim ) CLASS OOPTRAMO
    
-   LOCAL nPuntos := nArea / ( nSepPrim * 1.00 )
+   LOCAL nPuntos
    
-   IF Empty( cIdAnc ); RETURN NIL; ENDIF
+   IF _OptionalCode( cIdAnc ) .OR. nSepPrim <= 0
+      RETURN NIL
+   ENDIF
+
+   nPuntos := nArea / ( nSepPrim * 1.00 )
    
    DO CASE
       CASE "VARILLA" $ Upper( cIdAnc )
@@ -311,6 +338,7 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    LOCAL cDesc   := ""
    LOCAL cUni    := ""
    LOCAL nAreaArt
+   LOCAL nOrdArt := 0
    LOCAL cMsgErr := ""
    LOCAL nCompra := 0
    LOCAL nPesoTot := 0
@@ -320,49 +348,65 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    IF _OptionalCode( cCod )
       RETURN NIL
    ENDIF
+
+   cCod := Upper( AllTrim( hb_CStr( cCod ) ) )
    
    nAreaArt := Select()
    
-    IF Select( "ARTICULOS" ) > 0
-       dbSelectArea( "ARTICULOS" )
-       dbSetOrder( 1 )
-       
-       IF dbSeek( Upper( AllTrim( cCod ) ) )
-          nPrecio := ARTICULOS->PRECIO
-          nPesoU  := ARTICULOS->PESO_UNI
-          nLargo  := ARTICULOS->LARGO
-          nAncho  := ARTICULOS->ANCHO
-          cDesc   := ARTICULOS->DESCRIP
-          cUni    := ARTICULOS->UNIDAD
-          cFam    := ARTICULOS->FAMILIA 
-          IF Upper( AllTrim( cFam ) ) == "ACCESORIO" .AND. ;
-             Upper( AllTrim( cUdTec ) ) == "ML" .AND. ;
-             ( "BANDA" $ Upper( AllTrim( cCod ) ) .OR. "CINTA" $ Upper( AllTrim( cCod ) ) )
-             cUni := "rollo"
-          ENDIF
-       ELSE
-          ::nErrores++
-          cDesc   := "ERROR: ART. NO EXISTE"
-          cMsgErr := "Lin " + AllTrim(Str(TMP_TRA->ID_LINEA)) + ": Articulo [" + cCod + "] no existe."
-          AAdd( ::aLog, cMsgErr )
-       ENDIF
-    ELSE
-        Alert("Error Critico: Tabla ARTICULOS no abierta")
-        RETURN NIL
-    ENDIF
+   IF Select( "ARTICULOS" ) == 0
+      ::nErrores++
+      AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
+                     ": Tabla ARTICULOS no abierta." )
+      RETURN NIL
+   ENDIF
+
+   dbSelectArea( "ARTICULOS" )
+   nOrdArt := IndexOrd()
+   dbSetOrder( 1 )
+
+   IF dbSeek( cCod )
+      nPrecio := ARTICULOS->PRECIO
+      nPesoU  := ARTICULOS->PESO_UNI
+      nLargo  := ARTICULOS->LARGO
+      nAncho  := ARTICULOS->ANCHO
+      cDesc   := ARTICULOS->DESCRIP
+      cUni    := AllTrim( ARTICULOS->UNIDAD )
+      cFam    := AllTrim( ARTICULOS->FAMILIA )
+      IF Upper( AllTrim( cFam ) ) == "ACCESORIO" .AND. ;
+         Upper( AllTrim( cUdTec ) ) == "ML" .AND. ;
+         ( "BANDA" $ cCod .OR. "CINTA" $ cCod )
+         cUni := "rollo"
+      ENDIF
+   ELSE
+      ::nErrores++
+      cMsgErr := "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
+                 ": Articulo [" + cCod + "] no existe."
+      AAdd( ::aLog, cMsgErr )
+      dbSetOrder( nOrdArt )
+      dbSelectArea( nAreaArt )
+      RETURN NIL
+   ENDIF
+
+   dbSetOrder( nOrdArt )
 
    nCompra := _CantidadCompra( cFam, cCod, cUni, nCant, cUdTec, nLargo, nAncho, nPesoU )
    nPesoTot := If( nPesoU > 0, nCompra * nPesoU, 0 )
    
    dbSelectArea( "TMP_MAT" )
-   APPEND BLANK
+   dbAppend()
+   IF NetErr()
+      ::nErrores++
+      AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
+                     ": No se pudo anadir material [" + cCod + "]." )
+      dbSelectArea( nAreaArt )
+      RETURN NIL
+   ENDIF
    
    REPLACE FIELD->NUMERO    WITH TMP_TRA->NUMERO
    REPLACE FIELD->ID_LINEA  WITH TMP_TRA->ID_LINEA
-    REPLACE FIELD->L_MANUAL  WITH .F.
-    REPLACE FIELD->ORIGEN    WITH "AUTO"
-    
-    REPLACE FIELD->FAMILIA   WITH cFam
+   REPLACE FIELD->L_MANUAL  WITH .F.
+   REPLACE FIELD->ORIGEN    WITH "AUTO"
+   REPLACE FIELD->FAMILIA   WITH cFam
    REPLACE FIELD->CODIGO    WITH cCod
    REPLACE FIELD->DESCRIP   WITH cDesc
    REPLACE FIELD->UNIDAD    WITH cUni
@@ -378,84 +422,3 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    dbSelectArea( nAreaArt )
 
 RETURN NIL
-
-
-STATIC FUNCTION _OptionalCode( cCod )
-
-RETURN Empty( AllTrim( cCod ) ) .OR. AllTrim( cCod ) == "0"
-
-
-STATIC FUNCTION _CantidadCompra( cFam, cCod, cUni, nConsumo, cUdTec, nLargo, nAncho, nPesoU )
-
-    LOCAL cF := Upper( AllTrim( hb_CStr( cFam ) ) )
-    LOCAL cU := Upper( AllTrim( hb_CStr( cUni ) ) )
-    LOCAL cT := Upper( AllTrim( hb_CStr( cUdTec ) ) )
-    LOCAL cC := Upper( AllTrim( hb_CStr( cCod ) ) )
-    LOCAL nContenido := 0
-    LOCAL nAreaPieza := 0
-
-    DEFAULT nConsumo TO 0
-    DEFAULT nLargo   TO 0
-    DEFAULT nAncho   TO 0
-    DEFAULT nPesoU   TO 0
-
-    IF nConsumo <= 0
-        RETURN 0
-    ENDIF
-
-    DO CASE
-    CASE cF == "TORNILLO" .AND. ( cT == "UD" .OR. cU == "CAJA" )
-        nContenido := 1000
-        RETURN _RoundUp( nConsumo / nContenido )
-
-    CASE cT == "UD"
-        RETURN _RoundUp( nConsumo )
-
-    CASE cF == "PERFIL" .AND. cT == "ML"
-        nContenido := If( nLargo > 0, nLargo / 1000, 3 )
-        RETURN _RoundUp( nConsumo / nContenido )
-
-    CASE cF == "PLACA" .AND. cT == "M2"
-        nAreaPieza := ( nLargo / 1000 ) * ( nAncho / 1000 )
-        IF nAreaPieza <= 0
-            nAreaPieza := 3.00
-        ENDIF
-        RETURN _RoundUp( nConsumo / nAreaPieza )
-
-    CASE cF == "PASTA" .AND. cT == "KG"
-        nContenido := If( nPesoU > 0, nPesoU, 20 )
-        RETURN _RoundUp( nConsumo / nContenido )
-
-    CASE cF == "CINTA" .AND. cT == "ML"
-        nContenido := If( nLargo > 0, nLargo / 1000, 0 )
-        IF nContenido <= 0
-            nContenido := If( "50" $ cC, 50, 90 )
-        ENDIF
-        RETURN _RoundUp( nConsumo / nContenido )
-
-    CASE cF == "ACCESORIO" .AND. cT == "ML" .AND. ;
-         ( "BANDA" $ cC .OR. "CINTA" $ cC )
-        nContenido := If( nLargo > 0, nLargo / 1000, 30 )
-        RETURN _RoundUp( nConsumo / nContenido )
-
-    OTHERWISE
-        RETURN nConsumo
-    ENDCASE
-
-RETURN nConsumo
-
-
-STATIC FUNCTION _RoundUp( nValue )
-
-    LOCAL nInt
-
-    IF nValue <= 0
-        RETURN 0
-    ENDIF
-
-    nInt := Int( nValue )
-    IF nValue > nInt
-        nInt++
-    ENDIF
-
-RETURN nInt

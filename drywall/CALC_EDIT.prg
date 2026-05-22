@@ -199,18 +199,6 @@ STATIC FUNCTION _MarkCabDirty()
 RETURN NIL
 
 
-STATIC FUNCTION _SysAncho( xSistema )
-
-    DO CASE
-    CASE ValType( xSistema ) == "N"
-        RETURN xSistema
-    CASE ValType( xSistema ) == "C"
-        RETURN Val( AllTrim( xSistema ) )
-    ENDCASE
-
-RETURN 0
-
-
 STATIC FUNCTION _ValidSistema( oGet )
 
     LOCAL nSistema := _SysAncho( oGet:uVar )

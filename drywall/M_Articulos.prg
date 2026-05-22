@@ -32,7 +32,7 @@ FUNCTION ArticulosView()
     oGrid:aData    := aData
     oGrid:nSeekCol := 2
 
-    oGrid:AddColumn( "Codigo",      10, "@!",         { |a| a[1] } )
+    oGrid:AddColumn( "Codigo",      15, "@!",         { |a| a[1] } )
     oGrid:AddColumn( "Descripcion",  40, "@!",         { |a| a[2] } )
     oGrid:AddColumn( "Familia",      3, "@!",         { |a| a[3] } )
     oGrid:AddColumn( "Stock",        12, "999,999.99", { |a| a[4] } )
@@ -153,12 +153,12 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
     ENDIF
 
     IF lNuevo
-        cCodigo   := Space( 10 )
+        cCodigo   := Space( 15 )
         cDescrip  := Space( 60 )
         cFamilia  := Space(  3 )
         cProveed  := Space( 10 )
         cCodBarr  := Space( 15 )
-        cUnidad   := Space(  3 )
+        cUnidad   := Space(  5 )
         nStock    := 0.0000
         nStoMin   := 0.0000
         nStoMax   := 0.0000
@@ -175,12 +175,12 @@ FUNCTION ArticulosForm( lNuevo, cCodigo )
         DbSelectArea( "ART" )
         OrdSetFocus( "ART_COD" )
         IF DbSeek( AllTrim( cCodigo ) )
-            cCodigo  := PadR( AllTrim( ART->CODIGO   ), 10 )
+            cCodigo  := PadR( AllTrim( ART->CODIGO   ), 15 )
             cDescrip := PadR( AllTrim( ART->DESCRIP  ), 60 )
             cFamilia := PadR( AllTrim( ART->FAMILIA  ),  3 )
             cProveed := PadR( AllTrim( ART->PROVEEDO ), 10 )
             cCodBarr := PadR( AllTrim( ART->COD_BARR ), 15 )
-            cUnidad  := PadR( AllTrim( ART->UNIDAD   ),  3 )
+            cUnidad  := PadR( AllTrim( ART->UNIDAD   ),  5 )
             nStock   := ART->STOCK
             nStoMin  := ART->STO_MIN
             nStoMax  := ART->STO_MAX

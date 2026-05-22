@@ -554,37 +554,6 @@ FUNCTION _MostrarInformeTexto( cTitulo, cTexto, cFile )
 RETURN NIL
 
 
-STATIC FUNCTION _InformeTextoLineas( cTexto )
-
-    LOCAL aLineas := {}
-    LOCAL nStart  := 1
-    LOCAL nPos
-    LOCAL cLine
-
-    DEFAULT cTexto TO ""
-
-    cTexto := StrTran( cTexto, Chr( 13 ) + Chr( 10 ), Chr( 10 ) )
-    cTexto := StrTran( cTexto, Chr( 13 ), Chr( 10 ) )
-
-    DO WHILE nStart <= Len( cTexto ) + 1
-        nPos := At( Chr( 10 ), SubStr( cTexto, nStart ) )
-        IF nPos == 0
-            cLine := SubStr( cTexto, nStart )
-            AAdd( aLineas, { cLine } )
-            EXIT
-        ENDIF
-        cLine := SubStr( cTexto, nStart, nPos - 1 )
-        AAdd( aLineas, { cLine } )
-        nStart += nPos
-    ENDDO
-
-    IF Empty( aLineas )
-        AAdd( aLineas, { "" } )
-    ENDIF
-
-RETURN aLineas
-
-
 STATIC FUNCTION _ImpTexto( cTexto, cFile )
 
     LOCAL cPath := ".\INFORME\"
