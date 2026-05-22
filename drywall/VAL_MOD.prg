@@ -112,8 +112,6 @@ FUNCTION ResultadoResumen()
     oGrid:AddColumn( "PESO",        12, "999,999.999", { |a| a[8] } )
 
     oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "DESPIECE", {|| oWin:Close(), ResultadoDetalle() } ) )
-    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 20, GfxMaxRow() - 5, 36, oWin, "VALORAR", {|| Valorar() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, GfxMaxCol() - 20, GfxMaxRow() - 5, GfxMaxCol() - 4, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()
@@ -158,7 +156,6 @@ FUNCTION ResultadoDetalle()
     oGrid:AddColumn( "IMPORTE",     11, "999,999.99",  { |a| a[9] } )
 
     oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 18, oWin, "RESUMEN", {|| oWin:Close(), ResultadoResumen() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, GfxMaxCol() - 20, GfxMaxRow() - 5, GfxMaxCol() - 4, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()

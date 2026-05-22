@@ -18,6 +18,8 @@
 
 #include "OOp.ch"
 
+REQUEST DBFCDX
+
 FUNCTION InicioDrywall()
 
     LOCAL aAllDefs  := {}
@@ -35,6 +37,8 @@ FUNCTION InicioDrywall()
     ELSE
         SET DEFAULT TO ( hb_DirBase() + "..\DATA" )
     ENDIF
+
+    _DropDbfStem( "MIG_TMP" )
 
     // =========================================================
         // 4. TMP_CAB
@@ -99,6 +103,10 @@ FUNCTION InicioDrywall()
         AAdd( aInds, { "TTRA_ORD", "NUMERO + Str(ID_LINEA,4)" } )
         AAdd( aAllDefs, { "TMP_TRA", aFlds, aInds, .T. } )
 
+        aInds := {}
+        AAdd( aInds, { "HTRA_NUM", "NUMERO + Str(ID_LINEA,4)" } )
+        AAdd( aAllDefs, { "HIS_TRA", aFlds, aInds } )
+
         // =========================================================
         // 6. TMP_MAT
         // =========================================================
@@ -134,6 +142,11 @@ FUNCTION InicioDrywall()
 
         AAdd( aAllDefs, { "TMP_MAT", aFlds, aInds, .T. } )
 
+        aInds := {}
+        AAdd( aInds, { "HMAT_NUM", "NUMERO" } )
+        AAdd( aInds, { "HMAT_LIN", "NUMERO + Str(ID_LINEA,4)" } )
+        AAdd( aAllDefs, { "HIS_MAT", aFlds, aInds } )
+
 
         // =========================================================
         // 7. TMP_RES   (Resumen del proyecto temporal)
@@ -157,6 +170,10 @@ FUNCTION InicioDrywall()
 
         AAdd( aAllDefs, { "TMP_RES", aFlds, aInds, .T. } )
 
+        aInds := {}
+        AAdd( aInds, { "HRES_PK", "NUMERO + CODIGO" } )
+        AAdd( aAllDefs, { "HIS_RES", aFlds, aInds } )
+
         // =========================================================
         // 8. HIS_CAB   (Cabecera histórica)
         // =========================================================
@@ -176,108 +193,7 @@ FUNCTION InicioDrywall()
         AAdd( aAllDefs, { "HIS_CAB", aFlds, aInds } )
 
         // =========================================================
-		// 9. HIS_TRA   (Tramos históricos — espejo de TMP_TRA)
-		// =========================================================
-		aFlds := {}
-		AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
-		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
-		AAdd( aFlds, { "TIPO_OBRA",     "C", 15, 0 } ) // TABIQUE, TECHO, TRASDOSADO_...
-		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
-
-		// --- Geometría ---
-		AAdd( aFlds, { "LARGO",         "N",  6, 2 } ) 
-		AAdd( aFlds, { "ALTO",          "N",  6, 2 } ) 
-		AAdd( aFlds, { "MODUL",         "N",  5, 2 } ) // Separación Perfil VERTICAL (Placa)
-		AAdd( aFlds, { "SISTEMA",       "N",  3, 0 } ) // Ancho de perfileria: 48, 70, 90
-		AAdd( aFlds, { "SEP_PRIM",      "N",  5, 2 } ) // Separación Perfil HORIZ (Estructura) - Solo Techos
-
-		// --- Configuración Capas ---
-		AAdd( aFlds, { "CARAS",         "N",  1, 0 } ) // 1 o 2 (Auto según sistema)
-		AAdd( aFlds, { "PLAC_CARA",     "N",  1, 0 } ) // Nº Capas por cara (1, 2, 3...)
-
-		// --- Materiales Principales ---
-		AAdd( aFlds, { "ID_PER_VER",    "C", 15, 0 } )
-		AAdd( aFlds, { "ID_PER_HOR",    "C", 15, 0 } )
-		AAdd( aFlds, { "ID_PER_PER",    "C", 15, 0 } )
-
-		// --- Placas (Asimetría soportada) ---
-		AAdd( aFlds, { "ID_PLACA_A",    "C", 15, 0 } ) // Cara Vista / Base
-		AAdd( aFlds, { "ID_PLACA_B",    "C", 15, 0 } ) // Cara Oculta / Reverso (Si CARAS=2)
-
-		// --- Aislamiento ---
-		AAdd( aFlds, { "L_AISLANT",     "L",  1, 0 } ) 
-		AAdd( aFlds, { "ID_AISLANT",    "C", 15, 0 } )
-
-		// --- Accesorios y Detalles (NUEVOS) ---
-		AAdd( aFlds, { "ID_ANCLAJE",    "C", 15, 0 } ) // "Varilla", "Nonius"... (Solo Techos)
-		AAdd( aFlds, { "L_BANDA",       "L",  1, 0 } ) // Banda Acústica bajo perfiles?
-
-		// --- Resultado ---
-		AAdd( aFlds, { "METROS",        "N", 10, 2 } )
-
-        aInds := {}
-        AAdd( aInds, { "HTRA_NUM", "NUMERO + Str(ID_LINEA,4)" } )
-
-        AAdd( aAllDefs, { "HIS_TRA", aFlds, aInds } )
-
-
-        // =========================================================
-        // 10. HIS_MAT   (Material histórico — espejo de TMP_MAT)
-        // =========================================================
-        aFlds := {}
-        AAdd( aFlds, { "NUMERO",    "C",  6, 0 } ) 
-        AAdd( aFlds, { "ID_LINEA",  "N",  4, 0 } ) 
-		
-		// --- Control (OPTIMIZADO) ---
-		// .T. = Introducido manual (Proteger)
-		// .F. = Calculado auto (Borrar al recalcular)
-		AAdd( aFlds, { "L_MANUAL", "L",  1, 0 } )
-		
-        AAdd( aFlds, { "ORIGEN",    "C",  4, 0 } ) // 'AUTO' / 'MAN'
-        AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) 
-        
-        AAdd( aFlds, { "CODIGO",    "C", 15, 0 } ) 
-        AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) 
-        AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
-        
-        // --- LOGISTICA ---
-        AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Peso Total Línea (Kg)
-		
-		AAdd( aFlds, { "RENDIM",    "N",  8, 4 } ) 
-        AAdd( aFlds, { "CANTIDAD",  "N", 12, 3 } ) 
-        AAdd( aFlds, { "PRECIO",    "N", 10, 2 } ) 
-        AAdd( aFlds, { "IMPORTE",   "N", 12, 2 } ) 
-        AAdd( aFlds, { "DETALLE",   "C", 30, 0 } )
-
-        aInds := {}
-        AAdd( aInds, { "HMAT_NUM", "NUMERO" } )
-        AAdd( aInds, { "HMAT_LIN", "NUMERO + Str(ID_LINEA,4)" } )
-
-        AAdd( aAllDefs, { "HIS_MAT", aFlds, aInds } )
-
-        // =========================================================
-        // 11. HIS_RES   (Resumen histórico — espejo de TMP_RES)
-        // =========================================================
-        aFlds := {}
-        AAdd( aFlds, { "NUMERO",    "C",  6, 0 } )
-        AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } ) // Antes faltaba
-        AAdd( aFlds, { "CODIGO",    "C", 15, 0 } )
-        AAdd( aFlds, { "DESCRIP",   "C", 40, 0 } ) // Antes 60, ahora 40 (igual que TMP)
-        AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
-        
-        // Nombres unificados
-        AAdd( aFlds, { "CANT_TOT",  "N", 12, 3 } ) // Antes CANT_T
-        AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Antes PESO_T
-        AAdd( aFlds, { "PRECIO",    "N", 10, 2 } ) 
-        AAdd( aFlds, { "IMP_TOT",   "N", 12, 2 } ) // Antes IMPORT
-
-        aInds := {}
-        AAdd( aInds, { "HRES_PK", "NUMERO + CODIGO" } )
-
-        AAdd( aAllDefs, { "HIS_RES", aFlds, aInds } )
-
-        // =========================================================
-        // 12. TABLAS_AUX   (Maestro de listas auxiliares)
+        // 9. TABLAS_AUX   (Maestro de listas auxiliares)
         // =========================================================
         aFlds := {}
         AAdd( aFlds, { "TIPO",    "C", 10, 0 } )
@@ -290,7 +206,7 @@ FUNCTION InicioDrywall()
         AAdd( aAllDefs, { "TABLAS_AUX", aFlds, aInds } )
 
         // =========================================================
-        // 13. PRESUPUEST   (Cabecera de presupuesto AppGestion)
+        // 10. PRESUPUEST   (Cabecera de presupuesto AppGestion)
         // =========================================================
         aFlds := {}
         AAdd( aFlds, { "NUMERO",   "C", 10, 0 } )
@@ -322,7 +238,7 @@ FUNCTION InicioDrywall()
         AAdd( aAllDefs, { "PRESUPUEST", aFlds, aInds } )
 
         // =========================================================
-        // 14. PRESUP_DE   (Lineas de presupuesto AppGestion)
+        // 11. PRESUP_DE   (Lineas de presupuesto AppGestion)
         // =========================================================
         aFlds := {}
         AAdd( aFlds, { "NUMERO",   "C", 10, 0 } )
@@ -588,21 +504,17 @@ RETURN 0
 
 STATIC FUNCTION _RebuildDbf( cDbf, aStruct )
 
-    LOCAL cTmp := "MIG_TMP"
+    LOCAL cTmp := "_MIG_" + Left( Upper( AllTrim( cDbf ) ), 6 )
     LOCAL cBak := cDbf + ".BAK"
     LOCAL nArea := Select()
     LOCAL i
     LOCAL nOldPos
     LOCAL xValue
+    LOCAL lDeleted
     LOCAL lOk := .T.
 
     BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
-        IF File( cTmp + ".DBF" )
-            FErase( cTmp + ".DBF" )
-        ENDIF
-        IF File( cTmp + ".CDX" )
-            FErase( cTmp + ".CDX" )
-        ENDIF
+        _DropDbfStem( cTmp )
 
         USE ( cDbf ) NEW EXCLUSIVE VIA "DBFCDX" ALIAS OLDMIG
         DbCreate( cTmp, aStruct, "DBFCDX" )
@@ -614,6 +526,9 @@ STATIC FUNCTION _RebuildDbf( cDbf, aStruct )
             dbSelectArea( "NEWMIG" )
             dbAppend()
 
+            dbSelectArea( "OLDMIG" )
+            lDeleted := Deleted()
+
             FOR i := 1 TO Len( aStruct )
                 dbSelectArea( "OLDMIG" )
                 nOldPos := FieldPos( aStruct[i, 1] )
@@ -624,6 +539,11 @@ STATIC FUNCTION _RebuildDbf( cDbf, aStruct )
                 ENDIF
             NEXT
 
+            IF lDeleted
+                dbSelectArea( "NEWMIG" )
+                dbDelete()
+            ENDIF
+
             dbSelectArea( "OLDMIG" )
             dbSkip()
         ENDDO
@@ -633,6 +553,7 @@ STATIC FUNCTION _RebuildDbf( cDbf, aStruct )
         dbCloseArea()
         dbSelectArea( "OLDMIG" )
         dbCloseArea()
+        dbCloseAll()
 
         IF File( cBak )
             FErase( cBak )
@@ -665,9 +586,7 @@ STATIC FUNCTION _RebuildDbf( cDbf, aStruct )
         dbCloseArea()
     ENDIF
 
-    IF File( cTmp + ".DBF" )
-        FErase( cTmp + ".DBF" )
-    ENDIF
+    _DropDbfStem( cTmp )
 
     IF nArea > 0
         dbSelectArea( nArea )
@@ -678,3 +597,17 @@ STATIC FUNCTION _RebuildDbf( cDbf, aStruct )
     ENDIF
 
 RETURN lOk
+
+
+STATIC FUNCTION _DropDbfStem( cStem )
+
+    LOCAL aExt := { ".DBF", ".CDX", ".FPT", ".DBT", ".NTX", ".BAK" }
+    LOCAL i
+
+    FOR i := 1 TO Len( aExt )
+        IF File( cStem + aExt[i] )
+            FErase( cStem + aExt[i] )
+        ENDIF
+    NEXT
+
+RETURN NIL
