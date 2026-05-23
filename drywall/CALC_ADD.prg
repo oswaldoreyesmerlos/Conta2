@@ -361,7 +361,7 @@ FUNCTION Add_Trasdosado( cTipo, cTit )
     hData["MODUL"] := 0.60
 
     DO CASE
-    CASE cTipo == "TRASDOSADO_SEMI" .OR. cTipo == "TRASDOSADO"
+    CASE cTipo == "TRASDOSADO_SEMI"
         hData["ID_PERFIL2"] := "0"
     CASE cTipo == "TRASDOSADO_DIR"
         hData["MODUL"] := 0.00
@@ -391,7 +391,7 @@ FUNCTION Form_Trasdosado( hData, lNuevo )
     LOCAL cBoton  := If( lNuevo, "GUARDAR", "ACTUALIZAR" )
 
     DO CASE
-    CASE cTipo == "TRASDOSADO_SEMI" .OR. cTipo == "TRASDOSADO" // Semi Directo
+    CASE cTipo == "TRASDOSADO_SEMI" // Semi Directo
         cLbl1 := "Montante.....:"
         lPideCanal := .F.
     CASE cTipo == "TRASDOSADO_DIR"  // Directo
