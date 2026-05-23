@@ -81,6 +81,7 @@ FUNCTION VerTareas( cTipo )
     oWin:AddCtrl( TButton():New( 23, 20, 24, 36, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( 23, 38, 24, 54, oWin, "RESUMEN", {|| ResultadoResumen() } ) )
     oWin:AddCtrl( TButton():New( 23, 56, 24, 72, oWin, "DESPIECE", {|| ResultadoDetalle() } ) )
+    oWin:AddCtrl( TButton():New( 25,  2, 26, 28, oWin, "VALORAR / CERRAR", {|| Valorar() } ) )
     oWin:AddCtrl( TButton():New( 23, 85, 24, 101, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()

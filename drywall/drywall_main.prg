@@ -83,10 +83,9 @@ STATIC FUNCTION _DrywallMenu()
     LOCAL aInformes  := {}
     LOCAL aSistema   := {}
 
-    AAdd( aProyecto, { "Definir Tramos",    {|| VerTareas() },        NIL, "Panel de diseno de tramos" } )
-    AAdd( aProyecto, { "Calcular Material", {|| Procesa()  },         NIL, "Generar despiece y computo" } )
-    AAdd( aProyecto, { "Valorar Economico", {|| Valorar()  },         NIL, "Ajuste final de precios" } )
-    AAdd( aProyecto, { "Nuevo Proyecto",          {|| _DrywallLimpiar() },       NIL, "Borrar borrador" } )
+    AAdd( aProyecto, { "Proyecto Actual",         {|| VerTareas() },          NIL, "Cabecera, tramos y cierre" } )
+    AAdd( aProyecto, { "Historico de Proyectos",  {|| InformeHistoricos() },  NIL, "Proyectos archivados" } )
+    AAdd( aProyecto, { "Eliminar Proyecto Actual",{|| _DrywallLimpiar() },    NIL, "Borrar borrador" } )
 
     AAdd( aAux, { "Familias Art.", {|| EditAux("FAMILIA") }, NIL, "Placas, Perfiles..." } )
     AAdd( aAux, { "Unidad Medida", {|| EditAux("UNIDAD")  }, NIL, "Metros, Unidades..." } )
