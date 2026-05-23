@@ -44,6 +44,7 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
 
    LOCAL nArea := Select()
    LOCAL cTipo
+   LOCAL cProyecto := _OopProyectoActual()
    
    DEFAULT lTodo TO .T.
 
@@ -59,17 +60,18 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
    dbSelectArea( "TMP_TRA" )
    
    WHILE !Eof()
-      
-      ::LimpiarLinea( FIELD->ID_LINEA )
-      cTipo := Upper( AllTrim( FIELD->TIPO_OBRA ) )
 
-      DO CASE
+      IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+         ::LimpiarLinea( FIELD->ID_LINEA )
+         cTipo := Upper( AllTrim( FIELD->TIPO_OBRA ) )
+
+         DO CASE
          CASE cTipo == "TABIQUE"
             ::Calc_Tabique()
-            
+
          CASE cTipo == "TECHO"
             ::Calc_Techo()
-            
+
          CASE "TRAS" $ cTipo
             ::Calc_Trasdos()
 
@@ -80,7 +82,8 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
             ::nErrores++
             AAdd( ::aLog, "Lin " + AllTrim( Str( FIELD->ID_LINEA ) ) + ;
                            ": Tipo de obra [" + cTipo + "] no soportado." )
-      ENDCASE
+         ENDCASE
+      ENDIF
 
       IF !lTodo
          EXIT
@@ -92,6 +95,30 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
    dbSelectArea( nArea )
 
 RETURN NIL
+
+
+STATIC FUNCTION _OopProyectoActual()
+
+   LOCAL nArea := Select()
+   LOCAL cProyecto := ""
+
+   IF Select( "TMP_CAB" ) > 0
+      dbSelectArea( "TMP_CAB" )
+      dbGoTop()
+      DO WHILE !Eof()
+         IF !Deleted()
+            cProyecto := AllTrim( FIELD->NUMERO )
+            EXIT
+         ENDIF
+         dbSkip()
+      ENDDO
+   ENDIF
+
+   IF nArea > 0
+      dbSelectArea( nArea )
+   ENDIF
+
+RETURN cProyecto
 
 // ----------------------------------------------------------------------------
 // REPORTE DE ERRORES (Visualización)

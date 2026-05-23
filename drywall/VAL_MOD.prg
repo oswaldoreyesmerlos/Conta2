@@ -187,6 +187,7 @@ RETURN .T.
 STATIC FUNCTION _ResultadoResumenCargar( nTotalImp, nTotalPeso )
 
     LOCAL aData := {}
+    LOCAL cProyecto := _ResultadoProyectoActual()
 
     nTotalImp  := 0
     nTotalPeso := 0
@@ -195,7 +196,7 @@ STATIC FUNCTION _ResultadoResumenCargar( nTotalImp, nTotalPeso )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
             AAdd( aData, { ;
                 AllTrim( FIELD->FAMILIA ), ;
                 AllTrim( FIELD->CODIGO ), ;
@@ -217,12 +218,13 @@ RETURN aData
 STATIC FUNCTION _ResultadoDetalleCargar()
 
     LOCAL aData := {}
+    LOCAL cProyecto := _ResultadoProyectoActual()
 
     dbSelectArea( "TMP_MAT" )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
             AAdd( aData, { ;
                 FIELD->ID_LINEA, ;
                 AllTrim( FIELD->FAMILIA ), ;
@@ -243,12 +245,13 @@ RETURN aData
 STATIC FUNCTION _ValCargar()
 
     LOCAL aData := {}
+    LOCAL cProyecto := _ResultadoProyectoActual()
 
     dbSelectArea( "TMP_RES" )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
             AAdd( aData, { ;
                 AllTrim( FIELD->CODIGO ), ;
                 AllTrim( FIELD->DESCRIP ), ;
@@ -304,11 +307,20 @@ RETURN NIL
 STATIC FUNCTION _ValGuardar( aData )
 
     LOCAL i
-
-    dbSelectArea( "TMP_RES" )
-    dbGoTop()
+    LOCAL cProyecto := _ResultadoProyectoActual()
 
     FOR i := 1 TO Len( aData )
+        dbSelectArea( "TMP_RES" )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted() .AND. ;
+               AllTrim( FIELD->NUMERO ) == cProyecto .AND. ;
+               AllTrim( FIELD->CODIGO ) == AllTrim( aData[i, 1] )
+                EXIT
+            ENDIF
+            dbSkip()
+        ENDDO
+
         IF !Eof()
             IF NetRLock()
                 REPLACE FIELD->PRECIO  WITH aData[i, 5]
@@ -316,8 +328,31 @@ STATIC FUNCTION _ValGuardar( aData )
                 dbCommit()
                 dbUnlock()
             ENDIF
-            dbSkip()
         ENDIF
     NEXT
 
 RETURN NIL
+
+
+STATIC FUNCTION _ResultadoProyectoActual()
+
+    LOCAL nArea := Select()
+    LOCAL cProyecto := ""
+
+    IF Select( "TMP_CAB" ) > 0
+        dbSelectArea( "TMP_CAB" )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted()
+                cProyecto := AllTrim( FIELD->NUMERO )
+                EXIT
+            ENDIF
+            dbSkip()
+        ENDDO
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN cProyecto

@@ -119,12 +119,13 @@ STATIC FUNCTION _TareCargar()
 
     LOCAL aData := {}
     LOCAL cSistema
+    LOCAL cProyecto := _ProyectoActualNumero()
 
     dbSelectArea( "TMP_TRA" )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
             cSistema := AllTrim( FIELD->TIPO_OBRA )
             IF FieldPos( "SISTEMA" ) > 0 .AND. FIELD->SISTEMA > 0
                 cSistema += " " + AllTrim( Str( FIELD->SISTEMA ) ) + "mm"
@@ -141,6 +142,30 @@ STATIC FUNCTION _TareCargar()
     ENDDO
 
 RETURN aData
+
+
+STATIC FUNCTION _ProyectoActualNumero()
+
+    LOCAL nArea := Select()
+    LOCAL cProyecto := ""
+
+    IF Select( "TMP_CAB" ) > 0
+        dbSelectArea( "TMP_CAB" )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted()
+                cProyecto := AllTrim( FIELD->NUMERO )
+                EXIT
+            ENDIF
+            dbSkip()
+        ENDDO
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN cProyecto
 
 
 STATIC FUNCTION _OnAppend( oGrid )

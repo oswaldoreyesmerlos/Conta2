@@ -106,12 +106,14 @@ STATIC FUNCTION _CountAlias( cAlias )
 
     LOCAL nArea := Select()
     LOCAL nCount := 0
+    LOCAL cProyecto := _CalcProyectoActual()
 
     IF Select( cAlias ) > 0
         dbSelectArea( cAlias )
         dbGoTop()
         DO WHILE !Eof()
-            IF !Deleted()
+            IF !Deleted() .AND. ;
+               ( FieldPos( "NUMERO" ) == 0 .OR. AllTrim( FIELD->NUMERO ) == cProyecto )
                 nCount++
             ENDIF
             dbSkip()
@@ -232,6 +234,7 @@ STATIC FUNCTION _GeneraResumen()
     LOCAL aKeys := {}
     LOCAL aRow
     LOCAL cKey
+    LOCAL cProyecto := _CalcProyectoActual()
     LOCAL cNum
     LOCAL cCod
     LOCAL nCan
@@ -242,7 +245,7 @@ STATIC FUNCTION _GeneraResumen()
 
     DO WHILE !Eof()
         // Captura de datos de la línea de material
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( Field->NUMERO ) == cProyecto
             cNum := AllTrim( Field->NUMERO )
             cCod := Upper( AllTrim( Field->CODIGO ) )
             nCan := Field->CANTIDAD
@@ -299,6 +302,30 @@ STATIC FUNCTION _GeneraResumen()
     _ConvierteResumenCompra()
 
 RETURN NIL
+
+
+STATIC FUNCTION _CalcProyectoActual()
+
+    LOCAL nArea := Select()
+    LOCAL cProyecto := ""
+
+    IF Select( "TMP_CAB" ) > 0
+        dbSelectArea( "TMP_CAB" )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted()
+                cProyecto := AllTrim( FIELD->NUMERO )
+                EXIT
+            ENDIF
+            dbSkip()
+        ENDDO
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN cProyecto
 
 
 STATIC FUNCTION _ConvierteResumenCompra()
