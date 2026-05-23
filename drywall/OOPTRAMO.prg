@@ -131,7 +131,15 @@ METHOD LimpiarLinea( nIdLin ) CLASS OOPTRAMO
    IF dbSeek( cNum + Str( nIdLin, 4 ) )
       WHILE !Eof() .AND. TMP_MAT->NUMERO == cNum .AND. TMP_MAT->ID_LINEA == nIdLin
          IF !FIELD->L_MANUAL
-            dbDelete()
+            IF NetRLock()
+               dbDelete()
+               dbCommit()
+               dbUnlock()
+            ELSE
+               ::nErrores++
+               AAdd( ::aLog, "Lin " + AllTrim( Str( nIdLin ) ) + ;
+                              ": No se pudo bloquear TMP_MAT para limpiar material previo." )
+            ENDIF
          ENDIF
          dbSkip()
       ENDDO
