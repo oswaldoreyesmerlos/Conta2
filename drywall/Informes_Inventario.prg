@@ -254,7 +254,7 @@ FUNCTION VisorProyectos()
     oWin := TWindow():New( 2, 2, GfxMaxRow() - 2, GfxMaxCol() - 2, "VISOR DE PROYECTOS" )
 
     oWin:AddCtrl( TLabel():New( 1, 2, ;
-        "[ENTER] Ver calculo   [RECUPERAR] Reabrir historico como actual   [ESC] Salir", oWin ) )
+        "[ENTER] Ver calculo   [VALORAR] Editar valoracion   [RECUPERAR] Reabrir   [ESC] Salir", oWin ) )
 
     oGrid := TGrid():New( 3, 1, GfxMaxRow() - 6, GfxMaxCol() - 4, oWin )
     oGrid:aData    := aData
@@ -273,6 +273,11 @@ FUNCTION VisorProyectos()
         {|| aData := _VisorCargarDatos(), oGrid:aData := aData, oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 20, GfxMaxRow() - 3, 38, oWin, "RECUPERAR", ;
         {|| _VisorRecuperarHistorico( oGrid ), ;
+            aData := _VisorCargarDatos(), ;
+            oGrid:aData := aData, ;
+            oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 40, GfxMaxRow() - 3, 56, oWin, "VALORAR", ;
+        {|| _VisorValorarHistorico( oGrid ), ;
             aData := _VisorCargarDatos(), ;
             oGrid:aData := aData, ;
             oGrid:Paint() } ) )
@@ -363,13 +368,29 @@ STATIC FUNCTION _VisorCargarDatos()
                     DToC( HIS_CAB->FECHA ), ;
                     AllTrim( HIS_CAB->ID_CLIENTE ), ;
                     AllTrim( HIS_CAB->TITULO ), ;
-                    "Archivado" } )
+                    _VisorEstadoHis( HIS_CAB->ESTADO ) } )
             ENDIF
             dbSkip()
         ENDDO
     ENDIF
 
 RETURN aData
+
+
+STATIC FUNCTION _VisorEstadoHis( cEstado )
+
+    cEstado := Upper( AllTrim( cEstado ) )
+
+    DO CASE
+    CASE cEstado == "C"
+        RETURN "Calculado"
+    CASE cEstado == "F"
+        RETURN "Cerrado"
+    OTHERWISE
+        RETURN "Calculado"
+    ENDCASE
+
+RETURN "Calculado"
 
 
 STATIC FUNCTION _VisorVerCalculo( oGrid )
@@ -393,6 +414,23 @@ STATIC FUNCTION _VisorVerCalculo( oGrid )
 RETURN NIL
 
 
+STATIC FUNCTION _VisorValorarHistorico( oGrid )
+
+    LOCAL aRow := oGrid:CurrentRow()
+
+    IF aRow == NIL
+        RETURN NIL
+    ENDIF
+
+    IF aRow[1] == "TMP"
+        Valorar()
+    ELSE
+        ValorarHistorico( aRow[2] )
+    ENDIF
+
+RETURN NIL
+
+
 STATIC FUNCTION _VisorRecuperarHistorico( oGrid )
 
     LOCAL aRow := oGrid:CurrentRow()
@@ -408,6 +446,11 @@ STATIC FUNCTION _VisorRecuperarHistorico( oGrid )
 
     IF cOrigen != "HIS"
         MsgInfo( "Solo se pueden recuperar proyectos historicos.", "Recuperar" )
+        RETURN .F.
+    ENDIF
+
+    IF aRow[6] == "Cerrado"
+        MsgInfo( "El proyecto cerrado solo puede consultarse.", "Recuperar" )
         RETURN .F.
     ENDIF
 
@@ -436,6 +479,12 @@ FUNCTION DrywallRecuperarHistorico( cHisNum )
 
     IF !_RecSeekHistorico( cHisNum )
         MsgStop( "No se encontro el historico " + cHisNum + ".", "Recuperar" )
+        _RecRestoreArea( nArea, nOrd )
+        RETURN .F.
+    ENDIF
+
+    IF HIS_CAB->ESTADO == "F"
+        MsgInfo( "El proyecto " + cHisNum + " esta cerrado. Solo puede consultarse.", "Recuperar" )
         _RecRestoreArea( nArea, nOrd )
         RETURN .F.
     ENDIF

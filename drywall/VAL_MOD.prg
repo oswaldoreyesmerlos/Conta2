@@ -44,10 +44,10 @@ FUNCTION Valorar()
     oGrid:bEnter := {|| _ValEditarPrecio( oGrid, @aData ), oGrid:aData := aData, oGrid:Paint() }
 
     oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 34, oWin, ;
-        "GUARDAR Y GENERAR PRESUPUESTO", ;
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 28, oWin, ;
+        "GUARDAR CALCULADO", ;
         {|| _ValGuardar( aData ), ;
-            lSaved := DrywallGuardarGenerar(), ;
+            lSaved := DrywallGuardarCalculado(), ;
             If( lSaved, oWin:Close(), NIL ) } ) )
     oWin:Run()
 
@@ -55,6 +55,89 @@ FUNCTION Valorar()
         _ValGuardar( aData )
         MsgInfo( "Valoracion completada.", "Valoracion" )
     ENDIF
+
+    IF nAreaAnt > 0
+        dbSelectArea( nAreaAnt )
+        dbSetOrder( nOrdAnt )
+    ENDIF
+
+RETURN NIL
+
+
+FUNCTION ValorarHistorico( cProyecto )
+
+    LOCAL nAreaAnt := Select()
+    LOCAL nOrdAnt  := IndexOrd()
+    LOCAL oWin, oGrid, aData
+    LOCAL cEstado := ""
+    LOCAL lEditable := .F.
+
+    cProyecto := AllTrim( cProyecto )
+
+    IF Empty( cProyecto )
+        MsgStop( "No se ha indicado proyecto historico.", "Valoracion" )
+        RETURN NIL
+    ENDIF
+
+    IF !_ValAbrirHistorico()
+        RETURN NIL
+    ENDIF
+
+    cEstado := _ValEstadoHistorico( cProyecto )
+    IF Empty( cEstado )
+        MsgStop( "No se encontro el historico " + cProyecto + ".", "Valoracion" )
+        RETURN NIL
+    ENDIF
+
+    lEditable := ( cEstado != "F" )
+    aData := _ValCargarDesde( "HIS_RES", cProyecto )
+
+    IF Empty( aData )
+        MsgInfo( "El historico no tiene resumen valorado.", "Valoracion" )
+        RETURN NIL
+    ENDIF
+
+    oWin := TWindow():New( 4, 4, GfxMaxRow() - 4, GfxMaxCol() - 4, ;
+                           "VALORACION HISTORICA - " + cProyecto )
+
+    IF lEditable
+        oWin:AddCtrl( TLabel():New( 0, 2, "[ENTER] Editar Precio   [CERRAR] Bloquear proyecto", oWin ) )
+    ELSE
+        oWin:AddCtrl( TLabel():New( 0, 2, "Proyecto cerrado. Solo consulta.", oWin ) )
+    ENDIF
+
+    oGrid := TGrid():New( 2, 1, GfxMaxRow() - 6, GfxMaxCol() - 6, oWin )
+    oGrid:aData    := aData
+    oGrid:nSeekCol := 2
+
+    oGrid:AddColumn( "CODIGO",      15, "@!",          { |a| a[1] } )
+    oGrid:AddColumn( "DESCRIPCION", 40, "@!",          { |a| a[2] } )
+    oGrid:AddColumn( "UNIDAD",      6,  "@!",          { |a| a[3] } )
+    oGrid:AddColumn( "CANTIDAD",    10, "999,999.999", { |a| a[4] } )
+    oGrid:AddColumn( "PRECIO",      10, "999,999.99",  { |a| a[5] } )
+    oGrid:AddColumn( "IMPORTE",     14, "999,999.99",  { |a| a[6] } )
+
+    IF lEditable
+        oGrid:bEnter := {|| _ValEditarPrecio( oGrid, @aData ), oGrid:aData := aData, oGrid:Paint() }
+    ENDIF
+
+    oWin:AddCtrl( oGrid )
+
+    IF lEditable
+        oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 2, GfxMaxRow() - 5, 24, oWin, ;
+            "GUARDAR PRECIOS", ;
+            {|| _ValGuardarEn( "HIS_RES", cProyecto, aData ), ;
+                MsgInfo( "Valoracion guardada.", "Valoracion" ) } ) )
+        oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, 26, GfxMaxRow() - 5, 44, oWin, ;
+            "CERRAR PROYECTO", ;
+            {|| _ValGuardarEn( "HIS_RES", cProyecto, aData ), ;
+                If( DrywallCerrarHistorico( cProyecto ), oWin:Close(), NIL ) } ) )
+    ENDIF
+
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 6, GfxMaxCol() - 20, GfxMaxRow() - 5, GfxMaxCol() - 4, oWin, ;
+        "CERRAR", {|| oWin:Close() } ) )
+
+    oWin:Run()
 
     IF nAreaAnt > 0
         dbSelectArea( nAreaAnt )
@@ -244,10 +327,16 @@ RETURN aData
 
 STATIC FUNCTION _ValCargar()
 
-    LOCAL aData := {}
     LOCAL cProyecto := _ResultadoProyectoActual()
 
-    dbSelectArea( "TMP_RES" )
+RETURN _ValCargarDesde( "TMP_RES", cProyecto )
+
+
+STATIC FUNCTION _ValCargarDesde( cAlias, cProyecto )
+
+    LOCAL aData := {}
+
+    dbSelectArea( cAlias )
     dbGoTop()
 
     DO WHILE !Eof()
@@ -306,11 +395,17 @@ RETURN NIL
 
 STATIC FUNCTION _ValGuardar( aData )
 
-    LOCAL i
     LOCAL cProyecto := _ResultadoProyectoActual()
 
+RETURN _ValGuardarEn( "TMP_RES", cProyecto, aData )
+
+
+STATIC FUNCTION _ValGuardarEn( cAlias, cProyecto, aData )
+
+    LOCAL i
+
     FOR i := 1 TO Len( aData )
-        dbSelectArea( "TMP_RES" )
+        dbSelectArea( cAlias )
         dbGoTop()
         DO WHILE !Eof()
             IF !Deleted() .AND. ;
@@ -332,6 +427,35 @@ STATIC FUNCTION _ValGuardar( aData )
     NEXT
 
 RETURN NIL
+
+
+STATIC FUNCTION _ValAbrirHistorico()
+
+    IF !ABRIR_TABLA( "HIS_CAB", "HIS_CAB", "HIS_NUM" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "HIS_RES", "HIS_RES", "HRES_PK" )
+        RETURN .F.
+    ENDIF
+
+RETURN .T.
+
+
+STATIC FUNCTION _ValEstadoHistorico( cProyecto )
+
+    LOCAL cEstado := ""
+
+    dbSelectArea( "HIS_CAB" )
+    OrdSetFocus( "HIS_NUM" )
+    IF dbSeek( PadR( cProyecto, 6 ) )
+        cEstado := AllTrim( FIELD->ESTADO )
+        IF Empty( cEstado )
+            cEstado := "C"
+        ENDIF
+    ENDIF
+
+RETURN cEstado
 
 
 STATIC FUNCTION _ResultadoProyectoActual()

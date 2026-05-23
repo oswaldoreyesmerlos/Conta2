@@ -93,43 +93,60 @@ RETURN NIL
 // FUNCION: _MoverTramos
 // Descripción: Transfiere línea a línea los tramos técnicos al histórico.
 // ============================================================================
-STATIC FUNCTION _MoverTramos( cDocNum )
+STATIC FUNCTION _MoverTramos( cDocNum, cProyecto )
     LOCAL nAreaAct := Select()
+
+    IF ValType( cProyecto ) != "C"
+        cProyecto := cDocNum
+    ENDIF
+
+    dbSelectArea( "HIS_TRA" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear HIS_TRA.", "Guardar en Firme" )
+        dbSelectArea( nAreaAct )
+        RETURN NIL
+    ENDIF
     
     dbSelectArea( "TMP_TRA" )
     dbGoTop()
     
     DO WHILE !Eof()
-        dbSelectArea( "HIS_TRA" )
-        dbAppend()
-        
-        REPLACE Field->NUMERO       WITH cDocNum
-        REPLACE Field->ID_LINEA     WITH TMP_TRA->ID_LINEA
-        REPLACE Field->CONCEPTO     WITH TMP_TRA->CONCEPTO
-        REPLACE Field->TIPO_OBRA    WITH TMP_TRA->TIPO_OBRA
-        REPLACE Field->LARGO        WITH TMP_TRA->LARGO
-        REPLACE Field->ALTO         WITH TMP_TRA->ALTO
-        REPLACE Field->MODUL        WITH TMP_TRA->MODUL
-        IF FieldPos( "SISTEMA" ) > 0 .AND. TMP_TRA->( FieldPos( "SISTEMA" ) ) > 0
-            REPLACE Field->SISTEMA  WITH TMP_TRA->SISTEMA
+        IF !Deleted() .AND. AllTrim( TMP_TRA->NUMERO ) == AllTrim( cProyecto )
+            dbSelectArea( "HIS_TRA" )
+            dbAppend()
+
+            REPLACE Field->NUMERO       WITH cDocNum
+            REPLACE Field->ID_LINEA     WITH TMP_TRA->ID_LINEA
+            REPLACE Field->CONCEPTO     WITH TMP_TRA->CONCEPTO
+            REPLACE Field->TIPO_OBRA    WITH TMP_TRA->TIPO_OBRA
+            REPLACE Field->LARGO        WITH TMP_TRA->LARGO
+            REPLACE Field->ALTO         WITH TMP_TRA->ALTO
+            REPLACE Field->MODUL        WITH TMP_TRA->MODUL
+            IF FieldPos( "SISTEMA" ) > 0 .AND. TMP_TRA->( FieldPos( "SISTEMA" ) ) > 0
+                REPLACE Field->SISTEMA  WITH TMP_TRA->SISTEMA
+            ENDIF
+            REPLACE Field->SEP_PRIM     WITH TMP_TRA->SEP_PRIM
+            REPLACE Field->CARAS        WITH TMP_TRA->CARAS
+            REPLACE Field->PLAC_CARA    WITH TMP_TRA->PLAC_CARA
+            REPLACE Field->ID_PER_VER   WITH TMP_TRA->ID_PER_VER
+            REPLACE Field->ID_PER_HOR   WITH TMP_TRA->ID_PER_HOR
+            REPLACE Field->ID_PER_PER   WITH TMP_TRA->ID_PER_PER
+            REPLACE Field->ID_PLACA_A   WITH TMP_TRA->ID_PLACA_A
+            REPLACE Field->ID_PLACA_B   WITH TMP_TRA->ID_PLACA_B
+            REPLACE Field->ID_AISLANT   WITH TMP_TRA->ID_AISLANT
+            REPLACE Field->ID_ANCLAJE   WITH TMP_TRA->ID_ANCLAJE
+            REPLACE Field->L_AISLANT    WITH TMP_TRA->L_AISLANT
+            REPLACE Field->L_BANDA      WITH TMP_TRA->L_BANDA
+            REPLACE Field->METROS       WITH TMP_TRA->METROS
         ENDIF
-        REPLACE Field->SEP_PRIM     WITH TMP_TRA->SEP_PRIM
-        REPLACE Field->CARAS        WITH TMP_TRA->CARAS
-        REPLACE Field->PLAC_CARA    WITH TMP_TRA->PLAC_CARA
-        REPLACE Field->ID_PER_VER   WITH TMP_TRA->ID_PER_VER
-        REPLACE Field->ID_PER_HOR   WITH TMP_TRA->ID_PER_HOR
-        REPLACE Field->ID_PER_PER   WITH TMP_TRA->ID_PER_PER
-        REPLACE Field->ID_PLACA_A   WITH TMP_TRA->ID_PLACA_A
-        REPLACE Field->ID_PLACA_B   WITH TMP_TRA->ID_PLACA_B
-        REPLACE Field->ID_AISLANT   WITH TMP_TRA->ID_AISLANT
-        REPLACE Field->ID_ANCLAJE   WITH TMP_TRA->ID_ANCLAJE
-        REPLACE Field->L_AISLANT    WITH TMP_TRA->L_AISLANT
-        REPLACE Field->L_BANDA      WITH TMP_TRA->L_BANDA
-        REPLACE Field->METROS       WITH TMP_TRA->METROS
         
         dbSelectArea( "TMP_TRA" )
         dbSkip()
     ENDDO
+
+    dbSelectArea( "HIS_TRA" )
+    dbCommit()
+    dbUnlock()
     
     dbSelectArea( nAreaAct )
 RETURN NIL
@@ -251,8 +268,12 @@ RETURN NIL
 // FUNCION: _MoverCabecera
 // Descripción: Transfiere los datos de la cabecera al histórico HIS_CAB.
 // ============================================================================
-STATIC FUNCTION _MoverCabecera( cDoc, nTot )
+STATIC FUNCTION _MoverCabecera( cDoc, nTot, cEstado )
     LOCAL nArea := Select()
+
+    IF ValType( cEstado ) != "C"
+        cEstado := "C"
+    ENDIF
 
     IF Select( "TMP_CAB" ) == 0
         MsgStop( "No hay cabecera de presupuesto activa.", "Error" )
@@ -260,6 +281,12 @@ STATIC FUNCTION _MoverCabecera( cDoc, nTot )
     ENDIF
 
     dbSelectArea( "HIS_CAB" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear HIS_CAB.", "Guardar en Firme" )
+        dbSelectArea( nArea )
+        RETURN NIL
+    ENDIF
+
     dbAppend()
     IF !NetErr()
         REPLACE Field->NUMERO     WITH cDoc
@@ -268,8 +295,10 @@ STATIC FUNCTION _MoverCabecera( cDoc, nTot )
         REPLACE Field->ID_CLIENTE WITH TMP_CAB->ID_CLIENTE
         REPLACE Field->OBSERV     WITH TMP_CAB->OBSERV
         REPLACE Field->MARGEN     WITH TMP_CAB->MARGEN
-        dbUnlock()
+        REPLACE Field->ESTADO     WITH cEstado
+        dbCommit()
     ENDIF
+    dbUnlock()
     dbSelectArea( nArea )
 RETURN NIL
 
@@ -277,77 +306,155 @@ RETURN NIL
 // FUNCION: _MoverResumen
 // Descripción: Transfiere el resumen económico final a HIS_RES.
 // ============================================================================
-STATIC FUNCTION _MoverResumen( cDoc )
+STATIC FUNCTION _MoverResumen( cDoc, cProyecto )
     LOCAL nArea := Select()
+
+    IF ValType( cProyecto ) != "C"
+        cProyecto := cDoc
+    ENDIF
+
+    dbSelectArea( "HIS_RES" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear HIS_RES.", "Guardar en Firme" )
+        dbSelectArea( nArea )
+        RETURN NIL
+    ENDIF
+
     dbSelectArea( "TMP_RES" )
     dbGoTop()
     DO WHILE !Eof()
-        dbSelectArea( "HIS_RES" )
-        dbAppend()
-        REPLACE Field->NUMERO   WITH cDoc
-        REPLACE Field->FAMILIA  WITH TMP_RES->FAMILIA
-        REPLACE Field->CODIGO   WITH TMP_RES->CODIGO
-        REPLACE Field->DESCRIP  WITH TMP_RES->DESCRIP
-        REPLACE Field->UNIDAD   WITH TMP_RES->UNIDAD
-        REPLACE Field->CANT_TOT WITH TMP_RES->CANT_TOT
-        REPLACE Field->PRECIO   WITH TMP_RES->PRECIO
-        REPLACE Field->IMP_TOT  WITH TMP_RES->IMP_TOT
-        REPLACE Field->PESO_TOT WITH TMP_RES->PESO_TOT
+        IF !Deleted() .AND. AllTrim( TMP_RES->NUMERO ) == AllTrim( cProyecto )
+            dbSelectArea( "HIS_RES" )
+            dbAppend()
+            REPLACE Field->NUMERO   WITH cDoc
+            REPLACE Field->FAMILIA  WITH TMP_RES->FAMILIA
+            REPLACE Field->CODIGO   WITH TMP_RES->CODIGO
+            REPLACE Field->DESCRIP  WITH TMP_RES->DESCRIP
+            REPLACE Field->UNIDAD   WITH TMP_RES->UNIDAD
+            REPLACE Field->CANT_TOT WITH TMP_RES->CANT_TOT
+            REPLACE Field->PRECIO   WITH TMP_RES->PRECIO
+            REPLACE Field->IMP_TOT  WITH TMP_RES->IMP_TOT
+            REPLACE Field->PESO_TOT WITH TMP_RES->PESO_TOT
+        ENDIF
         dbSelectArea( "TMP_RES" )
         dbSkip()
     ENDDO
+
+    dbSelectArea( "HIS_RES" )
+    dbCommit()
+    dbUnlock()
+
     dbSelectArea( nArea )
 RETURN NIL
 
 
-FUNCTION DrywallGuardarGenerar()
+FUNCTION DrywallGuardarCalculado()
 
     LOCAL nArea := Select()
     LOCAL cProyecto := ""
-    LOCAL cHist := ""
 
     IF !_ValidaCierreProyecto( @cProyecto )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     ENDIF
 
-    IF !MsgYesNo( "Se guardara el proyecto en firme y se generara el presupuesto." + Chr(13) + ;
-                  "Esta operacion no debe repetirse para el mismo proyecto." + Chr(13) + ;
+    IF !MsgYesNo( "Se guardara el proyecto como CALCULADO en historico." + Chr(13) + ;
+                  "El proyecto temporal sera limpiado." + Chr(13) + ;
                   "Desea continuar?", "Guardar en Firme" )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     ENDIF
 
     IF !_EnsureHistoricoTables()
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     ENDIF
 
-    IF !DrywallGenPresupuesto( cProyecto )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+    IF !_BorraHistoricoProyecto( cProyecto )
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     ENDIF
 
-    cHist := _GetNextDoc()
-    IF Empty( cHist )
-        MsgStop( "No se pudo generar numero de historico.", "Guardar en Firme" )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
-        RETURN .F.
-    ENDIF
+    _MoverCabecera( cProyecto, _TotalTmpRes( cProyecto ), "C" )
+    _MoverTramos( cProyecto, cProyecto )
+    _MoverResumen( cProyecto, cProyecto )
+    _MoverMateriales( cProyecto, cProyecto )
+    _VaciarTemporales()
 
-    _MoverCabecera( cHist, _TotalTmpRes() )
-    _MoverTramos( cHist )
-    _MoverResumen( cHist )
-    _MoverMateriales( cHist )
-    _MarkTmpGuardado()
-
-    MsgInfo( "Proyecto guardado en firme. Historico: " + cHist, "Guardar en Firme" )
+    MsgInfo( "Proyecto " + cProyecto + " guardado como calculado.", "Guardar en Firme" )
 
     IF nArea > 0
         dbSelectArea( nArea )
     ENDIF
 
 RETURN .T.
+
+
+FUNCTION DrywallGuardarGenerar()
+
+RETURN DrywallGuardarCalculado()
+
+
+FUNCTION DrywallCerrarHistorico( cProyecto )
+
+    LOCAL nArea := Select()
+    LOCAL lOk := .F.
+
+    cProyecto := AllTrim( cProyecto )
+
+    IF Empty( cProyecto )
+        MsgStop( "No se ha indicado proyecto historico.", "Cerrar Proyecto" )
+        RETURN .F.
+    ENDIF
+
+    IF !_EnsureHistoricoTables()
+        RETURN .F.
+    ENDIF
+
+    dbSelectArea( "HIS_CAB" )
+    OrdSetFocus( "HIS_NUM" )
+    IF !dbSeek( PadR( cProyecto, 6 ) )
+        MsgStop( "No se encontro el historico " + cProyecto + ".", "Cerrar Proyecto" )
+        RETURN .F.
+    ENDIF
+
+    IF FIELD->ESTADO == "F"
+        MsgInfo( "El proyecto " + cProyecto + " ya esta cerrado.", "Cerrar Proyecto" )
+        RETURN .F.
+    ENDIF
+
+    IF !MsgYesNo( "Se cerrara el proyecto " + cProyecto + "." + Chr(13) + ;
+                  "Despues solo podra consultarse." + Chr(13) + ;
+                  "Desea continuar?", "Cerrar Proyecto" )
+        RETURN .F.
+    ENDIF
+
+    lOk := DrywallGenPresupuesto( cProyecto, "HIS" )
+
+    IF lOk
+        dbSelectArea( "HIS_CAB" )
+        OrdSetFocus( "HIS_NUM" )
+        IF dbSeek( PadR( cProyecto, 6 ) ) .AND. NetRLock()
+            REPLACE FIELD->ESTADO WITH "F"
+            dbCommit()
+            dbUnlock()
+        ENDIF
+        MsgInfo( "Proyecto " + cProyecto + " cerrado.", "Cerrar Proyecto" )
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN lOk
 
 
 STATIC FUNCTION _MarkTmpGuardado()
@@ -416,20 +523,17 @@ STATIC FUNCTION _ValidaCierreProyecto( cProyecto )
         RETURN .F.
     ENDIF
 
-    dbSelectArea( "TMP_TRA" )
-    IF LastRec() == 0
+    IF _CuentaProyecto( "TMP_TRA", cProyecto ) == 0
         MsgStop( "No hay tramos cargados.", "Guardar en Firme" )
         RETURN .F.
     ENDIF
 
-    dbSelectArea( "TMP_MAT" )
-    IF LastRec() == 0
+    IF _CuentaProyecto( "TMP_MAT", cProyecto ) == 0
         MsgStop( "No hay despiece de materiales. Ejecute Calcular Material.", "Guardar en Firme" )
         RETURN .F.
     ENDIF
 
-    dbSelectArea( "TMP_RES" )
-    IF LastRec() == 0
+    IF _CuentaProyecto( "TMP_RES", cProyecto ) == 0
         MsgStop( "No hay resumen economico. Ejecute Calcular Material.", "Guardar en Firme" )
         RETURN .F.
     ENDIF
@@ -437,13 +541,19 @@ STATIC FUNCTION _ValidaCierreProyecto( cProyecto )
 RETURN .T.
 
 
-STATIC FUNCTION _TotalTmpRes()
+STATIC FUNCTION _TotalTmpRes( cProyecto )
 
     LOCAL nArea := Select()
     LOCAL nTotal := 0
 
     dbSelectArea( "TMP_RES" )
-    SUM Field->IMP_TOT TO nTotal
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cProyecto )
+            nTotal += FIELD->IMP_TOT
+        ENDIF
+        dbSkip()
+    ENDDO
 
     IF nArea > 0
         dbSelectArea( nArea )
@@ -452,14 +562,25 @@ STATIC FUNCTION _TotalTmpRes()
 RETURN nTotal
 
 
-STATIC FUNCTION _MoverMateriales( cDoc )
+STATIC FUNCTION _MoverMateriales( cDoc, cProyecto )
 
     LOCAL nArea := Select()
+
+    IF ValType( cProyecto ) != "C"
+        cProyecto := cDoc
+    ENDIF
+
+    dbSelectArea( "HIS_MAT" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear HIS_MAT.", "Guardar en Firme" )
+        dbSelectArea( nArea )
+        RETURN NIL
+    ENDIF
 
     dbSelectArea( "TMP_MAT" )
     dbGoTop()
     DO WHILE !Eof()
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( TMP_MAT->NUMERO ) == AllTrim( cProyecto )
             dbSelectArea( "HIS_MAT" )
             dbAppend()
             REPLACE Field->NUMERO    WITH cDoc
@@ -482,8 +603,71 @@ STATIC FUNCTION _MoverMateriales( cDoc )
         dbSkip()
     ENDDO
 
+    dbSelectArea( "HIS_MAT" )
+    dbCommit()
+    dbUnlock()
+
     IF nArea > 0
         dbSelectArea( nArea )
     ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _CuentaProyecto( cAlias, cProyecto )
+
+    LOCAL nArea := Select()
+    LOCAL nCount := 0
+
+    dbSelectArea( cAlias )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cProyecto )
+            nCount++
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN nCount
+
+
+STATIC FUNCTION _BorraHistoricoProyecto( cProyecto )
+
+    LOCAL aTabs := { "HIS_CAB", "HIS_TRA", "HIS_MAT", "HIS_RES" }
+    LOCAL i
+
+    FOR i := 1 TO Len( aTabs )
+        dbSelectArea( aTabs[i] )
+        dbGoTop()
+
+        IF !NetFLock()
+            MsgStop( "No se pudo bloquear " + aTabs[i] + ".", "Guardar en Firme" )
+            RETURN .F.
+        ENDIF
+
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cProyecto )
+                dbDelete()
+            ENDIF
+            dbSkip()
+        ENDDO
+
+        dbCommit()
+        dbUnlock()
+    NEXT
+
+RETURN .T.
+
+
+STATIC FUNCTION _VaciarTemporales()
+
+    _SafeZap( "TMP_TRA" )
+    _SafeZap( "TMP_CAB" )
+    _SafeZap( "TMP_MAT" )
+    _SafeZap( "TMP_RES" )
 
 RETURN NIL

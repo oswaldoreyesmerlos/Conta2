@@ -3,7 +3,7 @@
 
 #define IVA_DEF 21.00
 
-FUNCTION DrywallGenPresupuesto( cNumProyecto )
+FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
 
     LOCAL nArea := Select()
     LOCAL aLineas := {}
@@ -17,55 +17,97 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto )
     LOCAL lOk := .F.
     LOCAL lRet := .F.
     LOCAL i, nFila, nCols
+    LOCAL cCabAlias := "TMP_CAB"
+    LOCAL cResAlias := "TMP_RES"
+    LOCAL cResIndex := "RES_PK"
 
     DEFAULT cNumProyecto TO ""
+    DEFAULT cOrigen TO "TMP"
+
+    cOrigen := Upper( AllTrim( cOrigen ) )
+    IF cOrigen == "HIS"
+        cCabAlias := "HIS_CAB"
+        cResAlias := "HIS_RES"
+        cResIndex := "HRES_PK"
+    ENDIF
 
     IF Empty( cNumProyecto )
-        IF Select( "TMP_CAB" ) > 0
-            dbSelectArea( "TMP_CAB" )
+        IF Select( cCabAlias ) > 0
+            dbSelectArea( cCabAlias )
             IF LastRec() > 0 .AND. !Eof()
-                cNumProyecto := AllTrim( TMP_CAB->NUMERO )
-                cCliId := AllTrim( TMP_CAB->ID_CLIENTE )
-                cObs   := AllTrim( TMP_CAB->OBSERV )
+                cNumProyecto := AllTrim( FIELD->NUMERO )
+                cCliId := AllTrim( FIELD->ID_CLIENTE )
+                cObs   := AllTrim( FIELD->OBSERV )
+            ENDIF
+        ENDIF
+    ELSE
+        IF ABRIR_TABLA( cCabAlias, cCabAlias, "" )
+            dbSelectArea( cCabAlias )
+            IF cOrigen == "HIS"
+                OrdSetFocus( "HIS_NUM" )
+                IF dbSeek( PadR( cNumProyecto, 6 ) )
+                    cCliId := AllTrim( FIELD->ID_CLIENTE )
+                    cObs   := AllTrim( FIELD->OBSERV )
+                ENDIF
+            ELSE
+                dbGoTop()
+                DO WHILE !Eof()
+                    IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cNumProyecto )
+                        cCliId := AllTrim( FIELD->ID_CLIENTE )
+                        cObs   := AllTrim( FIELD->OBSERV )
+                        EXIT
+                    ENDIF
+                    dbSkip()
+                ENDDO
             ENDIF
         ENDIF
     ENDIF
 
     IF Empty( cNumProyecto )
         MsgStop( "No hay proyecto activo.", "Generar Presupuesto" )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     ENDIF
 
     IF _PreExisteOrigen( cNumProyecto )
         MsgStop( "Ya existe un presupuesto generado para el proyecto " + cNumProyecto + ".", ;
                  "Generar Presupuesto" )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     ENDIF
 
-    IF Select( "TMP_RES" ) == 0
-        IF !File( "TMP_RES.DBF" )
+    IF Select( cResAlias ) == 0
+        IF !File( cResAlias + ".DBF" )
             MsgStop( "No hay datos de calculo para el proyecto.", "Generar Presupuesto" )
-            IF nArea > 0; dbSelectArea( nArea ); ENDIF
+            IF nArea > 0
+                dbSelectArea( nArea )
+            ENDIF
             RETURN .F.
         ENDIF
-        USE TMP_RES NEW SHARED VIA "DBFCDX" ALIAS "TMP_RES"
+        USE ( cResAlias ) NEW SHARED VIA "DBFCDX" ALIAS ( cResAlias )
     ENDIF
 
-    dbSelectArea( "TMP_RES" )
+    dbSelectArea( cResAlias )
     BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
-        OrdSetFocus( "RES_PK" )
+        OrdSetFocus( cResIndex )
         dbSeek( PadR( cNumProyecto, 6 ) )
     RECOVER
-        MsgStop( "No se pudo activar el indice RES_PK de TMP_RES.", "Generar Presupuesto" )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        MsgStop( "No se pudo activar el indice de " + cResAlias + ".", "Generar Presupuesto" )
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     END SEQUENCE
 
     IF !Found()
         MsgStop( "El proyecto '" + cNumProyecto + "' no tiene calculo valorado.", "Generar Presupuesto" )
-        IF nArea > 0; dbSelectArea( nArea ); ENDIF
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
         RETURN .F.
     ENDIF
 
