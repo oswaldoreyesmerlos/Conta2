@@ -646,9 +646,15 @@ STATIC FUNCTION _CoreSave( hData )
     ENDIF
 
     dbSelectArea( "TMP_TRA" )
-    dbAppend()
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear TMP_TRA para anadir el tramo.", "Nuevo Tramo" )
+        RETURN .F.
+    ENDIF
+
+    DbAppend()
 
     IF NetErr()
+        dbUnlock()
         MsgStop( "Error de Red: No se pudo anadir registro." )
         RETURN .F.
     ENDIF
@@ -691,6 +697,7 @@ STATIC FUNCTION _CoreSave( hData )
     REPLACE FIELD->CARAS      WITH hData["CARAS_REALES"]
     REPLACE FIELD->L_AISLANT  WITH ( hData["AIS"] == "S" )
 
+    dbCommit()
     dbUnlock()
 
     IF Select("TMP_CAB") > 0

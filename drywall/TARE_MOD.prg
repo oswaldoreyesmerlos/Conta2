@@ -6,6 +6,24 @@
 
 #include "OOp.ch"
 
+FUNCTION ProyectoActual()
+
+    IF !_AbrirTablas()
+        RETURN NIL
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    IF !_CabeceraActiva()
+        IF !_CrearProyectoActual()
+            RETURN NIL
+        ENDIF
+    ENDIF
+
+    _EditarCabeceraActual()
+
+RETURN NIL
+
+
 FUNCTION VerTareas( cTipo )
 
     LOCAL nArea  := Select()
@@ -19,17 +37,14 @@ FUNCTION VerTareas( cTipo )
     ENDIF
 
     dbSelectArea( "TMP_CAB" )
-    IF LastRec() == 0
-        dbAppend()
-        REPLACE FIELD->NUMERO     WITH "000001"
-        REPLACE FIELD->FECHA      WITH Date()
-        REPLACE FIELD->TITULO     WITH "NUEVO PRESUPUESTO"
-        REPLACE FIELD->ID_CLIENTE WITH Space(15)
-        REPLACE FIELD->ESTADO     WITH "P"
-        REPLACE FIELD->MARGEN     WITH 0
-        REPLACE FIELD->L_SUCIO    WITH .T.
+    IF !_CabeceraActiva()
+        MsgStop( "Debe crear un proyecto antes de agregar tramos.", "Proyecto requerido" )
+        IF nArea > 0
+            dbSelectArea( nArea )
+            dbSetOrder( nOrd )
+        ENDIF
+        RETURN NIL
     ENDIF
-    dbGoTop()
 
     cNum := FIELD->NUMERO
     dFec := FIELD->FECHA
@@ -87,8 +102,7 @@ FUNCTION VerTareas( cTipo )
     oWin:Run()
 
     dbSelectArea( "TMP_CAB" )
-    dbGoTop()
-    IF NetRLock()
+    IF _CabeceraActiva() .AND. NetRLock()
         REPLACE FIELD->TITULO     WITH oGTit:GetValue()
         REPLACE FIELD->FECHA      WITH oGFec:GetValue()
         REPLACE FIELD->ID_CLIENTE WITH oGCli:GetValue()
@@ -131,17 +145,18 @@ RETURN aData
 
 STATIC FUNCTION _OnAppend( oGrid )
 
-    LOCAL nId := 0
     LOCAL cTipo
+
+    dbSelectArea( "TMP_CAB" )
+    IF !_CabeceraActiva()
+        MsgStop( "Debe crear un proyecto antes de agregar tramos.", "Proyecto requerido" )
+        RETURN NIL
+    ENDIF
 
     cTipo := _PickTipoObra()
     IF Empty( cTipo )
         RETURN NIL
     ENDIF
-
-    dbSelectArea( "TMP_TRA" )
-    dbGoBottom()
-    nId := FIELD->ID_LINEA + 1
 
     DO CASE
     CASE cTipo == "TABIQUE"
@@ -211,6 +226,132 @@ STATIC FUNCTION _AbrirTablas()
     NEXT
 
 RETURN lOk
+
+
+STATIC FUNCTION _CabeceraActiva()
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            RETURN .T.
+        ENDIF
+        dbSkip()
+    ENDDO
+
+RETURN .F.
+
+
+STATIC FUNCTION _CrearProyectoActual()
+
+    LOCAL cNum := _NextProyectoNumero()
+
+    dbSelectArea( "TMP_CAB" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear TMP_CAB para crear el proyecto.", "Proyecto Actual" )
+        RETURN .F.
+    ENDIF
+
+    DbAppend()
+    IF NetErr()
+        dbUnlock()
+        MsgStop( "No se pudo crear la cabecera del proyecto.", "Proyecto Actual" )
+        RETURN .F.
+    ENDIF
+
+    REPLACE FIELD->NUMERO     WITH cNum
+    REPLACE FIELD->FECHA      WITH Date()
+    REPLACE FIELD->TITULO     WITH Space(60)
+    REPLACE FIELD->ID_CLIENTE WITH Space(15)
+    REPLACE FIELD->ESTADO     WITH "P"
+    REPLACE FIELD->MARGEN     WITH 0
+    REPLACE FIELD->OBSERV     WITH Space(200)
+    REPLACE FIELD->L_SUCIO    WITH .T.
+    dbCommit()
+    dbUnlock()
+
+RETURN .T.
+
+
+STATIC FUNCTION _EditarCabeceraActual()
+
+    LOCAL oWin
+    LOCAL cNum
+    LOCAL dFec
+    LOCAL cTit
+    LOCAL cCli
+    LOCAL cObs
+    LOCAL oGCli
+    LOCAL oGFec
+    LOCAL oGTit
+    LOCAL oGObs
+
+    dbSelectArea( "TMP_CAB" )
+    IF !_CabeceraActiva()
+        RETURN NIL
+    ENDIF
+
+    cNum := FIELD->NUMERO
+    dFec := FIELD->FECHA
+    cTit := FIELD->TITULO
+    cCli := FIELD->ID_CLIENTE
+    cObs := FIELD->OBSERV
+
+    oWin := TWindow():New( 5, 8, 15, 90, "PROYECTO ACTUAL - " + AllTrim( cNum ) )
+
+    oWin:AddCtrl( TLabel():New( 1,  2, "TITULO...:", oWin ) )
+    oGTit := TGet():New( 1, 14, cTit, "@S60!", oWin )
+
+    oWin:AddCtrl( TLabel():New( 3,  2, "CLIENTE..:", oWin ) )
+    oGCli := TGet():New( 3, 14, cCli, "@S15!", oWin )
+    oGCli:bValid := {| o | _ValidarCli( o ) }
+
+    oWin:AddCtrl( TLabel():New( 3, 40, "FEC:", oWin ) )
+    oGFec := TGet():New( 3, 46, dFec, "99/99/9999", oWin )
+
+    oWin:AddCtrl( TLabel():New( 5,  2, "NOTAS....:", oWin ) )
+    oGObs := TGet():New( 5, 14, cObs, "@S60!", oWin )
+
+    oWin:AddCtrl( oGTit )
+    oWin:AddCtrl( oGCli )
+    oWin:AddCtrl( TButton():New( 3, 31, 3, 38, oWin, "BUSCAR", {|| _BuscarCli( oGCli ) } ) )
+    oWin:AddCtrl( oGFec )
+    oWin:AddCtrl( oGObs )
+    oWin:AddCtrl( TButton():New( 8,  2, 9, 18, oWin, "GUARDAR", {|| oWin:Close() } ) )
+    oWin:AddCtrl( TButton():New( 8, 62, 9, 78, oWin, "CERRAR", {|| oWin:Close() } ) )
+
+    oWin:Run()
+
+    dbSelectArea( "TMP_CAB" )
+    IF _CabeceraActiva() .AND. NetRLock()
+        REPLACE FIELD->TITULO     WITH oGTit:GetValue()
+        REPLACE FIELD->FECHA      WITH oGFec:GetValue()
+        REPLACE FIELD->ID_CLIENTE WITH oGCli:GetValue()
+        REPLACE FIELD->OBSERV     WITH oGObs:GetValue()
+        REPLACE FIELD->L_SUCIO    WITH .T.
+        dbCommit()
+        dbUnlock()
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _NextProyectoNumero()
+
+    LOCAL nMax := 0
+    LOCAL nVal
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        nVal := Val( AllTrim( FIELD->NUMERO ) )
+        IF nVal > nMax
+            nMax := nVal
+        ENDIF
+        dbSkip()
+    ENDDO
+
+RETURN PadL( AllTrim( Str( nMax + 1 ) ), 6, "0" )
 
 
 STATIC FUNCTION _ValidarCli( oGet )

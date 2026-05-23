@@ -254,17 +254,20 @@ STATIC FUNCTION _GeneraResumen()
             ENDIF
         ELSE
             // Si no existe, creamos la entrada nueva
-            dbAppend()
-            REPLACE Field->NUMERO    WITH cNum
-            REPLACE Field->CODIGO    WITH cCod
-            REPLACE Field->CANT_TOT  WITH nCan
-            REPLACE Field->IMP_TOT   WITH 0
-            REPLACE Field->PESO_TOT  WITH 0
-            REPLACE Field->FAMILIA   WITH TMP_MAT->FAMILIA
-            REPLACE Field->DESCRIP   WITH TMP_MAT->DESCRIP
-            REPLACE Field->UNIDAD    WITH TMP_MAT->UNIDAD
-            REPLACE Field->PRECIO    WITH TMP_MAT->PRECIO
-            dbCommit()
+            IF NetFLock()
+                DbAppend()
+                REPLACE Field->NUMERO    WITH cNum
+                REPLACE Field->CODIGO    WITH cCod
+                REPLACE Field->CANT_TOT  WITH nCan
+                REPLACE Field->IMP_TOT   WITH 0
+                REPLACE Field->PESO_TOT  WITH 0
+                REPLACE Field->FAMILIA   WITH TMP_MAT->FAMILIA
+                REPLACE Field->DESCRIP   WITH TMP_MAT->DESCRIP
+                REPLACE Field->UNIDAD    WITH TMP_MAT->UNIDAD
+                REPLACE Field->PRECIO    WITH TMP_MAT->PRECIO
+                dbCommit()
+                dbUnlock()
+            ENDIF
         ENDIF
 
         dbSelectArea( "TMP_MAT" )

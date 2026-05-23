@@ -399,8 +399,17 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    ENDIF
    
    dbSelectArea( "TMP_MAT" )
-   dbAppend()
+   IF !FLock()
+      ::nErrores++
+      AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
+                     ": No se pudo bloquear TMP_MAT para anadir material [" + cCod + "]." )
+      dbSelectArea( nAreaArt )
+      RETURN NIL
+   ENDIF
+
+   DbAppend()
    IF NetErr()
+      dbUnlock()
       ::nErrores++
       AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
                      ": No se pudo anadir material [" + cCod + "]." )
@@ -424,6 +433,7 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    REPLACE FIELD->IMPORTE   WITH 0
    REPLACE FIELD->DETALLE   WITH cDet
    dbCommit()
+   dbUnlock()
    
    dbSelectArea( nAreaArt )
 
