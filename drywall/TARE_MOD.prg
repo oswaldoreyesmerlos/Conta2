@@ -196,7 +196,7 @@ STATIC FUNCTION _PickTipoObra()
     AAdd( aData, {"TABIQUE","Tabique pladur"} )
     AAdd( aData,  {"TECHO","Techo pladur"} )
     AAdd( aData,  {"TRASDOSADO_AUT","Trasdosado Autoportante"} )
-    AAdd( aData,  {"TRASDOSADO","Trasdosado  Semi Directo"} )
+    AAdd( aData,  {"TRASDOSADO_SEMI","Trasdosado  Semi Directo"} )
     AAdd( aData,  {"TRASDOSADO_DIR","Trasdosado Directo"} )
     AAdd( aData,  {"GENERICO","Material generico (m2)"} )
     
