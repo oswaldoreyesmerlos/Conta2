@@ -228,51 +228,73 @@ RETURN .T.
 // Descripción: Recorre TMP_MAT y agrupa cantidades en TMP_RES.
 // ============================================================================
 STATIC FUNCTION _GeneraResumen()
+    LOCAL hResumen := hb_Hash()
+    LOCAL aKeys := {}
+    LOCAL aRow
+    LOCAL cKey
     LOCAL cNum
     LOCAL cCod
     LOCAL nCan
+    LOCAL i
     
     dbSelectArea( "TMP_MAT" )
     dbGoTop()
-    dbSelectArea( "TMP_RES" )
-    dbSetOrder( 1 )
-    dbSelectArea( "TMP_MAT" )
 
     DO WHILE !Eof()
         // Captura de datos de la línea de material
-        cNum := Field->NUMERO
-        cCod := Field->CODIGO
-        nCan := Field->CANTIDAD
+        IF !Deleted()
+            cNum := AllTrim( Field->NUMERO )
+            cCod := Upper( AllTrim( Field->CODIGO ) )
+            nCan := Field->CANTIDAD
+            cKey := cNum + "|" + cCod
 
-        dbSelectArea( "TMP_RES" )
-        // Buscamos si el material ya existe en el resumen actual
-        IF dbSeek( cNum + cCod )
-            IF NetRLock()
-                REPLACE Field->CANT_TOT WITH Field->CANT_TOT + nCan
-                dbCommit()
-                dbUnlock()
-            ENDIF
-        ELSE
-            // Si no existe, creamos la entrada nueva
-            IF NetFLock()
-                DbAppend()
-                REPLACE Field->NUMERO    WITH cNum
-                REPLACE Field->CODIGO    WITH cCod
-                REPLACE Field->CANT_TOT  WITH nCan
-                REPLACE Field->IMP_TOT   WITH 0
-                REPLACE Field->PESO_TOT  WITH 0
-                REPLACE Field->FAMILIA   WITH TMP_MAT->FAMILIA
-                REPLACE Field->DESCRIP   WITH TMP_MAT->DESCRIP
-                REPLACE Field->UNIDAD    WITH TMP_MAT->UNIDAD
-                REPLACE Field->PRECIO    WITH TMP_MAT->PRECIO
-                dbCommit()
-                dbUnlock()
+            IF hb_HHasKey( hResumen, cKey )
+                aRow := hResumen[ cKey ]
+                aRow[3] += nCan
+                hResumen[ cKey ] := aRow
+            ELSE
+                AAdd( aKeys, cKey )
+                hResumen[ cKey ] := { ;
+                    cNum, ;
+                    cCod, ;
+                    nCan, ;
+                    AllTrim( Field->FAMILIA ), ;
+                    AllTrim( Field->DESCRIP ), ;
+                    AllTrim( Field->UNIDAD ), ;
+                    Field->PRECIO }
             ENDIF
         ENDIF
 
-        dbSelectArea( "TMP_MAT" )
         dbSkip()
     ENDDO
+
+    dbSelectArea( "TMP_RES" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear TMP_RES para generar el resumen.", "Error de Proceso" )
+        RETURN NIL
+    ENDIF
+
+    FOR i := 1 TO Len( aKeys )
+        aRow := hResumen[ aKeys[i] ]
+
+        DbAppend()
+        IF NetErr()
+            EXIT
+        ENDIF
+
+        REPLACE Field->NUMERO    WITH aRow[1]
+        REPLACE Field->CODIGO    WITH aRow[2]
+        REPLACE Field->CANT_TOT  WITH aRow[3]
+        REPLACE Field->IMP_TOT   WITH 0
+        REPLACE Field->PESO_TOT  WITH 0
+        REPLACE Field->FAMILIA   WITH aRow[4]
+        REPLACE Field->DESCRIP   WITH aRow[5]
+        REPLACE Field->UNIDAD    WITH aRow[6]
+        REPLACE Field->PRECIO    WITH aRow[7]
+    NEXT
+
+    dbCommit()
+    dbUnlock()
 
     _ConvierteResumenCompra()
 
