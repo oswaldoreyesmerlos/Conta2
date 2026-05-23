@@ -29,16 +29,16 @@ FUNCTION Main()
         RETURN 0
     ENDIF
 
-    // Modo migracion: reconstruye estructuras/indices y sale sin abrir interfaz.
+    // Modo inicializacion: crea tablas/indices y sale sin abrir interfaz.
     IF "migrate" $ cArg
         SET DATE BRIT
         SET DATE FORMAT TO "DD/MM/YYYY"
         SET CENTURY ON
         IF InicioDrywall()
-            ? "Migracion Drywall completada."
+            ? "Inicializacion Drywall completada."
             RETURN 0
         ENDIF
-        ? "Error migrando tablas Drywall."
+        ? "Error inicializando tablas Drywall."
         RETURN 1
     ENDIF
 
