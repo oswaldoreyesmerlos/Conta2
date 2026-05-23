@@ -418,7 +418,6 @@ FUNCTION DrywallRecuperarHistorico( cHisNum )
 
     LOCAL nArea := Select()
     LOCAL nOrd  := IndexOrd()
-    LOCAL cNewNum := ""
     LOCAL nTramos := 0
     LOCAL lOk := .F.
 
@@ -441,9 +440,7 @@ FUNCTION DrywallRecuperarHistorico( cHisNum )
         RETURN .F.
     ENDIF
 
-    cNewNum := _RecNextProyectoNumero()
-
-    IF !MsgYesNo( "Se creara un nuevo proyecto actual a partir del historico " + cHisNum + "." + Chr(13) + ;
+    IF !MsgYesNo( "Se reabrira el historico " + cHisNum + " como proyecto actual." + Chr(13) + ;
                   "El proyecto actual temporal sera reemplazado." + Chr(13) + ;
                   "El historico original no se modifica. Continuar?", "Recuperar" )
         _RecRestoreArea( nArea, nOrd )
@@ -460,13 +457,13 @@ FUNCTION DrywallRecuperarHistorico( cHisNum )
         RETURN .F.
     ENDIF
 
-    IF _RecCopiarCabecera( cHisNum, cNewNum )
-        nTramos := _RecCopiarTramos( cHisNum, cNewNum )
+    IF _RecCopiarCabecera( cHisNum )
+        nTramos := _RecCopiarTramos( cHisNum )
         lOk := ( nTramos > 0 )
     ENDIF
 
     IF lOk
-        MsgInfo( "Historico " + cHisNum + " recuperado como proyecto actual " + cNewNum + "." + Chr(13) + ;
+        MsgInfo( "Historico " + cHisNum + " recuperado como proyecto actual." + Chr(13) + ;
                  "Revise los tramos y ejecute Calcular antes de guardar en firme.", "Recuperar" )
     ELSE
         MsgStop( "No se pudo recuperar el historico " + cHisNum + ".", "Recuperar" )
@@ -512,51 +509,6 @@ STATIC FUNCTION _RecSeekHistorico( cHisNum )
     OrdSetFocus( "HIS_NUM" )
 
 RETURN dbSeek( PadR( cHisNum, 6 ) )
-
-
-STATIC FUNCTION _RecNextProyectoNumero()
-
-    LOCAL nMax := 0
-
-    nMax := Max( nMax, _RecMaxNumeroAlias( "TMP_CAB", "NUMERO" ) )
-    nMax := Max( nMax, _RecMaxNumeroAlias( "HIS_CAB", "NUMERO" ) )
-
-    IF File( "PRESUPUEST.DBF" )
-        IF ABRIR_TABLA( "PRESUPUEST", "PRE_REC", "" )
-            nMax := Max( nMax, _RecMaxNumeroAlias( "PRE_REC", "ID_OBRA" ) )
-        ENDIF
-    ENDIF
-
-RETURN PadL( AllTrim( Str( nMax + 1 ) ), 6, "0" )
-
-
-STATIC FUNCTION _RecMaxNumeroAlias( cAlias, cField )
-
-    LOCAL nArea := Select()
-    LOCAL nMax := 0
-    LOCAL nVal
-
-    IF !IsDbUsed( cAlias )
-        RETURN 0
-    ENDIF
-
-    dbSelectArea( cAlias )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted() .AND. FieldPos( cField ) > 0
-            nVal := Val( AllTrim( FieldGet( FieldPos( cField ) ) ) )
-            IF nVal > nMax
-                nMax := nVal
-            ENDIF
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN nMax
 
 
 STATIC FUNCTION _RecVaciarTemporales()
@@ -624,7 +576,7 @@ STATIC FUNCTION _RecCloseOpenList( aOpen )
 RETURN NIL
 
 
-STATIC FUNCTION _RecCopiarCabecera( cHisNum, cNewNum )
+STATIC FUNCTION _RecCopiarCabecera( cHisNum )
 
     IF !_RecSeekHistorico( cHisNum )
         RETURN .F.
@@ -642,7 +594,7 @@ STATIC FUNCTION _RecCopiarCabecera( cHisNum, cNewNum )
         RETURN .F.
     ENDIF
 
-    REPLACE FIELD->NUMERO     WITH cNewNum
+    REPLACE FIELD->NUMERO     WITH cHisNum
     REPLACE FIELD->FECHA      WITH HIS_CAB->FECHA
     REPLACE FIELD->TITULO     WITH HIS_CAB->TITULO
     REPLACE FIELD->ID_CLIENTE WITH HIS_CAB->ID_CLIENTE
@@ -656,7 +608,7 @@ STATIC FUNCTION _RecCopiarCabecera( cHisNum, cNewNum )
 RETURN .T.
 
 
-STATIC FUNCTION _RecCopiarTramos( cHisNum, cNewNum )
+STATIC FUNCTION _RecCopiarTramos( cHisNum )
 
     LOCAL nCopiados := 0
 
@@ -680,7 +632,7 @@ STATIC FUNCTION _RecCopiarTramos( cHisNum, cNewNum )
                 RETURN nCopiados
             ENDIF
 
-            REPLACE FIELD->NUMERO      WITH cNewNum
+            REPLACE FIELD->NUMERO      WITH cHisNum
             REPLACE FIELD->ID_LINEA    WITH HIS_TRA->ID_LINEA
             REPLACE FIELD->TIPO_OBRA   WITH HIS_TRA->TIPO_OBRA
             REPLACE FIELD->CONCEPTO    WITH HIS_TRA->CONCEPTO
