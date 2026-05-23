@@ -12,7 +12,6 @@
 
 # Dependencias GfxStack
 gtwvg.hbc
-hbct.hbc
 
 ..\api\Gfx.prg
 ..\api\TControl.prg

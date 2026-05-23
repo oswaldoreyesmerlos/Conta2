@@ -602,6 +602,19 @@ FUNCTION DirExiste( cRuta )
 RETURN ( Len( aDir ) > 0 )
 
 
+FUNCTION DirMake( cRuta )
+
+    IF ValType( cRuta ) != "C" .OR. Empty( AllTrim( cRuta ) )
+        RETURN -1
+    ENDIF
+
+    IF hb_DirExists( cRuta )
+        RETURN 0
+    ENDIF
+
+RETURN hb_DirCreate( cRuta )
+
+
 FUNCTION MiDefault( xVar, xDefecto )
 RETURN If( xVar == NIL, xDefecto, xVar )
 
