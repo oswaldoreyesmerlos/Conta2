@@ -254,7 +254,7 @@ FUNCTION VisorProyectos()
     oWin := TWindow():New( 2, 2, GfxMaxRow() - 2, GfxMaxCol() - 2, "VISOR DE PROYECTOS" )
 
     oWin:AddCtrl( TLabel():New( 1, 2, ;
-        "[ENTER] Ver cálculo   [Flechas] Navegar   [ESC] Salir", oWin ) )
+        "[ENTER] Ver calculo   [RECUPERAR] Reabrir historico como actual   [ESC] Salir", oWin ) )
 
     oGrid := TGrid():New( 3, 1, GfxMaxRow() - 6, GfxMaxCol() - 4, oWin )
     oGrid:aData    := aData
@@ -271,6 +271,11 @@ FUNCTION VisorProyectos()
     oWin:AddCtrl( oGrid )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 2, GfxMaxRow() - 3, 18, oWin, "REFRESCAR", ;
         {|| aData := _VisorCargarDatos(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 20, GfxMaxRow() - 3, 38, oWin, "RECUPERAR", ;
+        {|| _VisorRecuperarHistorico( oGrid ), ;
+            aData := _VisorCargarDatos(), ;
+            oGrid:aData := aData, ;
+            oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, GfxMaxCol() - 20, GfxMaxRow() - 3, GfxMaxCol() - 4, oWin, "CERRAR", ;
         {|| oWin:Close() } ) )
 
@@ -383,6 +388,339 @@ STATIC FUNCTION _VisorVerCalculo( oGrid )
         _VisorMostrarResultado( "TMP_RES", cNum, "RESULTADO - Proyecto " + cNum )
     ELSEIF cOrigen == "HIS"
         _VisorMostrarResultado( "HIS_RES", cNum, "HISTORICO - Proyecto " + cNum )
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _VisorRecuperarHistorico( oGrid )
+
+    LOCAL aRow := oGrid:CurrentRow()
+    LOCAL cOrigen
+    LOCAL cNum
+
+    IF aRow == NIL
+        RETURN .F.
+    ENDIF
+
+    cOrigen := aRow[1]
+    cNum    := aRow[2]
+
+    IF cOrigen != "HIS"
+        MsgInfo( "Solo se pueden recuperar proyectos historicos.", "Recuperar" )
+        RETURN .F.
+    ENDIF
+
+RETURN DrywallRecuperarHistorico( cNum )
+
+
+FUNCTION DrywallRecuperarHistorico( cHisNum )
+
+    LOCAL nArea := Select()
+    LOCAL nOrd  := IndexOrd()
+    LOCAL cNewNum := ""
+    LOCAL nTramos := 0
+    LOCAL lOk := .F.
+
+    cHisNum := AllTrim( cHisNum )
+
+    IF Empty( cHisNum )
+        MsgStop( "No se ha indicado historico a recuperar.", "Recuperar" )
+        _RecRestoreArea( nArea, nOrd )
+        RETURN .F.
+    ENDIF
+
+    IF !_RecAbrirTablas()
+        _RecRestoreArea( nArea, nOrd )
+        RETURN .F.
+    ENDIF
+
+    IF !_RecSeekHistorico( cHisNum )
+        MsgStop( "No se encontro el historico " + cHisNum + ".", "Recuperar" )
+        _RecRestoreArea( nArea, nOrd )
+        RETURN .F.
+    ENDIF
+
+    cNewNum := _RecNextProyectoNumero()
+
+    IF !MsgYesNo( "Se creara un nuevo proyecto actual a partir del historico " + cHisNum + "." + Chr(13) + ;
+                  "El proyecto actual temporal sera reemplazado." + Chr(13) + ;
+                  "El historico original no se modifica. Continuar?", "Recuperar" )
+        _RecRestoreArea( nArea, nOrd )
+        RETURN .F.
+    ENDIF
+
+    IF !_RecVaciarTemporales()
+        _RecRestoreArea( nArea, nOrd )
+        RETURN .F.
+    ENDIF
+
+    IF !_RecAbrirTablas()
+        _RecRestoreArea( nArea, nOrd )
+        RETURN .F.
+    ENDIF
+
+    IF _RecCopiarCabecera( cHisNum, cNewNum )
+        nTramos := _RecCopiarTramos( cHisNum, cNewNum )
+        lOk := ( nTramos > 0 )
+    ENDIF
+
+    IF lOk
+        MsgInfo( "Historico " + cHisNum + " recuperado como proyecto actual " + cNewNum + "." + Chr(13) + ;
+                 "Revise los tramos y ejecute Calcular antes de guardar en firme.", "Recuperar" )
+    ELSE
+        MsgStop( "No se pudo recuperar el historico " + cHisNum + ".", "Recuperar" )
+    ENDIF
+
+    _RecRestoreArea( nArea, nOrd )
+
+RETURN lOk
+
+
+STATIC FUNCTION _RecAbrirTablas()
+
+    IF !ABRIR_TABLA( "HIS_CAB", "HIS_CAB", "HIS_NUM" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "HIS_TRA", "HIS_TRA", "HTRA_NUM" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "TMP_TRA", "TMP_TRA", "TTRA_ORD" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "TMP_MAT", "TMP_MAT", "MAT_NUM" )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "TMP_RES", "TMP_RES", "RES_PK" )
+        RETURN .F.
+    ENDIF
+
+RETURN .T.
+
+
+STATIC FUNCTION _RecSeekHistorico( cHisNum )
+
+    dbSelectArea( "HIS_CAB" )
+    OrdSetFocus( "HIS_NUM" )
+
+RETURN dbSeek( PadR( cHisNum, 6 ) )
+
+
+STATIC FUNCTION _RecNextProyectoNumero()
+
+    LOCAL nMax := 0
+
+    nMax := Max( nMax, _RecMaxNumeroAlias( "TMP_CAB", "NUMERO" ) )
+    nMax := Max( nMax, _RecMaxNumeroAlias( "HIS_CAB", "NUMERO" ) )
+
+    IF File( "PRESUPUEST.DBF" )
+        IF ABRIR_TABLA( "PRESUPUEST", "PRE_REC", "" )
+            nMax := Max( nMax, _RecMaxNumeroAlias( "PRE_REC", "ID_OBRA" ) )
+        ENDIF
+    ENDIF
+
+RETURN PadL( AllTrim( Str( nMax + 1 ) ), 6, "0" )
+
+
+STATIC FUNCTION _RecMaxNumeroAlias( cAlias, cField )
+
+    LOCAL nArea := Select()
+    LOCAL nMax := 0
+    LOCAL nVal
+
+    IF !IsDbUsed( cAlias )
+        RETURN 0
+    ENDIF
+
+    dbSelectArea( cAlias )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. FieldPos( cField ) > 0
+            nVal := Val( AllTrim( FieldGet( FieldPos( cField ) ) ) )
+            IF nVal > nMax
+                nMax := nVal
+            ENDIF
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN nMax
+
+
+STATIC FUNCTION _RecVaciarTemporales()
+
+    LOCAL aTabs := { "TMP_CAB", "TMP_TRA", "TMP_MAT", "TMP_RES" }
+    LOCAL aOpen := {}
+    LOCAL cAlias
+    LOCAL i
+
+    _RecCloseAlias( "TPC_I" )
+
+    FOR i := 1 TO Len( aTabs )
+        _RecCloseAlias( aTabs[i] )
+    NEXT
+
+    FOR i := 1 TO Len( aTabs )
+        IF !File( aTabs[i] + ".DBF" )
+            MsgStop( "Falta archivo " + aTabs[i] + ".DBF.", "Recuperar" )
+            _RecCloseOpenList( aOpen )
+            RETURN .F.
+        ENDIF
+
+        cAlias := "RECZ" + AllTrim( Str( i ) )
+        DbUseArea( .T., "DBFCDX", aTabs[i], cAlias, .F., .F. )
+        IF NetErr()
+            MsgStop( "No se pudo abrir " + aTabs[i] + " en modo exclusivo.", "Recuperar" )
+            _RecCloseOpenList( aOpen )
+            RETURN .F.
+        ENDIF
+
+        AAdd( aOpen, cAlias )
+    NEXT
+
+    FOR i := 1 TO Len( aOpen )
+        dbSelectArea( aOpen[i] )
+        __dbZap()
+    NEXT
+
+    _RecCloseOpenList( aOpen )
+
+RETURN .T.
+
+
+STATIC FUNCTION _RecCloseAlias( cAlias )
+
+    IF IsDbUsed( cAlias )
+        dbSelectArea( cAlias )
+        dbCloseArea()
+    ENDIF
+
+RETURN NIL
+
+
+STATIC FUNCTION _RecCloseOpenList( aOpen )
+
+    LOCAL i
+
+    FOR i := Len( aOpen ) TO 1 STEP -1
+        IF IsDbUsed( aOpen[i] )
+            dbSelectArea( aOpen[i] )
+            dbCloseArea()
+        ENDIF
+    NEXT
+
+RETURN NIL
+
+
+STATIC FUNCTION _RecCopiarCabecera( cHisNum, cNewNum )
+
+    IF !_RecSeekHistorico( cHisNum )
+        RETURN .F.
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear TMP_CAB.", "Recuperar" )
+        RETURN .F.
+    ENDIF
+
+    DbAppend()
+    IF NetErr()
+        dbUnlock()
+        RETURN .F.
+    ENDIF
+
+    REPLACE FIELD->NUMERO     WITH cNewNum
+    REPLACE FIELD->FECHA      WITH HIS_CAB->FECHA
+    REPLACE FIELD->TITULO     WITH HIS_CAB->TITULO
+    REPLACE FIELD->ID_CLIENTE WITH HIS_CAB->ID_CLIENTE
+    REPLACE FIELD->ESTADO     WITH "P"
+    REPLACE FIELD->MARGEN     WITH HIS_CAB->MARGEN
+    REPLACE FIELD->OBSERV     WITH HIS_CAB->OBSERV
+    REPLACE FIELD->L_SUCIO    WITH .T.
+    dbCommit()
+    dbUnlock()
+
+RETURN .T.
+
+
+STATIC FUNCTION _RecCopiarTramos( cHisNum, cNewNum )
+
+    LOCAL nCopiados := 0
+
+    dbSelectArea( "HIS_TRA" )
+    OrdSetFocus( "HTRA_NUM" )
+    dbSeek( PadR( cHisNum, 6 ) )
+
+    dbSelectArea( "TMP_TRA" )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear TMP_TRA.", "Recuperar" )
+        RETURN 0
+    ENDIF
+
+    dbSelectArea( "HIS_TRA" )
+    DO WHILE !Eof() .AND. AllTrim( FIELD->NUMERO ) == cHisNum
+        IF !Deleted()
+            dbSelectArea( "TMP_TRA" )
+            DbAppend()
+            IF NetErr()
+                dbUnlock()
+                RETURN nCopiados
+            ENDIF
+
+            REPLACE FIELD->NUMERO      WITH cNewNum
+            REPLACE FIELD->ID_LINEA    WITH HIS_TRA->ID_LINEA
+            REPLACE FIELD->TIPO_OBRA   WITH HIS_TRA->TIPO_OBRA
+            REPLACE FIELD->CONCEPTO    WITH HIS_TRA->CONCEPTO
+            REPLACE FIELD->LARGO       WITH HIS_TRA->LARGO
+            REPLACE FIELD->ALTO        WITH HIS_TRA->ALTO
+            REPLACE FIELD->MODUL       WITH HIS_TRA->MODUL
+            REPLACE FIELD->SISTEMA     WITH HIS_TRA->SISTEMA
+            REPLACE FIELD->SEP_PRIM    WITH HIS_TRA->SEP_PRIM
+            REPLACE FIELD->CARAS       WITH HIS_TRA->CARAS
+            REPLACE FIELD->PLAC_CARA   WITH HIS_TRA->PLAC_CARA
+            REPLACE FIELD->ID_PER_VER  WITH HIS_TRA->ID_PER_VER
+            REPLACE FIELD->ID_PER_HOR  WITH HIS_TRA->ID_PER_HOR
+            REPLACE FIELD->ID_PER_PER  WITH HIS_TRA->ID_PER_PER
+            REPLACE FIELD->ID_PLACA_A  WITH HIS_TRA->ID_PLACA_A
+            REPLACE FIELD->ID_PLACA_B  WITH HIS_TRA->ID_PLACA_B
+            REPLACE FIELD->L_AISLANT   WITH HIS_TRA->L_AISLANT
+            REPLACE FIELD->ID_AISLANT  WITH HIS_TRA->ID_AISLANT
+            REPLACE FIELD->ID_ANCLAJE  WITH HIS_TRA->ID_ANCLAJE
+            REPLACE FIELD->L_BANDA     WITH HIS_TRA->L_BANDA
+            REPLACE FIELD->METROS      WITH HIS_TRA->METROS
+            nCopiados++
+        ENDIF
+        dbSelectArea( "HIS_TRA" )
+        dbSkip()
+    ENDDO
+
+    dbSelectArea( "TMP_TRA" )
+    dbCommit()
+    dbUnlock()
+
+RETURN nCopiados
+
+
+STATIC FUNCTION _RecRestoreArea( nArea, nOrd )
+
+    IF nArea > 0 .AND. !Empty( Alias( nArea ) )
+        dbSelectArea( nArea )
+        IF nOrd > 0
+            dbSetOrder( nOrd )
+        ENDIF
     ENDIF
 
 RETURN NIL

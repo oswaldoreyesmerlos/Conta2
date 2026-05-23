@@ -85,7 +85,7 @@ STATIC FUNCTION _DrywallMenu()
 
     AAdd( aProyecto, { "Proyecto Actual",         {|| ProyectoActual() },     NIL, "Crear o editar cabecera" } )
     AAdd( aProyecto, { "Definir Tramos",          {|| VerTareas() },          NIL, "Tramos, calculo y cierre" } )
-    AAdd( aProyecto, { "Historico de Proyectos",  {|| InformeHistoricos() },  NIL, "Proyectos archivados" } )
+    AAdd( aProyecto, { "Historico de Proyectos",  {|| VisorProyectos() },     NIL, "Consultar o recuperar archivados" } )
     AAdd( aProyecto, { "Eliminar Proyecto Actual",{|| _DrywallLimpiar() },    NIL, "Borrar borrador" } )
 
     AAdd( aAux, { "Familias Art.", {|| EditAux("FAMILIA") }, NIL, "Placas, Perfiles..." } )
