@@ -231,8 +231,6 @@ STATIC FUNCTION _GeneraResumen()
     LOCAL cNum
     LOCAL cCod
     LOCAL nCan
-    LOCAL nImp
-    LOCAL nPes
     
     dbSelectArea( "TMP_MAT" )
     dbGoTop()
@@ -245,16 +243,12 @@ STATIC FUNCTION _GeneraResumen()
         cNum := Field->NUMERO
         cCod := Field->CODIGO
         nCan := Field->CANTIDAD
-        nImp := Field->IMPORTE
-        nPes := Field->PESO_TOT
 
         dbSelectArea( "TMP_RES" )
         // Buscamos si el material ya existe en el resumen actual
         IF dbSeek( cNum + cCod )
             IF NetRLock()
                 REPLACE Field->CANT_TOT WITH Field->CANT_TOT + nCan
-                REPLACE Field->IMP_TOT  WITH Field->IMP_TOT  + nImp
-                REPLACE Field->PESO_TOT WITH Field->PESO_TOT + nPes
                 dbCommit()
                 dbUnlock()
             ENDIF
@@ -264,8 +258,8 @@ STATIC FUNCTION _GeneraResumen()
             REPLACE Field->NUMERO    WITH cNum
             REPLACE Field->CODIGO    WITH cCod
             REPLACE Field->CANT_TOT  WITH nCan
-            REPLACE Field->IMP_TOT   WITH nImp
-            REPLACE Field->PESO_TOT  WITH nPes
+            REPLACE Field->IMP_TOT   WITH 0
+            REPLACE Field->PESO_TOT  WITH 0
             REPLACE Field->FAMILIA   WITH TMP_MAT->FAMILIA
             REPLACE Field->DESCRIP   WITH TMP_MAT->DESCRIP
             REPLACE Field->UNIDAD    WITH TMP_MAT->UNIDAD
@@ -276,4 +270,93 @@ STATIC FUNCTION _GeneraResumen()
         dbSelectArea( "TMP_MAT" )
         dbSkip()
     ENDDO
+
+    _ConvierteResumenCompra()
+
+RETURN NIL
+
+
+STATIC FUNCTION _ConvierteResumenCompra()
+
+    LOCAL nArea := Select()
+    LOCAL nOrdArt := 0
+    LOCAL cCod
+    LOCAL cFam
+    LOCAL cUniCons
+    LOCAL cUniCompra
+    LOCAL nConsumo
+    LOCAL nCompra
+    LOCAL nPrecio
+    LOCAL nPesoU
+    LOCAL nLargo
+    LOCAL nAncho
+    LOCAL nPesoTot
+
+    IF Select( "ARTICULOS" ) == 0 .OR. Select( "TMP_RES" ) == 0
+        RETURN NIL
+    ENDIF
+
+    dbSelectArea( "ARTICULOS" )
+    nOrdArt := IndexOrd()
+    dbSetOrder( 1 )
+
+    dbSelectArea( "TMP_RES" )
+    dbGoTop()
+
+    DO WHILE !Eof()
+        IF !Deleted()
+            cCod       := Upper( AllTrim( FIELD->CODIGO ) )
+            cFam       := AllTrim( FIELD->FAMILIA )
+            cUniCons   := Upper( AllTrim( FIELD->UNIDAD ) )
+            nConsumo   := FIELD->CANT_TOT
+            nPrecio    := FIELD->PRECIO
+            nPesoU     := 0
+            nLargo     := 0
+            nAncho     := 0
+            cUniCompra := AllTrim( FIELD->UNIDAD )
+
+            dbSelectArea( "ARTICULOS" )
+            IF dbSeek( cCod )
+                cFam       := AllTrim( ARTICULOS->FAMILIA )
+                cUniCompra := AllTrim( ARTICULOS->UNIDAD )
+                nPrecio    := ARTICULOS->PRECIO
+                nPesoU     := ARTICULOS->PESO_UNI
+                nLargo     := ARTICULOS->LARGO
+                nAncho     := ARTICULOS->ANCHO
+
+                IF Upper( AllTrim( cFam ) ) == "ACCESORIO" .AND. ;
+                   cUniCons == "ML" .AND. ;
+                   ( "BANDA" $ cCod .OR. "CINTA" $ cCod )
+                    cUniCompra := "rollo"
+                ENDIF
+            ENDIF
+
+            nCompra  := _CantidadCompra( cFam, cCod, cUniCompra, nConsumo, ;
+                                          cUniCons, nLargo, nAncho, nPesoU )
+            nPesoTot := If( nPesoU > 0, nCompra * nPesoU, 0 )
+
+            dbSelectArea( "TMP_RES" )
+            IF NetRLock()
+                REPLACE FIELD->FAMILIA  WITH cFam
+                REPLACE FIELD->UNIDAD   WITH cUniCompra
+                REPLACE FIELD->CANT_TOT WITH nCompra
+                REPLACE FIELD->PRECIO   WITH nPrecio
+                REPLACE FIELD->IMP_TOT  WITH nCompra * nPrecio
+                REPLACE FIELD->PESO_TOT WITH nPesoTot
+                dbCommit()
+                dbUnlock()
+            ENDIF
+        ENDIF
+
+        dbSelectArea( "TMP_RES" )
+        dbSkip()
+    ENDDO
+
+    dbSelectArea( "ARTICULOS" )
+    dbSetOrder( nOrdArt )
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
 RETURN NIL

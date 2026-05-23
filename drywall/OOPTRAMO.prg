@@ -340,8 +340,8 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    LOCAL nAreaArt
    LOCAL nOrdArt := 0
    LOCAL cMsgErr := ""
-   LOCAL nCompra := 0
    LOCAL nPesoTot := 0
+   LOCAL cUdCons := ""
 
    DEFAULT cUdTec TO ""
    
@@ -350,6 +350,7 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    ENDIF
 
    cCod := Upper( AllTrim( hb_CStr( cCod ) ) )
+   cUdCons := Upper( AllTrim( hb_CStr( cUdTec ) ) )
    
    nAreaArt := Select()
    
@@ -389,8 +390,13 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
 
    dbSetOrder( nOrdArt )
 
-   nCompra := _CantidadCompra( cFam, cCod, cUni, nCant, cUdTec, nLargo, nAncho, nPesoU )
-   nPesoTot := If( nPesoU > 0, nCompra * nPesoU, 0 )
+   IF Empty( cUdCons )
+      cUdCons := Upper( AllTrim( cUni ) )
+   ENDIF
+
+   IF nPesoU > 0 .AND. cUdCons == "UD"
+      nPesoTot := nCant * nPesoU
+   ENDIF
    
    dbSelectArea( "TMP_MAT" )
    dbAppend()
@@ -409,13 +415,13 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    REPLACE FIELD->FAMILIA   WITH cFam
    REPLACE FIELD->CODIGO    WITH cCod
    REPLACE FIELD->DESCRIP   WITH cDesc
-   REPLACE FIELD->UNIDAD    WITH cUni
+   REPLACE FIELD->UNIDAD    WITH cUdCons
    
    REPLACE FIELD->RENDIM    WITH nCant
-   REPLACE FIELD->CANTIDAD  WITH nCompra
+   REPLACE FIELD->CANTIDAD  WITH nCant
    REPLACE FIELD->PESO_TOT  WITH nPesoTot
    REPLACE FIELD->PRECIO    WITH nPrecio
-   REPLACE FIELD->IMPORTE   WITH ( nCompra * nPrecio )
+   REPLACE FIELD->IMPORTE   WITH 0
    REPLACE FIELD->DETALLE   WITH cDet
    dbCommit()
    

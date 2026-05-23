@@ -129,7 +129,7 @@ FUNCTION InicioDrywall()
         // --- LOGISTICA ---
         AAdd( aFlds, { "PESO_TOT",  "N", 12, 3 } ) // Peso Total Línea (Kg)
 		
-		AAdd( aFlds, { "RENDIM",    "N",  8, 4 } ) 
+		AAdd( aFlds, { "RENDIM",    "N", 12, 3 } )
         AAdd( aFlds, { "CANTIDAD",  "N", 12, 3 } ) 
         AAdd( aFlds, { "PRECIO",    "N", 10, 2 } ) 
         AAdd( aFlds, { "IMPORTE",   "N", 12, 2 } ) 

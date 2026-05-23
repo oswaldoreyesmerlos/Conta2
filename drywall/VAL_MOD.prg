@@ -152,7 +152,7 @@ FUNCTION ResultadoDetalle()
     oGrid:AddColumn( "DETALLE",     18, "@!",          { |a| a[5] } )
     oGrid:AddColumn( "UD",           6, "@!",          { |a| a[6] } )
     oGrid:AddColumn( "TEC",         10, "999,999.999", { |a| a[7] } )
-    oGrid:AddColumn( "COMPRA",      10, "999,999.999", { |a| a[8] } )
+    oGrid:AddColumn( "CONSUMO",     10, "999,999.999", { |a| a[8] } )
     oGrid:AddColumn( "IMPORTE",     11, "999,999.99",  { |a| a[9] } )
 
     oWin:AddCtrl( oGrid )
