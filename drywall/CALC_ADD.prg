@@ -585,9 +585,16 @@ RETURN hData
 STATIC FUNCTION _CoreSave( hData )
 
     LOCAL cTipo := AllTrim( hData["TIPO"] )
+    LOCAL cProyecto := _CurrentProyectoNumero()
+    LOCAL nLinea
 
     IF Empty( hData["CONCEPTO"] )
         MsgStop( "Falta Concepto" )
+        RETURN .F.
+    ENDIF
+
+    IF Empty( cProyecto )
+        MsgStop( "Debe crear un proyecto antes de agregar tramos.", "Proyecto requerido" )
         RETURN .F.
     ENDIF
 
@@ -645,6 +652,8 @@ STATIC FUNCTION _CoreSave( hData )
         RETURN .F.
     ENDIF
 
+    nLinea := _NextTramoLinea( cProyecto )
+
     dbSelectArea( "TMP_TRA" )
     IF !NetFLock()
         MsgStop( "No se pudo bloquear TMP_TRA para anadir el tramo.", "Nuevo Tramo" )
@@ -659,7 +668,8 @@ STATIC FUNCTION _CoreSave( hData )
         RETURN .F.
     ENDIF
 
-    REPLACE FIELD->ID_LINEA   WITH RecNo()
+    REPLACE FIELD->NUMERO     WITH cProyecto
+    REPLACE FIELD->ID_LINEA   WITH nLinea
     REPLACE FIELD->TIPO_OBRA  WITH hData["TIPO"]
     REPLACE FIELD->CONCEPTO   WITH hData["CONCEPTO"]
     REPLACE FIELD->LARGO      WITH hData["LARGO"]
@@ -702,14 +712,74 @@ STATIC FUNCTION _CoreSave( hData )
 
     IF Select("TMP_CAB") > 0
         dbSelectArea("TMP_CAB")
-        dbGoto(1)
-        IF NetRLock()
-            REPLACE FIELD->L_SUCIO WITH .T.
-            dbUnlock()
-        ENDIF
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+                IF NetRLock()
+                    REPLACE FIELD->L_SUCIO WITH .T.
+                    dbCommit()
+                    dbUnlock()
+                ENDIF
+                EXIT
+            ENDIF
+            dbSkip()
+        ENDDO
     ENDIF
 
 RETURN .T.
+
+
+STATIC FUNCTION _CurrentProyectoNumero()
+
+    LOCAL nArea := Select()
+    LOCAL cProyecto := ""
+
+    IF Select( "TMP_CAB" ) == 0
+        IF File( "TMP_CAB.DBF" )
+            USE TMP_CAB NEW SHARED VIA "DBFCDX"
+        ELSE
+            RETURN ""
+        ENDIF
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            cProyecto := AllTrim( FIELD->NUMERO )
+            EXIT
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN cProyecto
+
+
+STATIC FUNCTION _NextTramoLinea( cProyecto )
+
+    LOCAL nArea := Select()
+    LOCAL nMax := 0
+
+    dbSelectArea( "TMP_TRA" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cProyecto )
+            IF FIELD->ID_LINEA > nMax
+                nMax := FIELD->ID_LINEA
+            ENDIF
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN nMax + 1
 
 
 STATIC FUNCTION _ValidSistema( oGet )

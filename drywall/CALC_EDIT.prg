@@ -63,6 +63,7 @@ STATIC FUNCTION _LoadData( nIdLinea )
     LOCAL hData := hb_Hash()
     LOCAL cTipo
     LOCAL lWeOpened := .F.
+    LOCAL cProyecto := _EditProyectoActual()
 
     IF Select( "TMP_TRA" ) == 0
         USE TMP_TRA NEW SHARED VIA "DBFCDX"
@@ -73,7 +74,9 @@ STATIC FUNCTION _LoadData( nIdLinea )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF FIELD->ID_LINEA == nIdLinea
+        IF !Deleted() .AND. ;
+           AllTrim( FIELD->NUMERO ) == cProyecto .AND. ;
+           FIELD->ID_LINEA == nIdLinea
             hData["ID_LINEA"]   := FIELD->ID_LINEA
             hData["TIPO"]       := FIELD->TIPO_OBRA
             hData["CONCEPTO"]   := FIELD->CONCEPTO
@@ -125,6 +128,7 @@ RETURN _UpdateData( hData )
 STATIC FUNCTION _UpdateData( hData )
 
     LOCAL lWeOpened := .F.
+    LOCAL cProyecto := _EditProyectoActual()
 
     IF Select( "TMP_TRA" ) == 0
         USE TMP_TRA NEW SHARED VIA "DBFCDX"
@@ -135,7 +139,9 @@ STATIC FUNCTION _UpdateData( hData )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF FIELD->ID_LINEA == hData["ID_LINEA"]
+        IF !Deleted() .AND. ;
+           AllTrim( FIELD->NUMERO ) == cProyecto .AND. ;
+           FIELD->ID_LINEA == hData["ID_LINEA"]
             IF NetRLock()
                 REPLACE FIELD->CONCEPTO   WITH hData["CONCEPTO"]
                 REPLACE FIELD->LARGO      WITH hData["LARGO"]
@@ -176,6 +182,30 @@ STATIC FUNCTION _UpdateData( hData )
     ENDIF
     MsgStop( "No se pudo actualizar el tramo." )
 RETURN .F.
+
+
+STATIC FUNCTION _EditProyectoActual()
+
+    LOCAL nArea := Select()
+    LOCAL cProyecto := ""
+
+    IF Select( "TMP_CAB" ) > 0
+        dbSelectArea( "TMP_CAB" )
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted()
+                cProyecto := AllTrim( FIELD->NUMERO )
+                EXIT
+            ENDIF
+            dbSkip()
+        ENDDO
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN cProyecto
 
 
 STATIC FUNCTION _MarkCabDirty()
