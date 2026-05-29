@@ -52,6 +52,7 @@ FUNCTION VerTareas( cTipo )
     cCli := FIELD->ID_CLIENTE
     cObs := FIELD->OBSERV
 
+    _AdoptaTramosSinProyecto( AllTrim( cNum ) )
     aData := _TareCargar()
 
     oWin := TWindow():New( 2, 2, 27, 105, "GESTION DEL PROYECTO - " + AllTrim( cNum ) )
@@ -82,6 +83,7 @@ FUNCTION VerTareas( cTipo )
     oGrid:AddColumn( "ALTO",       8,  "999.99", { |a| a[5] } )
     oGrid:AddColumn( "MODUL",      6,  "99.99",  { |a| a[6] } )
     oGrid:bEnter := {|| _OnEdit( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() }
+    oGrid:bInsert := {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() }
 
     // Controles de cabecera primero (foco inicial)
     oWin:AddCtrl( oGTit )
@@ -91,7 +93,7 @@ FUNCTION VerTareas( cTipo )
     oWin:AddCtrl( oGObs )
     // Luego el grid y botones de accion
     oWin:AddCtrl( oGrid )
-    oWin:AddCtrl( TLabel():New( 22, 2, "[F5] Nuevo [ENTER] Editar [DEL] Borrar", oWin ) )
+    oWin:AddCtrl( TLabel():New( 22, 2, "[NUEVO] Agregar tramo   [ENTER] Editar", oWin ) )
     oWin:AddCtrl( TButton():New( 23,  2, 24, 18, oWin, "NUEVO (F5)", {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( 23, 20, 24, 36, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( 23, 38, 24, 54, oWin, "RESUMEN", {|| ResultadoResumen() } ) )
@@ -142,6 +144,80 @@ STATIC FUNCTION _TareCargar()
     ENDDO
 
 RETURN aData
+
+
+STATIC FUNCTION _AdoptaTramosSinProyecto( cProyecto )
+
+    LOCAL nArea := Select()
+    LOCAL nAdoptados := 0
+    LOCAL nLinea
+
+    cProyecto := AllTrim( cProyecto )
+    IF Empty( cProyecto )
+        RETURN 0
+    ENDIF
+
+    IF Select( "TMP_TRA" ) == 0
+        RETURN 0
+    ENDIF
+
+    nLinea := _TareNextLinea( cProyecto )
+
+    dbSelectArea( "TMP_TRA" )
+    IF !NetFLock()
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
+        RETURN 0
+    ENDIF
+
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. Empty( AllTrim( FIELD->NUMERO ) )
+            REPLACE FIELD->NUMERO   WITH cProyecto
+            REPLACE FIELD->ID_LINEA WITH nLinea
+            nLinea++
+            nAdoptados++
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    dbCommit()
+    dbUnlock()
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+    IF nAdoptados > 0
+        MsgInfo( "Se recuperaron " + AllTrim( Str( nAdoptados ) ) + ;
+                 " tramos sin proyecto.", "Definir Tramos" )
+    ENDIF
+
+RETURN nAdoptados
+
+
+STATIC FUNCTION _TareNextLinea( cProyecto )
+
+    LOCAL nArea := Select()
+    LOCAL nMax := 0
+
+    dbSelectArea( "TMP_TRA" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cProyecto )
+            IF FIELD->ID_LINEA > nMax
+                nMax := FIELD->ID_LINEA
+            ENDIF
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN nMax + 1
 
 
 STATIC FUNCTION _ProyectoActualNumero()

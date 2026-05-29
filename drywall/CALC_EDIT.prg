@@ -211,15 +211,22 @@ RETURN cProyecto
 STATIC FUNCTION _MarkCabDirty()
 
     LOCAL nArea := Select()
+    LOCAL cProyecto := _EditProyectoActual()
 
     IF Select( "TMP_CAB" ) > 0
         dbSelectArea( "TMP_CAB" )
         dbGoTop()
-        IF NetRLock()
-            REPLACE FIELD->L_SUCIO WITH .T.
-            dbCommit()
-            dbUnlock()
-        ENDIF
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+                IF NetRLock()
+                    REPLACE FIELD->L_SUCIO WITH .T.
+                    dbCommit()
+                    dbUnlock()
+                ENDIF
+                EXIT
+            ENDIF
+            dbSkip()
+        ENDDO
     ENDIF
 
     IF nArea > 0

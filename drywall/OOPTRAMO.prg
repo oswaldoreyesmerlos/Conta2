@@ -432,9 +432,9 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
    IF nPesoU > 0 .AND. cUdCons == "UD"
       nPesoTot := nCant * nPesoU
    ENDIF
-   
+
    dbSelectArea( "TMP_MAT" )
-   IF !FLock()
+   IF !NetFLock()
       ::nErrores++
       AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
                      ": No se pudo bloquear TMP_MAT para anadir material [" + cCod + "]." )

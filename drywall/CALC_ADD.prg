@@ -20,6 +20,10 @@ FUNCTION Add_Tabique( cTit )
     LOCAL hData
 
     hData := _InitData( "TABIQUE", cTit )
+    IF hData == NIL
+        RETURN .F.
+    ENDIF
+
     hData["MODUL"]      := 0.60
     hData["NUM_PLACAS"] := 1
     hData["SAME_B"]     := "S"
@@ -212,6 +216,11 @@ RETURN NIL
 FUNCTION Add_Techo( cTit )
 
     LOCAL hData := _InitData( "TECHO", cTit )
+
+    IF hData == NIL
+        RETURN .F.
+    ENDIF
+
     hData["MODUL"]      := 0.50
     hData["SEP_PRIM"]   := 1.00
     hData["NUM_PLACAS"] := 1
@@ -358,6 +367,11 @@ RETURN .T.
 FUNCTION Add_Trasdosado( cTipo, cTit )
 
     LOCAL hData := _InitData( cTipo, cTit )
+
+    IF hData == NIL
+        RETURN .F.
+    ENDIF
+
     hData["MODUL"] := 0.60
 
     DO CASE
@@ -493,6 +507,11 @@ RETURN .F.
 FUNCTION Add_Generico( cTit )
 
     LOCAL hData := _InitData( "GENERICO", cTit )
+
+    IF hData == NIL
+        RETURN .F.
+    ENDIF
+
     hData["MODUL"] := 0.00
 
 RETURN Form_Generico( hData, .T. )
@@ -552,12 +571,16 @@ STATIC FUNCTION _InitData( cTipo, cTit )
 
     LOCAL hData := hb_Hash()
 
-    IF Select("TMP_TRA") == 0
-        USE TMP_TRA NEW SHARED VIA "DBFCDX"
+    IF !ABRIR_TABLA( "TMP_TRA", "TMP_TRA", "TTRA_ORD" )
+        MsgStop( "No se pudo abrir TMP_TRA.", "Nuevo Tramo" )
+        RETURN NIL
     ENDIF
 
-    IF Select("ARTICULOS") == 0
-        USE ARTICULOS NEW SHARED VIA "DBFCDX"
+    IF !ABRIR_TABLA( "ARTICULOS", "ARTICULOS", "ART_COD" )
+        MsgStop( "No se pudo abrir ARTICULOS." + Chr(13) + ;
+                 "Ejecute AppGestion para crear la base de articulos.", ;
+                 "Nuevo Tramo" )
+        RETURN NIL
     ENDIF
 
     hData["TIPO"]       := cTipo
@@ -836,12 +859,16 @@ STATIC FUNCTION _PickArt( cFam )
     LOCAL i, cRet
     LOCAL nArea := Select()
 
-    IF Select( "ARTICULOS" ) == 0
-        USE ARTICULOS NEW SHARED VIA "DBFCDX"
+    IF !ABRIR_TABLA( "ARTICULOS", "ARTICULOS", "ART_FAM" )
+        MsgStop( "No se pudo abrir ARTICULOS.", "Seleccion" )
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
+        RETURN ""
     ENDIF
 
     dbSelectArea( "ARTICULOS" )
-    dbSetOrder( 3 )          // ART_FAM
+    OrdSetFocus( "ART_FAM" )
     dbSeek( Upper( cFam ) )
 
     DO WHILE !Eof() .AND. Upper( AllTrim( FIELD->FAMILIA ) ) == Upper( AllTrim( cFam ) )
