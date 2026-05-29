@@ -607,9 +607,16 @@ RETURN hData
 
 STATIC FUNCTION _CoreSave( hData )
 
-    LOCAL cTipo := AllTrim( hData["TIPO"] )
+    LOCAL cTipo := Upper( AllTrim( hData["TIPO"] ) )
     LOCAL cProyecto := _CurrentProyectoNumero()
     LOCAL nLinea
+
+    hData["TIPO"] := cTipo
+
+    IF !_TipoObraValido( cTipo )
+        MsgStop( "Sistema constructivo no valido: [" + cTipo + "].", "Nuevo Tramo" )
+        RETURN .F.
+    ENDIF
 
     IF Empty( hData["CONCEPTO"] )
         MsgStop( "Falta Concepto" )
@@ -803,6 +810,24 @@ STATIC FUNCTION _NextTramoLinea( cProyecto )
     ENDIF
 
 RETURN nMax + 1
+
+
+FUNCTION TipoObraDrywallValido( cTipo )
+
+RETURN _TipoObraValido( cTipo )
+
+
+STATIC FUNCTION _TipoObraValido( cTipo )
+
+    cTipo := Upper( AllTrim( cTipo ) )
+
+RETURN AScan( { ;
+    "TABIQUE", ;
+    "TECHO", ;
+    "TRASDOSADO_AUT", ;
+    "TRASDOSADO_SEMI", ;
+    "TRASDOSADO_DIR", ;
+    "GENERICO" }, cTipo ) > 0
 
 
 STATIC FUNCTION _ValidSistema( oGet )

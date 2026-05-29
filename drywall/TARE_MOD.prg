@@ -128,7 +128,11 @@ STATIC FUNCTION _TareCargar()
 
     DO WHILE !Eof()
         IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
-            cSistema := AllTrim( FIELD->TIPO_OBRA )
+            cSistema := Upper( AllTrim( FIELD->TIPO_OBRA ) )
+            IF !TipoObraDrywallValido( cSistema )
+                cSistema := "**SIN SISTEMA**"
+            ENDIF
+
             IF FieldPos( "SISTEMA" ) > 0 .AND. FIELD->SISTEMA > 0
                 cSistema += " " + AllTrim( Str( FIELD->SISTEMA ) ) + "mm"
             ENDIF
@@ -173,7 +177,9 @@ STATIC FUNCTION _AdoptaTramosSinProyecto( cProyecto )
 
     dbGoTop()
     DO WHILE !Eof()
-        IF !Deleted() .AND. Empty( AllTrim( FIELD->NUMERO ) )
+        IF !Deleted() .AND. ;
+           Empty( AllTrim( FIELD->NUMERO ) ) .AND. ;
+           TipoObraDrywallValido( FIELD->TIPO_OBRA )
             REPLACE FIELD->NUMERO   WITH cProyecto
             REPLACE FIELD->ID_LINEA WITH nLinea
             nLinea++

@@ -78,7 +78,7 @@ STATIC FUNCTION _LoadData( nIdLinea )
            AllTrim( FIELD->NUMERO ) == cProyecto .AND. ;
            FIELD->ID_LINEA == nIdLinea
             hData["ID_LINEA"]   := FIELD->ID_LINEA
-            hData["TIPO"]       := FIELD->TIPO_OBRA
+            hData["TIPO"]       := Upper( AllTrim( FIELD->TIPO_OBRA ) )
             hData["CONCEPTO"]   := FIELD->CONCEPTO
             hData["LARGO"]      := FIELD->LARGO
             hData["ALTO"]       := FIELD->ALTO
@@ -129,6 +129,12 @@ STATIC FUNCTION _UpdateData( hData )
 
     LOCAL lWeOpened := .F.
     LOCAL cProyecto := _EditProyectoActual()
+    LOCAL cTipo := Upper( AllTrim( hData["TIPO"] ) )
+
+    IF !TipoObraDrywallValido( cTipo )
+        MsgStop( "Sistema constructivo no valido: [" + cTipo + "].", "Editar Tramo" )
+        RETURN .F.
+    ENDIF
 
     IF Select( "TMP_TRA" ) == 0
         USE TMP_TRA NEW SHARED VIA "DBFCDX"
@@ -143,6 +149,7 @@ STATIC FUNCTION _UpdateData( hData )
            AllTrim( FIELD->NUMERO ) == cProyecto .AND. ;
            FIELD->ID_LINEA == hData["ID_LINEA"]
             IF NetRLock()
+                REPLACE FIELD->TIPO_OBRA  WITH cTipo
                 REPLACE FIELD->CONCEPTO   WITH hData["CONCEPTO"]
                 REPLACE FIELD->LARGO      WITH hData["LARGO"]
                 REPLACE FIELD->ALTO       WITH hData["ALTO"]
