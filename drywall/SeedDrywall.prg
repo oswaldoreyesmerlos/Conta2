@@ -41,6 +41,7 @@ STATIC FUNCTION _CrearTablas()
         AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
         AAdd( aFlds, { "ES_SERV",   "L",  1, 0 } )
         AAdd( aFlds, { "ESPESOR",   "N",  6, 2 } )
+        AAdd( aFlds, { "ANCHO_PERF","N",  3, 0 } )
         AAdd( aFlds, { "LARGO",     "N",  9, 2 } )
         AAdd( aFlds, { "ANCHO",     "N",  9, 2 } )
         AAdd( aFlds, { "PESO_UNI",  "N", 10, 3 } )
@@ -290,8 +291,14 @@ RETURN NIL
 
 STATIC FUNCTION _Art( cCod, cDesc, cFam, cUd, nPre, nEsp, nLar, nAnc, nPeso )
 
+    LOCAL nAnchoPerf := 0
+
     IF ValType( nPeso ) != "N"
         nPeso := 0
+    ENDIF
+
+    IF Upper( AllTrim( cFam ) ) == "PERFIL" .AND. AScan( { 48, 70, 90 }, nEsp ) > 0
+        nAnchoPerf := nEsp
     ENDIF
 
     IF Select( "ARTICULOS" ) == 0
@@ -313,6 +320,9 @@ STATIC FUNCTION _Art( cCod, cDesc, cFam, cUd, nPre, nEsp, nLar, nAnc, nPeso )
         REPLACE FIELD->UNIDAD   WITH cUd
         REPLACE FIELD->PRECIO   WITH nPre
         REPLACE FIELD->ESPESOR  WITH nEsp
+        IF FieldPos( "ANCHO_PERF" ) > 0
+            REPLACE FIELD->ANCHO_PERF WITH nAnchoPerf
+        ENDIF
         REPLACE FIELD->LARGO    WITH nLar
         REPLACE FIELD->ANCHO    WITH nAnc
         REPLACE FIELD->PESO_UNI WITH nPeso
