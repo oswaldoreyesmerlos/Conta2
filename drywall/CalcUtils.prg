@@ -97,7 +97,7 @@ FUNCTION _GetAuxTitle( cTipo )
     CASE cTipo == "PERFIL"   ; RETURN "PERFILES"
     CASE cTipo == "PLACA"    ; RETURN "PLACAS DE YESO"
     CASE cTipo == "AISLAN"   ; RETURN "AISLAMIENTOS"
-    CASE cTipo == "ANCLAJE"  ; RETURN "SISTEMAS ANCLAJE"
+    CASE cTipo == "ANCLAJE"  ; RETURN "ANCLAJES"
     CASE cTipo == "TORNILLO" ; RETURN "TORNILLERIA"
     CASE cTipo == "PASTA"    ; RETURN "PASTAS"
     CASE cTipo == "CINTA"    ; RETURN "CINTAS"

@@ -83,7 +83,7 @@ STATIC FUNCTION _LoadData( nIdLinea )
             hData["LARGO"]      := FIELD->LARGO
             hData["ALTO"]       := FIELD->ALTO
             hData["MODUL"]      := FIELD->MODUL
-            hData["SISTEMA"]    := If( FieldPos( "SISTEMA" ) > 0, FIELD->SISTEMA, 0 )
+            hData["ANCHO_PERF"] := If( FieldPos( "ANCHO_PERF" ) > 0, FIELD->ANCHO_PERF, 0 )
             hData["SEP_PRIM"]   := FIELD->SEP_PRIM
             hData["NUM_PLACAS"] := FIELD->PLAC_CARA
             hData["SAME_B"]     := "S"
@@ -118,8 +118,6 @@ STATIC FUNCTION _LoadData( nIdLinea )
     ENDIF
     MsgStop( "No se encontro el tramo " + AllTrim( Str( nIdLinea ) ) )
 RETURN NIL
-
-
 FUNCTION UpdateTramoData( hData )
 
 RETURN _UpdateData( hData )
@@ -154,8 +152,8 @@ STATIC FUNCTION _UpdateData( hData )
                 REPLACE FIELD->LARGO      WITH hData["LARGO"]
                 REPLACE FIELD->ALTO       WITH hData["ALTO"]
                 REPLACE FIELD->MODUL      WITH hData["MODUL"]
-                IF FieldPos( "SISTEMA" ) > 0 .AND. hb_HHasKey( hData, "SISTEMA" )
-                    REPLACE FIELD->SISTEMA WITH _SysAncho( hData["SISTEMA"] )
+                IF FieldPos( "ANCHO_PERF" ) > 0 .AND. hb_HHasKey( hData, "ANCHO_PERF" )
+                    REPLACE FIELD->ANCHO_PERF WITH _SysAncho( hData["ANCHO_PERF"] )
                 ENDIF
                 REPLACE FIELD->SEP_PRIM   WITH hData["SEP_PRIM"]
                 REPLACE FIELD->PLAC_CARA  WITH hData["NUM_PLACAS"]
@@ -241,17 +239,3 @@ STATIC FUNCTION _MarkCabDirty()
     ENDIF
 
 RETURN NIL
-
-
-STATIC FUNCTION _ValidSistema( oGet )
-
-    LOCAL nSistema := _SysAncho( oGet:uVar )
-
-    IF AScan( { 48, 70, 90 }, nSistema ) > 0
-        RETURN .T.
-    ENDIF
-
-    MsgStop( "Sistema: 48, 70 o 90", "Validacion" )
-
-RETURN .F.
-

@@ -29,7 +29,7 @@ FUNCTION Add_Tabique( cTit )
     hData["SAME_B"]     := "S"
     hData["AIS"]        := "N"
     hData["BANDA"]      := "N"
-    hData["SISTEMA"]    := "48"
+    hData["ANCHO_PERF"] := "48"
 
 RETURN Form_Tabique( hData, .T. )
 
@@ -38,7 +38,7 @@ FUNCTION Form_Tabique( hData, lNuevo )
 
     LOCAL oWin
     LOCAL oGCon, oGLar, oGAlt, oGMod
-    LOCAL oGSis, oGPer1, oGPer2, oGPla1, oGPla2, oGNumP
+    LOCAL oGAncho, oGPer1, oGPer2, oGPla1, oGPla2, oGNumP
     LOCAL oChkSame, oChkAis, oChkBand
     LOCAL oGAisCod
     LOCAL oBtBusP1, oBtBusP2, oBtBusA, oBtBusB, oBtBusAis
@@ -61,12 +61,12 @@ FUNCTION Form_Tabique( hData, lNuevo )
     oWin:AddCtrl( TLabel():New( 3, 32, "Alto (m)..:", oWin ) )
     oGAlt := TGet():New( 3, 46, hData["ALTO"],    "999.99", oWin )
 
-    // -- FILA 4: Modulacion, Sistema --
+    // -- FILA 4: Modulacion, ancho de perfileria --
     oWin:AddCtrl( TLabel():New( 5,  2, "Modulacion:", oWin ) )
     oGMod := TGet():New( 5, 16, hData["MODUL"],  "9.99", oWin )
-    oWin:AddCtrl( TLabel():New( 5, 32, "Sistema mm:", oWin ) )
-    oGSis := TGet():New( 5, 46, hData["SISTEMA"], "99", oWin )
-    oGSis:bValid := {|o| _ValidSistema( o ) }
+    oWin:AddCtrl( TLabel():New( 5, 32, "Ancho perf.:", oWin ) )
+    oGAncho := TGet():New( 5, 46, hData["ANCHO_PERF"], "99", oWin )
+    oGAncho:bValid := {|o| _ValidAnchoPerf( o ) }
 
     // -- FILA 6: Montante + buscar, Canal + buscar --
     oWin:AddCtrl( TLabel():New( 7,  2, "Montante..:", oWin ) )
@@ -119,7 +119,7 @@ FUNCTION Form_Tabique( hData, lNuevo )
     oWin:AddCtrl( oGLar )
     oWin:AddCtrl( oGAlt )
     oWin:AddCtrl( oGMod )
-    oWin:AddCtrl( oGSis )
+    oWin:AddCtrl( oGAncho )
     oWin:AddCtrl( oGPer1 )
     oWin:AddCtrl( oBtBusP1 )
     oWin:AddCtrl( oGPer2 )
@@ -144,7 +144,7 @@ FUNCTION Form_Tabique( hData, lNuevo )
         hData["LARGO"]       := oGLar:GetValue()
         hData["ALTO"]        := oGAlt:GetValue()
         hData["MODUL"]       := oGMod:GetValue()
-        hData["SISTEMA"]     := _SysAncho( oGSis:GetValue() )
+        hData["ANCHO_PERF"]  := _SysAncho( oGAncho:GetValue() )
         hData["ID_PERFIL"]   := oGPer1:GetValue()
         hData["ID_PERFIL2"]  := oGPer2:GetValue()
         hData["ID_PLACA_A"]  := oGPla1:GetValue()
@@ -588,7 +588,7 @@ STATIC FUNCTION _InitData( cTipo, cTit )
     hData["LARGO"]      := 0.00
     hData["ALTO"]       := 2.50
     hData["MODUL"]      := 0.60
-    hData["SISTEMA"]    := 0
+    hData["ANCHO_PERF"] := 0
     hData["SEP_PRIM"]   := 0.00
 
     hData["ID_PERFIL"]  := Space(15)
@@ -706,8 +706,8 @@ STATIC FUNCTION _CoreSave( hData )
     REPLACE FIELD->ALTO       WITH hData["ALTO"]
     REPLACE FIELD->MODUL      WITH hData["MODUL"]
 
-    IF FieldPos("SISTEMA") > 0 .AND. hb_HHasKey( hData, "SISTEMA" )
-        REPLACE FIELD->SISTEMA WITH _SysAncho( hData["SISTEMA"] )
+    IF FieldPos("ANCHO_PERF") > 0 .AND. hb_HHasKey( hData, "ANCHO_PERF" )
+        REPLACE FIELD->ANCHO_PERF WITH _SysAncho( hData["ANCHO_PERF"] )
     ENDIF
 
     IF FieldPos("SEP_PRIM") > 0
@@ -830,7 +830,7 @@ RETURN AScan( { ;
     "GENERICO" }, cTipo ) > 0
 
 
-STATIC FUNCTION _ValidSistema( oGet )
+STATIC FUNCTION _ValidAnchoPerf( oGet )
 
     LOCAL nSistema := _SysAncho( oGet:uVar )
 
@@ -838,7 +838,7 @@ STATIC FUNCTION _ValidSistema( oGet )
         RETURN .T.
     ENDIF
 
-    MsgStop( "Sistema: 48, 70 o 90", "Validacion" )
+    MsgStop( "Ancho perfil: 48, 70 o 90", "Validacion" )
 
 RETURN .F.
 

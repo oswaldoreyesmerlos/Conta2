@@ -77,7 +77,7 @@ FUNCTION VerTareas( cTipo )
     oGrid:aData    := aData
     oGrid:nSeekCol := 2
     oGrid:AddColumn( "CODIGO",     10, "@!",     { |a| a[1] } )
-    oGrid:AddColumn( "SISTEMA",    12, "@!",     { |a| a[2] } )
+    oGrid:AddColumn( "TIPO OBRA",  18, "@!",     { |a| a[2] } )
     oGrid:AddColumn( "DESCRIPCION",35, "@!",     { |a| a[3] } )
     oGrid:AddColumn( "LARGO",      8,  "999.99", { |a| a[4] } )
     oGrid:AddColumn( "ALTO",       8,  "999.99", { |a| a[5] } )
@@ -130,11 +130,11 @@ STATIC FUNCTION _TareCargar()
         IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
             cSistema := Upper( AllTrim( FIELD->TIPO_OBRA ) )
             IF !TipoObraDrywallValido( cSistema )
-                cSistema := "**SIN SISTEMA**"
+                cSistema := "**SIN TIPO OBRA**"
             ENDIF
 
-            IF FieldPos( "SISTEMA" ) > 0 .AND. FIELD->SISTEMA > 0
-                cSistema += " " + AllTrim( Str( FIELD->SISTEMA ) ) + "mm"
+            IF FieldPos( "ANCHO_PERF" ) > 0 .AND. FIELD->ANCHO_PERF > 0
+                cSistema += " " + AllTrim( Str( FIELD->ANCHO_PERF ) ) + "mm"
             ENDIF
             AAdd( aData, { ;
                 FIELD->ID_LINEA, ;

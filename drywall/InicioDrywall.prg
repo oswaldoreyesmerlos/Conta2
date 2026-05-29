@@ -70,7 +70,7 @@ FUNCTION InicioDrywall()
 		AAdd( aFlds, { "LARGO",         "N",  6, 2 } ) 
 		AAdd( aFlds, { "ALTO",          "N",  6, 2 } ) 
 		AAdd( aFlds, { "MODUL",         "N",  5, 2 } ) // Separación Perfil VERTICAL (Placa)
-		AAdd( aFlds, { "SISTEMA",       "N",  3, 0 } ) // Ancho de perfileria: 48, 70, 90
+		AAdd( aFlds, { "ANCHO_PERF",    "N",  3, 0 } ) // Ancho de perfileria: 48, 70, 90
 		AAdd( aFlds, { "SEP_PRIM",      "N",  5, 2 } ) // Separación Perfil HORIZ (Estructura) - Solo Techos
 
 		// --- Configuración Capas ---
