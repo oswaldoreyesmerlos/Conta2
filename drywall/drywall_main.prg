@@ -43,6 +43,7 @@ FUNCTION Main()
     ENDIF
 
     ErrorBlock( { |e| ErrSys( e ) } )
+
     SET DATE BRIT
     SET DATE FORMAT TO "DD/MM/YYYY"
     SET CENTURY ON

@@ -233,14 +233,18 @@ RETURN .T.
 // Descripción: Recorre TMP_MAT y agrupa cantidades en TMP_RES.
 // ============================================================================
 STATIC FUNCTION _GeneraResumen()
+    LOCAL hLineas := hb_Hash()
+    LOCAL aLineKeys := {}
     LOCAL hResumen := hb_Hash()
     LOCAL aKeys := {}
     LOCAL aRow
     LOCAL cKey
+    LOCAL cLineKey
     LOCAL cProyecto := _CalcProyectoActual()
     LOCAL cNum
     LOCAL cCod
     LOCAL nCan
+    LOCAL nOrdArt := 0
     LOCAL i
     
     dbSelectArea( "TMP_MAT" )
@@ -252,15 +256,17 @@ STATIC FUNCTION _GeneraResumen()
             cNum := AllTrim( Field->NUMERO )
             cCod := Upper( AllTrim( Field->CODIGO ) )
             nCan := Field->CANTIDAD
-            cKey := cNum + "|" + cCod
+            cLineKey := cNum + "|" + ;
+                        StrZero( Field->ID_LINEA, 6 ) + "|" + ;
+                        cCod
 
-            IF hb_HHasKey( hResumen, cKey )
-                aRow := hResumen[ cKey ]
+            IF hb_HHasKey( hLineas, cLineKey )
+                aRow := hLineas[ cLineKey ]
                 aRow[3] += nCan
-                hResumen[ cKey ] := aRow
+                hLineas[ cLineKey ] := aRow
             ELSE
-                AAdd( aKeys, cKey )
-                hResumen[ cKey ] := { ;
+                AAdd( aLineKeys, cLineKey )
+                hLineas[ cLineKey ] := { ;
                     cNum, ;
                     cCod, ;
                     nCan, ;
@@ -273,6 +279,32 @@ STATIC FUNCTION _GeneraResumen()
 
         dbSkip()
     ENDDO
+
+    dbSelectArea( "ARTICULOS" )
+    nOrdArt := IndexOrd()
+    OrdSetFocus( "ART_COD" )
+
+    FOR i := 1 TO Len( aLineKeys )
+        aRow := hLineas[ aLineKeys[i] ]
+
+        IF _ResumenPorTramo( aRow[4] )
+            aRow := _ResumenConvierteTramo( aRow )
+        ENDIF
+
+        cKey := aRow[1] + "|" + aRow[2]
+        IF hb_HHasKey( hResumen, cKey )
+            nCan := aRow[3]
+            aRow := hResumen[ cKey ]
+            aRow[3] += nCan
+            hResumen[ cKey ] := aRow
+        ELSE
+            AAdd( aKeys, cKey )
+            hResumen[ cKey ] := aRow
+        ENDIF
+    NEXT
+
+    dbSelectArea( "ARTICULOS" )
+    dbSetOrder( nOrdArt )
 
     dbSelectArea( "TMP_RES" )
     IF !NetFLock()
@@ -305,6 +337,39 @@ STATIC FUNCTION _GeneraResumen()
     _ConvierteResumenCompra()
 
 RETURN NIL
+
+
+STATIC FUNCTION _ResumenPorTramo( cFamilia )
+
+    cFamilia := Upper( AllTrim( hb_CStr( cFamilia ) ) )
+
+RETURN cFamilia == "PLACA" .OR. cFamilia == "PERFIL"
+
+
+STATIC FUNCTION _ResumenConvierteTramo( aRow )
+
+    LOCAL cCod := aRow[2]
+    LOCAL cFam := Upper( AllTrim( aRow[4] ) )
+    LOCAL cUdTec := Upper( AllTrim( aRow[6] ) )
+    LOCAL cUdCompra := aRow[6]
+    LOCAL nLargo := 0
+    LOCAL nAncho := 0
+    LOCAL nPesoU := 0
+
+    dbSelectArea( "ARTICULOS" )
+    IF dbSeek( cCod )
+        cUdCompra := AllTrim( ARTICULOS->UNIDAD )
+        nLargo    := ARTICULOS->LARGO
+        nAncho    := ARTICULOS->ANCHO
+        nPesoU    := ARTICULOS->PESO_UNI
+        aRow[7]   := ARTICULOS->PRECIO
+    ENDIF
+
+    aRow[3] := _CantidadCompra( cFam, cCod, cUdCompra, aRow[3], ;
+                                cUdTec, nLargo, nAncho, nPesoU )
+    aRow[6] := "ud"
+
+RETURN aRow
 
 
 STATIC FUNCTION _CalcProyectoActual()
@@ -371,6 +436,12 @@ STATIC FUNCTION _ConvierteResumenCompra()
             nCompra  := _CantidadCompra( cFam, cCod, cUniCompra, nConsumo, ;
                                           cUniCons, nLargo, nAncho, nPesoU )
             nPesoTot := If( nPesoU > 0, nCompra * nPesoU, 0 )
+
+            IF cUniCons == "UD" .AND. ;
+               ( Upper( AllTrim( cFam ) ) == "PLACA" .OR. ;
+                 Upper( AllTrim( cFam ) ) == "PERFIL" )
+                cUniCompra := "ud"
+            ENDIF
 
             dbSelectArea( "TMP_RES" )
             IF NetRLock()

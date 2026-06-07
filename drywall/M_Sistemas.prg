@@ -37,10 +37,11 @@ FUNCTION SistemasView()
     oGrid:AddColumn( "Tipo obra",   15, "@!",     { |a| a[2] } )
     oGrid:AddColumn( "Descripcion", 42, "@!",     { |a| a[3] } )
     oGrid:AddColumn( "Modul",        6, "9.99",   { |a| a[4] } )
-    oGrid:AddColumn( "Car",          3, "9",      { |a| a[5] } )
-    oGrid:AddColumn( "Cap",          3, "9",      { |a| a[6] } )
-    oGrid:AddColumn( "Ancho",        5, "999",    { |a| a[7] } )
-    oGrid:AddColumn( "Lin",          4, "999",    { |a| a[8] } )
+    oGrid:AddColumn( "Sep.Pr",        6, "9.99",   { |a| a[5] } )
+    oGrid:AddColumn( "Car",           3, "9",      { |a| a[6] } )
+    oGrid:AddColumn( "Cap",           3, "9",      { |a| a[7] } )
+    oGrid:AddColumn( "Ancho",         5, "999",    { |a| a[8] } )
+    oGrid:AddColumn( "Lin",           4, "999",    { |a| a[9] } )
 
     oGrid:bEnter := {| g | ;
         If( g:CurrentRow() != NIL, _SisLineas( g:CurrentRow()[1] ), NIL ), ;
@@ -134,13 +135,14 @@ STATIC FUNCTION _SisCargar()
             IF !Empty( cSis )
                 IF hb_HHasKey( hPos, cSis )
                     nPos := hPos[ cSis ]
-                    aData[nPos, 8]++
+                    aData[nPos, 9]++
                 ELSE
                     AAdd( aData, { ;
                         cSis, ;
                         AllTrim( SYS->TIPO_OBRA ), ;
                         AllTrim( SYS->DESC_SIS ), ;
                         SYS->MODUL, ;
+                        If( FieldPos( "SEP_PRIM" ) > 0, SYS->SEP_PRIM, 0 ), ;
                         SYS->CARAS, ;
                         SYS->CAPAS, ;
                         SYS->ANCHO_PERF, ;
@@ -165,6 +167,7 @@ STATIC FUNCTION _SisCabForm( aRow, lNuevo )
     LOCAL oGTip
     LOCAL oGDes
     LOCAL oGMod
+    LOCAL oGSep
     LOCAL oGCar
     LOCAL oGCap
     LOCAL oGAnc
@@ -175,6 +178,7 @@ STATIC FUNCTION _SisCabForm( aRow, lNuevo )
     LOCAL cTipo
     LOCAL cDesc
     LOCAL nMod
+    LOCAL nSepPrim
     LOCAL nCaras
     LOCAL nCapas
     LOCAL nAncho
@@ -187,6 +191,7 @@ STATIC FUNCTION _SisCabForm( aRow, lNuevo )
     cTipo   := Space( 15 )
     cDesc   := Space( 60 )
     nMod    := 0.60
+    nSepPrim := 0
     nCaras  := 1
     nCapas  := 1
     nAncho  := 0
@@ -197,9 +202,10 @@ STATIC FUNCTION _SisCabForm( aRow, lNuevo )
         cTipo   := PadR( aRow[2], 15 )
         cDesc   := PadR( aRow[3], 60 )
         nMod    := aRow[4]
-        nCaras  := aRow[5]
-        nCapas  := aRow[6]
-        nAncho  := aRow[7]
+        nSepPrim := aRow[5]
+        nCaras  := aRow[6]
+        nCapas  := aRow[7]
+        nAncho  := aRow[8]
     ENDIF
 
     oWin := TWindow():New( 7, 20, 27, 115, ;
@@ -211,42 +217,46 @@ STATIC FUNCTION _SisCabForm( aRow, lNuevo )
     oWin:AddCtrl( TLabel():New(  4, 3, "Tipo obra  :", oWin ) )
     oWin:AddCtrl( TLabel():New(  6, 3, "Descripcion:", oWin ) )
     oWin:AddCtrl( TLabel():New(  8, 3, "Modulacion :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 10, 3, "Caras      :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 12, 3, "Capas      :", oWin ) )
-    oWin:AddCtrl( TLabel():New( 14, 3, "Ancho perf.:", oWin ) )
+    oWin:AddCtrl( TLabel():New( 10, 3, "Sep. prim. :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 12, 3, "Caras      :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 14, 3, "Capas      :", oWin ) )
+    oWin:AddCtrl( TLabel():New( 16, 3, "Ancho perf.:", oWin ) )
 
     oGSis := TGet():New(  2, 17, cSis,   "@!",   oWin )
     oGTip := TGet():New(  4, 17, cTipo,  "@!",   oWin )
     oGDes := TGet():New(  6, 17, cDesc,  "@!",   oWin )
     oGMod := TGet():New(  8, 17, nMod,   "9.99", oWin )
-    oGCar := TGet():New( 10, 17, nCaras, "9",    oWin )
-    oGCap := TGet():New( 12, 17, nCapas, "9",    oWin )
-    oGAnc := TGet():New( 14, 17, nAncho, "999",  oWin )
+    oGSep := TGet():New( 10, 17, nSepPrim, "9.99", oWin )
+    oGCar := TGet():New( 12, 17, nCaras, "9",    oWin )
+    oGCap := TGet():New( 14, 17, nCapas, "9",    oWin )
+    oGAnc := TGet():New( 16, 17, nAncho, "999",  oWin )
 
     oGSis:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
     oGTip:bValid := {| o | TipoObraDrywallValido( Upper( AllTrim( o:cBuffer ) ) ) .OR. ;
                             ( MsgStop( "Tipo obra no valido.", "Sistema" ), .F. ) }
-    oGMod:bValid := {| o | o:GetValue() >= 0 }
-    oGCar:bValid := {| o | o:GetValue() >= 0 .AND. o:GetValue() <= 2 }
-    oGCap:bValid := {| o | o:GetValue() >= 0 .AND. o:GetValue() <= 5 }
+    oGMod:bValid := {| o | o:uVar >= 0 }
+    oGSep:bValid := {| o | o:uVar >= 0 }
+    oGCar:bValid := {| o | o:uVar >= 0 .AND. o:uVar <= 2 }
+    oGCap:bValid := {| o | o:uVar >= 0 .AND. o:uVar <= 5 }
 
     IF !lNuevo
         oGSis:lEnabled := .F.
     ENDIF
 
-    oBtGua := TButton():New( 17, 18, 18, 36, oWin, "GUARDAR", ;
+    oBtGua := TButton():New( 18, 18, 19, 36, oWin, "GUARDAR", ;
         {|| lSave := _SisGuardarCab( cOldSis, ;
-                    _SisCabHash( oGSis, oGTip, oGDes, oGMod, oGCar, oGCap, oGAnc ), ;
+                    _SisCabHash( oGSis, oGTip, oGDes, oGMod, oGSep, oGCar, oGCap, oGAnc ), ;
                     lNuevo ), ;
             If( lSave, oWin:Close(), NIL ) } )
 
-    oBtCan := TButton():New( 17, 40, 18, 58, oWin, "CANCELAR", ;
+    oBtCan := TButton():New( 18, 40, 19, 58, oWin, "CANCELAR", ;
         {|| oWin:Close() } )
 
     oWin:AddCtrl( oGSis )
     oWin:AddCtrl( oGTip )
     oWin:AddCtrl( oGDes )
     oWin:AddCtrl( oGMod )
+    oWin:AddCtrl( oGSep )
     oWin:AddCtrl( oGCar )
     oWin:AddCtrl( oGCap )
     oWin:AddCtrl( oGAnc )
@@ -262,7 +272,7 @@ STATIC FUNCTION _SisCabForm( aRow, lNuevo )
 RETURN ""
 
 
-STATIC FUNCTION _SisCabHash( oGSis, oGTip, oGDes, oGMod, oGCar, oGCap, oGAnc )
+STATIC FUNCTION _SisCabHash( oGSis, oGTip, oGDes, oGMod, oGSep, oGCar, oGCap, oGAnc )
 
     LOCAL h := {=>}
 
@@ -270,6 +280,7 @@ STATIC FUNCTION _SisCabHash( oGSis, oGTip, oGDes, oGMod, oGCar, oGCap, oGAnc )
     h[ "TIPO_OBRA"  ] := Upper( AllTrim( oGTip:GetValue() ) )
     h[ "DESC_SIS"   ] := AllTrim( oGDes:GetValue() )
     h[ "MODUL"      ] := oGMod:GetValue()
+    h[ "SEP_PRIM"   ] := oGSep:GetValue()
     h[ "CARAS"      ] := oGCar:GetValue()
     h[ "CAPAS"      ] := oGCap:GetValue()
     h[ "ANCHO_PERF" ] := oGAnc:GetValue()
@@ -336,6 +347,9 @@ STATIC FUNCTION _SisReplaceHeader( h )
     REPLACE SYS->TIPO_OBRA  WITH h[ "TIPO_OBRA"  ]
     REPLACE SYS->DESC_SIS   WITH h[ "DESC_SIS"   ]
     REPLACE SYS->MODUL      WITH h[ "MODUL"      ]
+    IF FieldPos( "SEP_PRIM" ) > 0
+        REPLACE SYS->SEP_PRIM WITH h[ "SEP_PRIM" ]
+    ENDIF
     REPLACE SYS->CARAS      WITH h[ "CARAS"      ]
     REPLACE SYS->CAPAS      WITH h[ "CAPAS"      ]
     REPLACE SYS->ANCHO_PERF WITH h[ "ANCHO_PERF" ]
@@ -496,7 +510,7 @@ STATIC FUNCTION _LinForm( cSis, aRow, lNuevo )
     oWin := TWindow():New( 7, 22, 28, 111, ;
         If( lNuevo, "NUEVO RENDIMIENTO", "EDITAR RENDIMIENTO" ) )
     oWin:lStatusBar := .T.
-    oWin:SetStatus( "Roles: PLACA_A, PLACA_B, MONTANTE, CANAL, PASTA_JUNT, CINTA_JUNT, TORN_PM_1..." )
+    oWin:SetStatus( "Techo: PERF_SEC, PERF_PRI, PERF_PER, PLACA_A y componentes CUELGUE_*" )
 
     oWin:AddCtrl( TLabel():New(  2, 3, "Orden      :", oWin ) )
     oWin:AddCtrl( TLabel():New(  4, 3, "Familia    :", oWin ) )
@@ -513,11 +527,11 @@ STATIC FUNCTION _LinForm( cSis, aRow, lNuevo )
     oGRen := TGet():New( 12, 17, nRend,  "999.999", oWin )
     oChk  := TCheck():New( 14, 17, "Editable", lEdit, oWin )
 
-    oGOrd:bValid := {| o | o:GetValue() >= 0 }
+    oGOrd:bValid := {| o | o:uVar >= 0 }
     oGFam:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
     oGRol:bValid := {| o | !Empty( AllTrim( o:cBuffer ) ) }
-    oGUd:bValid  := {| o | !Empty( AllTrim( o:cBuffer ) ) .OR. oGOrd:GetValue() == 0 }
-    oGRen:bValid := {| o | o:GetValue() >= 0 }
+    oGUd:bValid  := {| o | !Empty( AllTrim( o:cBuffer ) ) .OR. oGOrd:uVar == 0 }
+    oGRen:bValid := {| o | o:uVar >= 0 }
 
     IF !lNuevo .AND. nOrden == 0
         oGOrd:lEnabled := .F.
@@ -621,6 +635,7 @@ STATIC FUNCTION _SisHeader( cSis )
             h[ "TIPO_OBRA"  ] := AllTrim( SYS->TIPO_OBRA )
             h[ "DESC_SIS"   ] := AllTrim( SYS->DESC_SIS )
             h[ "MODUL"      ] := SYS->MODUL
+            h[ "SEP_PRIM"   ] := If( FieldPos( "SEP_PRIM" ) > 0, SYS->SEP_PRIM, 0 )
             h[ "CARAS"      ] := SYS->CARAS
             h[ "CAPAS"      ] := SYS->CAPAS
             h[ "ANCHO_PERF" ] := SYS->ANCHO_PERF

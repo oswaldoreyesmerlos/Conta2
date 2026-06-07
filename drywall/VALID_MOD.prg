@@ -290,16 +290,17 @@ STATIC FUNCTION _DvValidaTramoActual( aErr )
         _DvArticuloReq( TMP_TRA->ID_PLACA_B, "PLACA", nLin, "placa cara B", @aErr )
 
     CASE cTipo == "TECHO"
+        IF Empty( AllTrim( TMP_TRA->SISTEMA_ID ) )
+            AAdd( aErr, _DvLin( nLin, "debe tener un sistema de techo." ) )
+        ENDIF
         _DvArticuloReq( TMP_TRA->ID_PER_VER, "PERFIL", nLin, "perfil secundario", @aErr )
         _DvArticuloReq( TMP_TRA->ID_PLACA_A, "PLACA", nLin, "placa", @aErr )
         IF TMP_TRA->SEP_PRIM > 0
             _DvArticuloReq( TMP_TRA->ID_PER_HOR, "PERFIL", nLin, "perfil primario", @aErr )
         ENDIF
         _DvArticuloOpt( TMP_TRA->ID_PER_PER, "PERFIL", nLin, "perfil perimetral", @aErr )
-        _DvArticuloOpt( TMP_TRA->ID_ANCLAJE, "", nLin, "anclaje", @aErr )
 
     CASE cTipo == "TRASDOSADO_DIR"
-        _DvArticuloReq( TMP_TRA->ID_PER_VER, "PASTA", nLin, "pasta de agarre", @aErr )
         _DvArticuloReq( TMP_TRA->ID_PLACA_A, "PLACA", nLin, "placa", @aErr )
 
     CASE cTipo == "TRASDOSADO_AUT"

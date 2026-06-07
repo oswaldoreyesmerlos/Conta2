@@ -6,6 +6,10 @@
 
 #include "OOp.ch"
 
+// ============================================================================
+// FORMS - Formularios principales
+// ============================================================================
+
 FUNCTION ProyectoActual()
 
     IF !_AbrirTablas()
@@ -151,6 +155,10 @@ STATIC FUNCTION _TareCargar()
 RETURN aData
 
 
+// ============================================================================
+// DBF - Acceso a base de datos
+// ============================================================================
+
 STATIC FUNCTION _AdoptaTramosSinProyecto( cProyecto )
 
     LOCAL nArea := Select()
@@ -226,96 +234,6 @@ STATIC FUNCTION _TareNextLinea( cProyecto )
 
 RETURN nMax + 1
 
-
-FUNCTION DrywallProyectoActualNumero()
-
-    LOCAL nArea := Select()
-    LOCAL cProyecto := ""
-    LOCAL cPrimero := ""
-
-    IF Select( "TMP_CAB" ) == 0
-        IF File( "TMP_CAB.DBF" )
-            ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
-        ELSE
-            RETURN ""
-        ENDIF
-    ENDIF
-
-    dbSelectArea( "TMP_CAB" )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted()
-            IF Empty( cPrimero )
-                cPrimero := AllTrim( FIELD->NUMERO )
-            ENDIF
-            IF FieldPos( "L_ACTIVO" ) > 0 .AND. FIELD->L_ACTIVO
-                cProyecto := AllTrim( FIELD->NUMERO )
-                EXIT
-            ENDIF
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    IF Empty( cProyecto ) .AND. !Empty( cPrimero )
-        cProyecto := cPrimero
-        DrywallActivarProyecto( cProyecto )
-    ENDIF
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN cProyecto
-
-
-FUNCTION DrywallActivarProyecto( cProyecto )
-
-    LOCAL nArea := Select()
-    LOCAL lOk := .F.
-
-    cProyecto := AllTrim( cProyecto )
-
-    IF Empty( cProyecto )
-        RETURN .F.
-    ENDIF
-
-    IF Select( "TMP_CAB" ) == 0
-        IF File( "TMP_CAB.DBF" )
-            ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
-        ELSE
-            RETURN .F.
-        ENDIF
-    ENDIF
-
-    dbSelectArea( "TMP_CAB" )
-    IF !NetFLock()
-        MsgStop( "No se pudo activar el proyecto " + cProyecto + ".", "Proyecto Actual" )
-        RETURN .F.
-    ENDIF
-
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted()
-            IF FieldPos( "L_ACTIVO" ) > 0
-                REPLACE FIELD->L_ACTIVO WITH ( AllTrim( FIELD->NUMERO ) == cProyecto )
-            ENDIF
-            IF AllTrim( FIELD->NUMERO ) == cProyecto
-                lOk := .T.
-            ENDIF
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    dbCommit()
-    dbUnlock()
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN lOk
-
-
 STATIC FUNCTION _OnAppend( oGrid )
 
     LOCAL cTipo
@@ -347,6 +265,7 @@ RETURN NIL
 
 STATIC FUNCTION _OnEdit( oGrid )
 
+
     LOCAL aRow := oGrid:CurrentRow()
     LOCAL nId
 
@@ -359,6 +278,10 @@ STATIC FUNCTION _OnEdit( oGrid )
 
 RETURN NIL
 
+
+// ============================================================================
+// UI HELPERS - Dialogos de seleccion
+// ============================================================================
 
 STATIC FUNCTION _PickTipoObra()
 
@@ -692,6 +615,10 @@ STATIC FUNCTION _MaxProyectoAlias( cAlias, nMax )
 
 RETURN nMax
 
+
+// ============================================================================
+// VALIDACION - Validaciones
+// ============================================================================
 
 STATIC FUNCTION _ValidarCli( oGet )
 

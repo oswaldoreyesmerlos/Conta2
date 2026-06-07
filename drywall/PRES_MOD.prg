@@ -68,18 +68,28 @@ FUNCTION GrabaPres( lConfirmar, lLimpiar )
     // 5. CÁLCULO DEL TOTAL DESDE EL RESUMEN VALORADO
     nTotal := _TotalTmpRes( cProyecto )
 
-    // 6. FASE DE TRANSFERENCIA (Paso a paso para facilitar el debug)
-    
-    // A. Copiado de Cabecera
-    _MoverCabecera( cNueNum, nTotal, "C", cProyecto )
-    
-    // B. Copiado de Tramos
-    _MoverTramos( cNueNum, cProyecto )
-    
-    // C. Copiado de Resumen de Materiales
-    _MoverResumen( cNueNum, cProyecto )
+    // 6. FASE DE TRANSFERENCIA (con proteccion contra errores)
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
 
-    // 7. LIMPIEZA DEL BORRADOR (Boy Scout deja el sitio limpio)
+        // A. Copiado de Cabecera
+        _MoverCabecera( cNueNum, nTotal, "C", cProyecto )
+
+        // B. Copiado de Tramos
+        _MoverTramos( cNueNum, cProyecto )
+
+        // C. Copiado de Resumen de Materiales
+        _MoverResumen( cNueNum, cProyecto )
+
+    RECOVER
+        MsgStop( "Error al guardar el presupuesto. Operacion cancelada.", "Error" )
+        IF nAreaOri > 0
+            dbSelectArea( nAreaOri )
+            dbSetOrder( nOrdOri )
+        ENDIF
+        RETURN NIL
+    END SEQUENCE
+
+    // 7. LIMPIEZA DEL BORRADOR (fuera de secuencia)
     _LimpiaTemporales()
 
     // 8. NOTIFICACIÓN FINAL NATIVA
@@ -481,10 +491,21 @@ FUNCTION DrywallGuardarCalculado()
         RETURN .F.
     ENDIF
 
-    _MoverCabecera( cProyecto, _TotalTmpRes( cProyecto ), "C", cProyecto )
-    _MoverTramos( cProyecto, cProyecto )
-    _MoverResumen( cProyecto, cProyecto )
-    _MoverMateriales( cProyecto, cProyecto )
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+
+        _MoverCabecera( cProyecto, _TotalTmpRes( cProyecto ), "C", cProyecto )
+        _MoverTramos( cProyecto, cProyecto )
+        _MoverResumen( cProyecto, cProyecto )
+        _MoverMateriales( cProyecto, cProyecto )
+
+    RECOVER
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
+        MsgStop( "Error al guardar el proyecto. No se realizaron cambios.", "Guardar en Firme" )
+        RETURN .F.
+    END SEQUENCE
+
     _VaciarTemporales( cProyecto )
 
     MsgInfo( "Proyecto " + cProyecto + " guardado como calculado.", "Guardar en Firme" )

@@ -231,6 +231,7 @@ STATIC FUNCTION _CreateArticulos( cPath )
     _AddArt( "PASTA_JUNT", "Pasta juntas 20kg",            "PASTA",     "saco", 15.99, 0,    0,   20.000 )
     _AddArt( "PASTA_AGAR", "Pasta agarre 20kg",            "PASTA",     "saco",  9.70, 0,    0,   20.000 )
     _AddArt( "CINTA_PAP",  "Cinta papel juntas 90m",       "CINTA",     "rollo", 5.95, 0,    0,    0.200 )
+    _AddArt( "CINTA_GUAR", "Cinta guardavivos",             "CINTA",     "ud",   12.60, 0,    0,    0.150 )
     _AddArt( "TORN_PM_25", "Tornillo PM 25mm caja 1000",   "TORNILLO",  "caja",  8.95, 0,    0,    0.001 )
     _AddArt( "BANDA_ACUS", "Banda estanqueidad acustica",  "ACCESORIO", "rollo", 2.50, 30000,0,    0.050 )
     _AddArt( "PIEZA_CRUCE","Pieza cruce primario-sec",     "ACCESORIO", "ud",    1.20, 0,    0,    0.020 )
@@ -268,6 +269,7 @@ STATIC FUNCTION _CreateSysRend( cPath )
     AAdd( aFlds, { "TIPO_OBRA",  "C", 15, 0 } )
     AAdd( aFlds, { "DESC_SIS",   "C", 60, 0 } )
     AAdd( aFlds, { "MODUL",      "N",  5, 2 } )
+    AAdd( aFlds, { "SEP_PRIM",   "N",  5, 2 } )
     AAdd( aFlds, { "CARAS",      "N",  1, 0 } )
     AAdd( aFlds, { "CAPAS",      "N",  1, 0 } )
     AAdd( aFlds, { "ANCHO_PERF", "N",  3, 0 } )
@@ -300,7 +302,7 @@ STATIC FUNCTION _CreateSysRend( cPath )
     _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 60, "AISLAN",   "AISLANTE",   "",           "M2", 1.050 )
 
     _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 10, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
-    _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 20, "PERFIL",   "PERF_SEC",   "",           "ML", 2.450 )
+    _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 20, "PERFIL",   "PERF_SEC",   "MAS_82X16", "ML", 2.450 )
     _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 30, "PASTA",    "PASTA_JUNT", "PASTA_JUNT", "KG", 0.420 )
     _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 40, "TORNILLO", "TORN_PM_1",  "TORN_PM_25", "UD", 13.000 )
     _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 50, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 1.890 )
@@ -318,6 +320,7 @@ STATIC FUNCTION _Rend( cSis, cTipo, nMod, nCaras, nCapas, nAncho, nOrden, cFam, 
     REPLACE FIELD->TIPO_OBRA  WITH cTipo
     REPLACE FIELD->DESC_SIS   WITH cSis
     REPLACE FIELD->MODUL      WITH nMod
+    REPLACE FIELD->SEP_PRIM   WITH 0
     REPLACE FIELD->CARAS      WITH nCaras
     REPLACE FIELD->CAPAS      WITH nCapas
     REPLACE FIELD->ANCHO_PERF WITH nAncho

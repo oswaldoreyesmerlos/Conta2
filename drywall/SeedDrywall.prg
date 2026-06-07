@@ -388,7 +388,7 @@ STATIC FUNCTION _RendTechoSemidirecto()
     LOCAL cDesc := "Techo semidirecto maestras 1 placa"
 
     _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 10, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
-    _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 20, "PERFIL",   "PERF_SEC",   "",           "ML", 2.450 )
+    _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 20, "PERFIL",   "PERF_SEC",   "MAS_82X16", "ML", 2.450 )
     _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 30, "PASTA",    "PASTA_JUNT", "PASTA_JUNT", "KG", 0.420 )
     _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 40, "TORNILLO", "TORN_PM_1",  "TORN_PM_25", "UD", 13.000 )
     _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 50, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 1.890 )
@@ -425,6 +425,9 @@ STATIC FUNCTION _Rend( cSis, cTipo, cDesc, nMod, nCaras, nCapas, nAncho, ;
         REPLACE FIELD->TIPO_OBRA  WITH cTipo
         REPLACE FIELD->DESC_SIS   WITH cDesc
         REPLACE FIELD->MODUL      WITH nMod
+        IF FieldPos( "SEP_PRIM" ) > 0
+            REPLACE FIELD->SEP_PRIM WITH 0
+        ENDIF
         REPLACE FIELD->CARAS      WITH nCaras
         REPLACE FIELD->CAPAS      WITH nCapas
         REPLACE FIELD->ANCHO_PERF WITH nAncho

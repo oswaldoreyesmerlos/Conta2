@@ -136,8 +136,12 @@ STATIC FUNCTION _UpdateData( hData )
     ENDIF
 
     IF cTipo == "TECHO"
+        IF Empty( AllTrim( hData["SISTEMA_ID"] ) )
+            MsgStop( "Debe seleccionar un sistema de techo.", "Validacion" )
+            RETURN .F.
+        ENDIF
         IF hData["SEP_PRIM"] <= 0
-            hData["ID_PERFIL2"] := "0"
+            hData["ID_PERFIL2"] := Space( 15 )
         ELSEIF _OptionalCode( hData["ID_PERFIL2"] )
             MsgStop( "Falta seleccionar perfil primario.", "Validacion" )
             RETURN .F.

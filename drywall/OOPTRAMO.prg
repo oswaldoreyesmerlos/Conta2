@@ -29,7 +29,8 @@ CLASS OOPTRAMO
        METHOD Calc_Trasdos()
        METHOD Calc_Generico()
        METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec )
-        METHOD DesgloseAnclaje( cIdAnc, nArea, nSepPrim, nMod )
+         METHOD DesgloseAnclaje( cIdAnc, nArea, nSepPrim, nMod )
+         METHOD GetRendimientoRol( cRolRendimiento, nRendimientoDefecto )
 
 ENDCLASS
 
@@ -48,6 +49,8 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
 
    LOCAL nArea := Select()
    LOCAL cTipo
+   LOCAL cSistema
+   LOCAL lRendimientos
    LOCAL cProyecto := _OopProyectoActual()
    
    DEFAULT lTodo TO .T.
@@ -68,26 +71,39 @@ METHOD Procesar( lTodo ) CLASS OOPTRAMO
       IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
          ::LimpiarLinea( FIELD->ID_LINEA )
          cTipo := Upper( AllTrim( FIELD->TIPO_OBRA ) )
+         cSistema := ""
+         IF FieldPos( "SISTEMA_ID" ) > 0
+            cSistema := Upper( AllTrim( FIELD->SISTEMA_ID ) )
+         ENDIF
 
-         IF !::Calc_Rendimientos()
-            DO CASE
-            CASE cTipo == "TABIQUE"
-               ::Calc_Tabique()
+         lRendimientos := ::Calc_Rendimientos()
 
-            CASE cTipo == "TECHO"
-               ::Calc_Techo()
-
-            CASE "TRAS" $ cTipo
-               ::Calc_Trasdos()
-
-            CASE cTipo == "GENERICO"
-               ::Calc_Generico()
-
-            OTHERWISE
+         IF !lRendimientos
+            IF cTipo == "TECHO" .AND. !Empty( cSistema )
                ::nErrores++
                AAdd( ::aLog, "Lin " + AllTrim( Str( FIELD->ID_LINEA ) ) + ;
-                              ": Tipo de obra [" + cTipo + "] no soportado." )
-            ENDCASE
+                              ": El sistema de techo [" + cSistema + ;
+                              "] no tiene una receta SYS_REND compatible." )
+            ELSE
+               DO CASE
+               CASE cTipo == "TABIQUE"
+                  ::Calc_Tabique()
+
+               CASE cTipo == "TECHO"
+                  ::Calc_Techo()
+
+               CASE "TRAS" $ cTipo
+                  ::Calc_Trasdos()
+
+               CASE cTipo == "GENERICO"
+                  ::Calc_Generico()
+
+               OTHERWISE
+                  ::nErrores++
+                  AAdd( ::aLog, "Lin " + AllTrim( Str( FIELD->ID_LINEA ) ) + ;
+                                 ": Tipo de obra [" + cTipo + "] no soportado." )
+               ENDCASE
+            ENDIF
          ENDIF
       ENDIF
 
@@ -210,8 +226,12 @@ METHOD Calc_Rendimientos() CLASS OOPTRAMO
       IF !File( "SYS_REND.DBF" )
          RETURN .F.
       ENDIF
-      ABRIR_TABLA( "SYS_REND", "SYS_REND", "" )
-      lAbriRend := .T.
+      BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+         USE SYS_REND NEW SHARED VIA "DBFCDX" ALIAS SYS_REND
+         lAbriRend := .T.
+      RECOVER
+         RETURN .F.
+      END SEQUENCE
    ENDIF
 
    dbSelectArea( "SYS_REND" )
@@ -295,7 +315,11 @@ METHOD CodigoRendimiento( cRol, cCodDef ) CLASS OOPTRAMO
       cCod := TMP_TRA->ID_PER_PER
 
    CASE cRol == "PASTA_AGAR"
-      cCod := TMP_TRA->ID_PER_VER
+      IF !_OptionalCode( TMP_TRA->ID_PER_VER )
+         cCod := TMP_TRA->ID_PER_VER
+      ELSEIF Empty( cCod )
+         cCod := "PASTA_AGAR"
+      ENDIF
 
    CASE cRol == "AISLANTE"
        IF !If( ValType( TMP_TRA->L_AISLANT ) == "L", TMP_TRA->L_AISLANT, .F. )
@@ -370,7 +394,9 @@ METHOD Calc_Tabique() CLASS OOPTRAMO
    NEXT
    
    ::AddMat( "PASTA", "PASTA_JUNT", nM2Total * K_PASTA_M2, "Tratamiento Juntas", "KG" )
-   ::AddMat( "CINTA", "CINTA_PAP",  nM2Total * K_CINTA_M2, "Cinta Papel", "ML" )
+    ::AddMat( "CINTA", "CINTA_PAP", ;
+       nM2Total * ::GetRendimientoRol( "CINTA_JUNT", K_CINTA_M2 ), ;
+       "Cinta Papel", "ML" )
    
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
        ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Lana Mineral Interior", "M2" )
@@ -412,7 +438,9 @@ METHOD Calc_Techo() CLASS OOPTRAMO
 
     ::DesgloseAnclaje( FIELD->ID_ANCLAJE, nArea, If( nSepPrim > 0, nSepPrim, 1.00 ), nMod )
    ::AddMat( "PASTA",    "PASTA_JUNT", nArea * nCapas * K_PASTA_M2, "Juntas Techo", "KG" )
-   ::AddMat( "CINTA",    "CINTA_PAP",  nArea * nCapas * K_CINTA_M2, "Cinta Techo", "ML" )
+    ::AddMat( "CINTA", "CINTA_PAP", ;
+       nArea * nCapas * ::GetRendimientoRol( "CINTA_JUNT", K_CINTA_M2 ), ;
+       "Cinta Techo", "ML" )
    
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
        ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Aislamiento", "M2" )
@@ -434,7 +462,7 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    LOCAL nMetHor  := 0
    
    IF lDirect
-      ::AddMat( "PASTA", FIELD->ID_PER_VER, nArea * K_PASTA_M2, "Pasta Agarre", "KG" )
+      ::AddMat( "PASTA", "PASTA_AGAR", nArea * K_PASTA_M2, "Pasta Agarre", "KG" )
    ELSE
       IF nMod == 0; nMod := 0.60; ENDIF
 
@@ -458,13 +486,15 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    NEXT
 
    ::AddMat( "PASTA", "PASTA_JUNT", nArea * nCapas * K_PASTA_M2, "Juntas", "KG" )
-   ::AddMat( "CINTA", "CINTA_PAP",  nArea * nCapas * K_CINTA_M2, "Cinta Juntas Trasdosado", "ML" )
+    ::AddMat( "CINTA", "CINTA_PAP", ;
+       nArea * nCapas * ::GetRendimientoRol( "CINTA_JUNT", K_CINTA_M2 ), ;
+       "Cinta Juntas Trasdosado", "ML" )
 
    IF !lDirect
       ::AddMat( "TORNILLO", "TORN_MM_LN", nArea * K_TORN_MM, "Tornillo Fijacion Estructura", "UD" )
    ENDIF
 
-   ::AddMat( "PERFIL", "GUARDA", nArea * K_GUARDA_M2, "Guardavivos", "ML" )
+   ::AddMat( "CINTA", "CINTA_GUAR", nArea * K_GUARDA_M2, "Guardavivos", "ML" )
 
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
        ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Aislamiento", "M2" )
@@ -522,6 +552,54 @@ METHOD DesgloseAnclaje( cIdAnc, nArea, nSepPrim, nMod ) CLASS OOPTRAMO
    ENDCASE
 
 RETURN NIL
+
+// ----------------------------------------------------------------------------
+// Busca un rendimiento por SISTEMA_ID + TIPO_OBRA + ROL_MAT.
+// Si no encuentra, devuelve el rendimiento de respaldo.
+// ----------------------------------------------------------------------------
+METHOD GetRendimientoRol( cRolRendimiento, nRendimientoDefecto ) CLASS OOPTRAMO
+   LOCAL nRendimiento := nRendimientoDefecto
+   LOCAL nArea := Select()
+   LOCAL cSistemaId := Upper( AllTrim( FIELD->SISTEMA_ID ) )
+   LOCAL cTipoObra := Upper( AllTrim( FIELD->TIPO_OBRA ) )
+   LOCAL lAbriRendimientos := .F.
+
+   cRolRendimiento := Upper( AllTrim( cRolRendimiento ) )
+
+   IF Select( "SYS_REND" ) == 0 .AND. File( "SYS_REND.DBF" )
+      BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+         USE SYS_REND NEW SHARED VIA "DBFCDX" ALIAS SYS_REND
+         OrdSetFocus( "SR_SIS" )
+         lAbriRendimientos := .T.
+      RECOVER
+         lAbriRendimientos := .F.
+      END SEQUENCE
+   ENDIF
+
+   IF !Empty( cSistemaId ) .AND. Select( "SYS_REND" ) > 0
+      dbSelectArea( "SYS_REND" )
+      OrdSetFocus( "SR_SIS" )
+      IF dbSeek( cSistemaId )
+         DO WHILE !Eof() .AND. Upper( AllTrim( SYS_REND->SISTEMA_ID ) ) == cSistemaId
+            IF Upper( AllTrim( SYS_REND->TIPO_OBRA ) ) == cTipoObra .AND. ;
+               Upper( AllTrim( SYS_REND->ROL_MAT ) ) == cRolRendimiento
+               nRendimiento := SYS_REND->REND_M2
+               EXIT
+            ENDIF
+            dbSkip()
+         ENDDO
+      ENDIF
+   ENDIF
+
+   IF lAbriRendimientos
+      dbSelectArea( "SYS_REND" )
+      dbCloseArea()
+   ENDIF
+
+   IF nArea > 0
+      dbSelectArea( nArea )
+   ENDIF
+RETURN nRendimiento
 
 // ----------------------------------------------------------------------------
 // HERRAMIENTA CENTRAL: Añadir Material (CON VALIDACION DE ERRORES)

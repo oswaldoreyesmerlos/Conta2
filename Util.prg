@@ -144,6 +144,8 @@ FUNCTION ErrorLogAppend( cText )
 
     LOCAL nH
     LOCAL cFile
+    LOCAL cFallback
+    LOCAL nWritten
 
     DEFAULT cText TO ""
 
@@ -151,10 +153,19 @@ FUNCTION ErrorLogAppend( cText )
         RETURN .F.
     ENDIF
 
-    // error.log en el directorio del exe (no en DATA que es el SET DEFAULT)
-    nH := FOpen( hb_DirBase() + "error.log", FO_READWRITE + FO_DENYNONE )
+    cFile := ErrorLogPath()
+    nH := FOpen( cFile, FO_READWRITE + FO_DENYNONE )
     IF nH < 0
-        nH := FCreate( hb_DirBase() + "error.log", FC_NORMAL )
+        nH := FCreate( cFile, FC_NORMAL )
+    ENDIF
+
+    IF nH < 0
+        cFallback := _AppPathAddSep( GetEnv( "TEMP" ) ) + ;
+                     "Drywall_error.log"
+        nH := FOpen( cFallback, FO_READWRITE + FO_DENYNONE )
+        IF nH < 0
+            nH := FCreate( cFallback, FC_NORMAL )
+        ENDIF
     ENDIF
 
     IF nH < 0
@@ -162,13 +173,18 @@ FUNCTION ErrorLogAppend( cText )
     ENDIF
 
     FSeek( nH, 0, FS_END )
-    FWrite( nH, cText )
+    nWritten := FWrite( nH, cText )
     IF Right( cText, Len( hb_Eol() ) ) != hb_Eol()
         FWrite( nH, hb_Eol() )
     ENDIF
     FClose( nH )
 
-RETURN .T.
+RETURN nWritten == Len( cText )
+
+
+FUNCTION ErrorLogPath()
+
+RETURN _AppPathAddSep( hb_DirBase() ) + "error.log"
 
 
 FUNCTION ErrorLogError( oErr, cContext )
@@ -294,6 +310,7 @@ RETURN cOut
 FUNCTION ErrSys( oErr )
 
     STATIC lProc := .F.
+    LOCAL cLog
 
     IF lProc
         ErrorLevel( 2 )
@@ -303,7 +320,15 @@ FUNCTION ErrSys( oErr )
 
     ErrorBlock( { |e| Break( e ) } )
 
-    ErrorLogAppend( _ErrorLogBuild( oErr, "ErrSys", 2 ) )
+    BEGIN SEQUENCE
+        cLog := _ErrorLogBuild( oErr, "ErrSys", 2 )
+    RECOVER
+        cLog := Replicate( "=", 70 ) + hb_Eol() + ;
+                "ERROR CRITICO SIN DETALLE " + DToC( Date() ) + ;
+                " " + Time() + hb_Eol()
+    END SEQUENCE
+
+    ErrorLogAppend( cLog )
 
     BEGIN SEQUENCE
         dbCloseAll()
@@ -547,38 +572,23 @@ RETURN cPref
 FUNCTION EvalSafe( bBlock, cContext, xArg1, xArg2, xArg3 )
 
     LOCAL xRet := NIL
-    LOCAL bOld
-    LOCAL oErr
 
     IF ValType( bBlock ) != "B"
         RETURN NIL
     ENDIF
 
-    bOld := ErrorBlock( {| e | Break( e ) } )
+    HB_SYMBOL_UNUSED( cContext )
 
-    BEGIN SEQUENCE
-
-        DO CASE
-        CASE PCount() <= 2
-            xRet := Eval( bBlock )
-        CASE PCount() == 3
-            xRet := Eval( bBlock, xArg1 )
-        CASE PCount() == 4
-            xRet := Eval( bBlock, xArg1, xArg2 )
-        OTHERWISE
-            xRet := Eval( bBlock, xArg1, xArg2, xArg3 )
-        ENDCASE
-
-    RECOVER USING oErr
-
-        ErrorLogError( oErr, cContext )
-        MsgStop( "Se ha registrado un error en error.log." + hb_Eol() + ;
-                 "Contexto: " + hb_ValToStr( cContext ), "Error interno" )
-        xRet := NIL
-
-    END SEQUENCE
-
-    ErrorBlock( bOld )
+    DO CASE
+    CASE PCount() <= 2
+        xRet := Eval( bBlock )
+    CASE PCount() == 3
+        xRet := Eval( bBlock, xArg1 )
+    CASE PCount() == 4
+        xRet := Eval( bBlock, xArg1, xArg2 )
+    OTHERWISE
+        xRet := Eval( bBlock, xArg1, xArg2, xArg3 )
+    ENDCASE
 
 RETURN xRet
 
@@ -1090,6 +1100,99 @@ STATIC FUNCTION _ValidCifFiscal( cCif )
     ENDIF
 
 RETURN cCtrl == Str( nCtrl, 1 ) .OR. cCtrl == cCtrlLetra
+
+
+// ============================================================================
+// 8) DRYWALL - Gestion de proyecto activo
+// ============================================================================
+
+FUNCTION DrywallProyectoActualNumero()
+
+    LOCAL nArea := Select()
+    LOCAL cProyecto := ""
+    LOCAL cPrimero := ""
+
+    IF Select( "TMP_CAB" ) == 0
+        IF File( "TMP_CAB.DBF" )
+            ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
+        ELSE
+            RETURN ""
+        ENDIF
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            IF Empty( cPrimero )
+                cPrimero := AllTrim( FIELD->NUMERO )
+            ENDIF
+            IF FieldPos( "L_ACTIVO" ) > 0 .AND. FIELD->L_ACTIVO
+                cProyecto := AllTrim( FIELD->NUMERO )
+                EXIT
+            ENDIF
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF Empty( cProyecto ) .AND. !Empty( cPrimero )
+        cProyecto := cPrimero
+        DrywallActivarProyecto( cProyecto )
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN cProyecto
+
+
+FUNCTION DrywallActivarProyecto( cProyecto )
+
+    LOCAL nArea := Select()
+    LOCAL lOk := .F.
+
+    cProyecto := AllTrim( cProyecto )
+
+    IF Empty( cProyecto )
+        RETURN .F.
+    ENDIF
+
+    IF Select( "TMP_CAB" ) == 0
+        IF File( "TMP_CAB.DBF" )
+            ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
+        ELSE
+            RETURN .F.
+        ENDIF
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    IF !NetFLock()
+        MsgStop( "No se pudo activar el proyecto " + cProyecto + ".", "Proyecto Actual" )
+        RETURN .F.
+    ENDIF
+
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            IF FieldPos( "L_ACTIVO" ) > 0
+                REPLACE FIELD->L_ACTIVO WITH ( AllTrim( FIELD->NUMERO ) == cProyecto )
+            ENDIF
+            IF AllTrim( FIELD->NUMERO ) == cProyecto
+                lOk := .T.
+            ENDIF
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    dbCommit()
+    dbUnlock()
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN lOk
 
 
 // ============================================================================
