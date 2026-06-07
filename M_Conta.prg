@@ -556,24 +556,25 @@ RETURN NIL
 
 STATIC FUNCTION _DiaCargarCab( cAsiento, cAsi, dFec, cDes, cUsr )
 
-    IF !ABRIR_TABLA( "LDIARIO", "DIA_C", "DIA_ASI" )
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_CC", "DIA_ASI" )
         RETURN .F.
     ENDIF
 
-    DbSelectArea( "DIA_C" )
+    DbSelectArea( "DIA_CC" )
     OrdSetFocus( "DIA_ASI" )
 
     IF !DbSeek( PadR( cAsiento, 10 ) + "   1" )
         MsgStop( "Asiento " + cAsiento + " no encontrado.", "Error" )
+        DIA_CC->( DbCloseArea() )
         RETURN .F.
     ENDIF
 
-    cAsi := AllTrim( DIA_C->D_ASIENT )
-    dFec := DIA_C->D_FECHA
-    cDes := AllTrim( DIA_C->D_DESCRI )
-    cUsr := AllTrim( DIA_C->USUARIO_ )
+    cAsi := AllTrim( DIA_CC->D_ASIENT )
+    dFec := DIA_CC->D_FECHA
+    cDes := AllTrim( DIA_CC->D_DESCRI )
+    cUsr := AllTrim( DIA_CC->USUARIO_ )
 
-    DIA_C->( DbCloseArea() )
+    DIA_CC->( DbCloseArea() )
 
 RETURN .T.
 
@@ -1554,17 +1555,442 @@ RETURN .T.
 // ============================================================================
 FUNCTION CierreEjercicio()
 
-    MsgInfo( "El cierre de ejercicio aun no esta implementado." + Chr(13) + ;
-             Chr(13) + ;
-             "Pendiente:" + Chr(13) + ;
-             "- Regularizar cuentas 6/7 contra resultado." + Chr(13) + ;
-             "- Generar asiento de cierre." + Chr(13) + ;
-             "- Generar asiento de apertura del ejercicio siguiente." + Chr(13) + ;
-             "- Bloquear o marcar correctamente el ejercicio cerrado." + Chr(13) + ;
-             Chr(13) + ;
-             "No se ha modificado ningun dato.", "Cierre de ejercicio" )
+    LOCAL nYear, nNext
+    LOCAL aBal   := {}
+    LOCAL aPgAux := {}
+    LOCAL nDebe, nHaber
+    LOCAL hBal
+    LOCAL i
+    LOCAL cMsg
+    LOCAL aReg  := {}
+    LOCAL aCie  := {}
+    LOCAL aApe  := {}
+    LOCAL nSaldo
+    LOCAL cAsiReg, cAsiCie, cAsiApe
+    LOCAL lOk := .F.
 
-RETURN .F.
+    nYear := _EjInputYear()
+    IF nYear == 0
+        RETURN .F.
+    ENDIF
+
+    IF nYear >= Year( Date() )
+        MsgStop( "No se puede cerrar el ejercicio en curso o futuro.", "Cierre" )
+        RETURN .F.
+    ENDIF
+
+    IF !MsgYesNo( "Va a cerrar el ejercicio " + AllTrim( Str( nYear ) ) + "." + Chr(13) + ;
+                  "Se generaran automaticamente:" + Chr(13) + ;
+                  "- Asiento de regularizacion (cuentas 6/7 a 129)" + Chr(13) + ;
+                  "- Asiento de cierre (balance a 129)" + Chr(13) + ;
+                  "- Asiento de apertura " + AllTrim( Str( nYear + 1 ) ) + Chr(13) + ;
+                  Chr(13) + "Tenga una copia de seguridad antes de continuar." + Chr(13) + ;
+                  Chr(13) + "Desea continuar?", "Cierre ejercicio" )
+        RETURN .F.
+    ENDIF
+
+    // -- 1. Verificar asientos cuadrados en LDIARIO --
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_CJ", "DIA_FEC" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_CJ" )
+    OrdSetFocus( "DIA_FEC" )
+    DbSeek( DToS( CToD( "01/01/" + AllTrim( Str( nYear ) ) ) ) )
+
+    nDebe  := 0
+    nHaber := 0
+    aPgAux := {}
+
+    DO WHILE !Eof() .AND. Year( DIA_CJ->D_FECHA ) == nYear
+        nDebe   += DIA_CJ->D_DEBE
+        nHaber  += DIA_CJ->D_HABER
+        AAdd( aPgAux, { DIA_CJ->D_ASIENT, DIA_CJ->D_LINEA, ;
+                        DIA_CJ->D_CUENTA, DIA_CJ->D_DEBE, DIA_CJ->D_HABER, ;
+                        DIA_CJ->D_DESCRI, DIA_CJ->D_FECHA, DIA_CJ->TIP_ORIG, ;
+                        DIA_CJ->DOC_ORIG } )
+        DbSkip()
+    ENDDO
+
+    DIA_CJ->( DbCloseArea() )
+
+    IF nDebe == 0 .AND. nHaber == 0
+        MsgStop( "El ejercicio " + AllTrim( Str( nYear ) ) + ;
+                 " no tiene movimientos contables.", "Cierre" )
+        RETURN .F.
+    ENDIF
+
+    // Verificar cuadre por asiento
+    ASort( aPgAux,,, {|x,y| x[1] < y[1] } )
+    nDebe  := 0
+    nHaber := 0
+    FOR i := 1 TO Len( aPgAux )
+        nDebe  += aPgAux[i, 4]
+        nHaber += aPgAux[i, 5]
+        IF i == Len( aPgAux ) .OR. aPgAux[i, 1] != aPgAux[i+1, 1]
+            IF Abs( nDebe - nHaber ) > 0.005
+                MsgStop( "El asiento " + AllTrim( aPgAux[i, 1] ) + ;
+                         " no esta cuadrado (" + AllTrim( Str( nDebe, 16, 2 ) ) + ;
+                         " / " + AllTrim( Str( nHaber, 16, 2 ) ) + ").", "Cierre" )
+                RETURN .F.
+            ENDIF
+            nDebe  := 0
+            nHaber := 0
+        ENDIF
+    NEXT
+
+    // -- 2. Acumular saldos por cuenta --
+    aBal := {}
+    FOR i := 1 TO Len( aPgAux )
+        hBal := AScan( aBal, {|x| x[1] == aPgAux[i, 3] } )
+        IF hBal == 0
+            AAdd( aBal, { aPgAux[i, 3], aPgAux[i, 4], aPgAux[i, 5] } )
+        ELSE
+            aBal[hBal, 2] += aPgAux[i, 4]
+            aBal[hBal, 3] += aPgAux[i, 5]
+        ENDIF
+    NEXT
+
+    // -- 3. Generar asiento de regularizacion (cuentas 6/7 a 129) --
+    cAsiReg := _EjGenAsiento( nYear, 1, aBal, "REGULARIZACION", @aReg )
+    IF Empty( cAsiReg )
+        RETURN .F.
+    ENDIF
+
+    // -- 4. Generar asiento de cierre --
+    cAsiCie := _EjGenAsiento( nYear, 2, aBal, "CIERRE", @aCie )
+    IF Empty( cAsiCie )
+        RETURN .F.
+    ENDIF
+
+    // -- 5. Generar asiento de apertura --
+    nNext := nYear + 1
+    cAsiApe := _EjGenAsiento( nNext, 3, aBal, "APERTURA", @aApe )
+    IF Empty( cAsiApe )
+        RETURN .F.
+    ENDIF
+
+    // -- 6. Mostrar resumen y confirmar escritura --
+    cMsg := "RESUMEN DEL CIERRE DE " + AllTrim( Str( nYear ) ) + Chr(13) + ;
+            Chr(13) + ;
+            "Asiento de regularizacion: " + cAsiReg + Chr(13) + ;
+            "  Lineas: " + AllTrim( Str( Len( aReg ) ) ) + Chr(13) + ;
+            Chr(13) + ;
+            "Asiento de cierre: " + cAsiCie + Chr(13) + ;
+            "  Lineas: " + AllTrim( Str( Len( aCie ) ) ) + Chr(13) + ;
+            Chr(13) + ;
+            "Asiento de apertura " + AllTrim( Str( nNext ) ) + ": " + cAsiApe + Chr(13) + ;
+            "  Lineas: " + AllTrim( Str( Len( aApe ) ) ) + Chr(13) + ;
+            Chr(13) + ;
+            "Se escribiran " + AllTrim( Str( Len( aReg ) + Len( aCie ) + Len( aApe ) ) ) + ;
+            " lineas en LDIARIO." + Chr(13) + ;
+            Chr(13) + "Desea grabar los asientos?"
+
+    IF !MsgYesNo( cMsg, "Confirmar cierre" )
+        RETURN .F.
+    ENDIF
+
+    // -- 7. Escribir asientos --
+    BEGIN SEQUENCE
+        IF !_EjGuardarAsiento( cAsiReg, "REGULARIZACION " + AllTrim( Str( nYear ) ), ;
+                               CToD( "31/12/" + AllTrim( Str( nYear ) ) ), aReg )
+            BREAK
+        ENDIF
+
+        IF !_EjGuardarAsiento( cAsiCie, "CIERRE " + AllTrim( Str( nYear ) ), ;
+                               CToD( "31/12/" + AllTrim( Str( nYear ) ) ), aCie )
+            BREAK
+        ENDIF
+
+        IF !_EjGuardarAsiento( cAsiApe, "APERTURA " + AllTrim( Str( nNext ) ), ;
+                               CToD( "01/01/" + AllTrim( Str( nNext ) ) ), aApe )
+            BREAK
+        ENDIF
+
+        BEGIN TRANSACTION
+            IF ABRIR_TABLA( "EMPRESA", "EMP_CJ", "" )
+                IF NetFLock()
+                    EMP_CJ->FEC_CIER := CToD( "31/12/" + AllTrim( Str( nYear ) ) )
+                    DbUnlock()
+                ENDIF
+                EMP_CJ->( DbCloseArea() )
+            ENDIF
+        END TRANSACTION
+
+        lOk := .T.
+
+    RECOVER
+        lOk := .F.
+        MsgStop( "Error al escribir los asientos. " + ;
+                 "Los datos pueden quedar inconsistentes.", "Error" )
+    END SEQUENCE
+
+    IF lOk
+        MsgInfo( "Cierre del ejercicio " + AllTrim( Str( nYear ) ) + ;
+                 " completado." + Chr(13) + ;
+                 "Asientos generados:" + Chr(13) + ;
+                 "  " + cAsiReg + " (regularizacion)" + Chr(13) + ;
+                 "  " + cAsiCie + " (cierre)" + Chr(13) + ;
+                 "  " + cAsiApe + " (apertura)", "Cierre" )
+    ENDIF
+
+RETURN lOk
+
+
+// ============================================================================
+// _EjGenAsiento(cYear, nTipo, aBal, cPrefijo, aLineas)
+// Genera las lineas de un asiento de cierre/regularizacion/apertura
+//   nTipo: 1=Regularizacion, 2=Cierre, 3=Apertura
+//   aBal  := { { cCuenta, nDebe, nHaber }, ... }
+//   aLineas := { { nLinea, cCuenta, nDebe, nHaber, cDescrip }, ... }
+// Retorna el numero de asiento o "" si error
+// ============================================================================
+STATIC FUNCTION _EjGetCat()
+
+    LOCAL aCat := {}
+    LOCAL nArea := Select()
+
+    IF !ABRIR_TABLA( "CATALOGO", "CAT_EJ", "CAT_CTA" )
+        RETURN aCat
+    ENDIF
+
+    DbSelectArea( "CAT_EJ" )
+    DbGoTop()
+    DO WHILE !Eof()
+        AAdd( aCat, { CAT_EJ->CUENTA, CAT_EJ->TIPO, CAT_EJ->NATURALE, ;
+                      CAT_EJ->NIVEL, CAT_EJ->NOMBRE } )
+        DbSkip()
+    ENDDO
+    CAT_EJ->( DbCloseArea() )
+    Select( nArea )
+
+RETURN aCat
+
+
+STATIC FUNCTION _EjGetUsuario()
+
+    LOCAL cUsr := "SISTEMA"
+    MEMVAR cUserID
+    IF Type( "cUserID" ) == "C" .AND. !Empty( cUserID )
+        cUsr := PadR( AllTrim( cUserID ), 10 )
+    ENDIF
+RETURN cUsr
+
+
+STATIC FUNCTION _EjGenAsiento( nYear, nTipo, aBal, cPrefijo, aLineas )
+
+    LOCAL aCat
+    LOCAL i, h
+    LOCAL nSaldo
+    LOCAL nDebe := 0
+    LOCAL nHaber := 0
+    LOCAL nResult := 0
+    LOCAL nLin := 0
+    LOCAL cCta
+
+    aLineas := {}
+    aCat := _EjGetCat()
+    IF Empty( aCat )
+        RETURN ""
+    ENDIF
+
+    DO CASE
+    CASE nTipo == 1    // REGULARIZACION: cerrar 6/7 contra 129
+        nResult := 0
+        FOR i := 1 TO Len( aBal )
+            cCta := aBal[i, 1]
+            h := AScan( aCat, {|x| x[1] == cCta .AND. ( x[2] == "G" .OR. x[2] == "I" ) } )
+            IF h == 0
+                LOOP
+            ENDIF
+            nSaldo := aBal[i, 2] - aBal[i, 3]
+            IF nSaldo == 0
+                LOOP
+            ENDIF
+
+            nLin++
+            IF aCat[h, 2] == "G"     // Gasto: cerrar con Haber
+                AAdd( aLineas, { nLin, cCta, 0, nSaldo, "REG " + aCat[h, 5] } )
+                nHaber += nSaldo
+                nResult -= nSaldo
+            ELSE                     // Ingreso: cerrar con Debe
+                AAdd( aLineas, { nLin, cCta, nSaldo, 0, "REG " + aCat[h, 5] } )
+                nDebe += nSaldo
+                nResult += nSaldo
+            ENDIF
+        NEXT
+
+        IF nLin == 0
+            MsgStop( "No hay cuentas de gasto/ingreso en el ejercicio.", "Cierre" )
+            RETURN ""
+        ENDIF
+
+        nLin++
+        nSaldo := Abs( nDebe - nHaber )
+        IF nResult >= 0  // Beneficio
+            AAdd( aLineas, { nLin, "129", nSaldo, 0, "REG RESULTADO DEL EJERCICIO" } )
+        ELSE              // Perdida
+            AAdd( aLineas, { nLin, "129", 0, nSaldo, "REG RESULTADO DEL EJERCICIO" } )
+        ENDIF
+
+    CASE nTipo == 2    // CIERRE: cerrar balance contra 129
+        nDebe := 0; nHaber := 0
+        FOR i := 1 TO Len( aBal )
+            cCta := aBal[i, 1]
+            h := AScan( aCat, {|x| x[1] == cCta .AND. ;
+                                   ( x[2] == "A" .OR. x[2] == "P" .OR. x[2] == "N" ) } )
+            IF h == 0
+                LOOP
+            ENDIF
+            nSaldo := aBal[i, 2] - aBal[i, 3]
+            IF nSaldo == 0
+                LOOP
+            ENDIF
+
+            nLin++
+            IF aCat[h, 3] == "D"    // Deudora: saldo a credito
+                AAdd( aLineas, { nLin, cCta, 0, nSaldo, "CIE " + aCat[h, 5] } )
+                nHaber += nSaldo
+            ELSE                     // Acreedora: saldo a debito
+                AAdd( aLineas, { nLin, cCta, nSaldo, 0, "CIE " + aCat[h, 5] } )
+                nDebe += nSaldo
+            ENDIF
+        NEXT
+
+        // Incluir 129 (resultado del ejercicio)
+        h := AScan( aBal, {|x| x[1] == "129" } )
+        IF h > 0
+            nSaldo := aBal[h, 2] - aBal[h, 3]
+            IF Abs( nSaldo ) > 0.005
+                nLin++
+                IF nSaldo > 0
+                    AAdd( aLineas, { nLin, "129", nSaldo, 0, "CIE RESULTADO DEL EJERCICIO" } )
+                    nDebe += nSaldo
+                ELSE
+                    AAdd( aLineas, { nLin, "129", 0, -nSaldo, "CIE RESULTADO DEL EJERCICIO" } )
+                    nHaber += -nSaldo
+                ENDIF
+            ENDIF
+        ENDIF
+
+        IF nLin == 0
+            MsgStop( "No hay cuentas de balance que cerrar.", "Cierre" )
+            RETURN ""
+        ENDIF
+
+        // Diferencia a 129 (debe cuadrar a cero)
+        nSaldo := Abs( nDebe - nHaber )
+        IF nSaldo > 0.005
+            nLin++
+            IF nDebe > nHaber
+                AAdd( aLineas, { nLin, "129", 0, nSaldo, "CIE AJUSTE CIERRE" } )
+            ELSE
+                AAdd( aLineas, { nLin, "129", nSaldo, 0, "CIE AJUSTE CIERRE" } )
+            ENDIF
+        ENDIF
+
+    CASE nTipo == 3    // APERTURA: invertir saldos del balance
+        FOR i := 1 TO Len( aBal )
+            cCta := aBal[i, 1]
+            h := AScan( aCat, {|x| x[1] == cCta .AND. ;
+                                   ( x[2] == "A" .OR. x[2] == "P" .OR. x[2] == "N" ) } )
+            IF h == 0
+                LOOP
+            ENDIF
+            nSaldo := aBal[i, 2] - aBal[i, 3]
+            IF nSaldo == 0
+                LOOP
+            ENDIF
+
+            nLin++
+            IF aCat[h, 3] == "D"
+                AAdd( aLineas, { nLin, cCta, nSaldo, 0, "APE " + aCat[h, 5] } )
+            ELSE
+                AAdd( aLineas, { nLin, cCta, 0, nSaldo, "APE " + aCat[h, 5] } )
+            ENDIF
+        NEXT
+
+        // Incluir 129 con saldo invertido
+        h := AScan( aBal, {|x| x[1] == "129" } )
+        IF h > 0
+            nSaldo := aBal[h, 2] - aBal[h, 3]
+            IF Abs( nSaldo ) > 0.005
+                nLin++
+                AAdd( aLineas, { nLin, "129", 0, nSaldo, "APE RESULTADO DEL EJERCICIO" } )
+            ENDIF
+        ENDIF
+
+        IF nLin == 0
+            MsgStop( "No hay cuentas que abrir.", "Cierre" )
+            RETURN ""
+        ENDIF
+
+    ENDCASE
+
+RETURN GetNextNum( "ASI" + AllTrim( Str( nYear ) ), "Asientos " + AllTrim( Str( nYear ) ) )
+
+
+STATIC FUNCTION _EjGuardarAsiento( cAsi, cDesc, dFec, aLineas )
+
+    LOCAL i
+
+    IF Empty( cAsi )
+        RETURN .F.
+    ENDIF
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_EJ", "DIA_ASI" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_EJ" )
+
+    IF !NetFLock()
+        DIA_EJ->( DbCloseArea() )
+        RETURN .F.
+    ENDIF
+
+    FOR i := 1 TO Len( aLineas )
+        DbAppend()
+        REPLACE DIA_EJ->D_ASIENT WITH cAsi
+        REPLACE DIA_EJ->D_LINEA  WITH aLineas[i, 1]
+        REPLACE DIA_EJ->D_FECHA  WITH dFec
+        REPLACE DIA_EJ->D_CUENTA WITH aLineas[i, 2]
+        REPLACE DIA_EJ->D_DEBE   WITH aLineas[i, 3]
+        REPLACE DIA_EJ->D_HABER  WITH aLineas[i, 4]
+        REPLACE DIA_EJ->D_DESCRI WITH cDesc + " (" + aLineas[i, 5] + ")"
+        REPLACE DIA_EJ->TIP_ORIG WITH "CIE"
+        REPLACE DIA_EJ->DOC_ORIG WITH cAsi
+        REPLACE DIA_EJ->USUARIO_ WITH _EjGetUsuario()
+        REPLACE DIA_EJ->FECHA_AL WITH Date()
+    NEXT
+
+    DbCommit()
+    DbUnlock()
+    DIA_EJ->( DbCloseArea() )
+
+RETURN .T.
+
+
+STATIC FUNCTION _EjInputYear()
+
+    LOCAL oWin, oGet, oBtn
+    LOCAL cYear := Str( Year( Date() ), 4 )
+    LOCAL nYear := 0
+    LOCAL lOk := .F.
+
+    oWin := TWindow():New( 8, 40, 16, 76, "Cierre de ejercicio" )
+    oWin:AddCtrl( TLabel():New(  2,  3, "Ejercicio a cerrar:", oWin ) )
+    oGet := TGet():New( 2, 24, cYear, "9999", oWin )
+    oBtn := TButton():New( 4, 10, "[  Aceptar  ]", oWin )
+    oBtn:bAction := {|| lOk := .T., oWin:Close() }
+
+    oWin:Activate( ,,, {|| oGet:SetFocus() } )
+
+    IF lOk
+        nYear := Val( cYear )
+    ENDIF
+
+RETURN nYear
 
 
 // ============================================================================

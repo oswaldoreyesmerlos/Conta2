@@ -559,11 +559,9 @@ STATIC FUNCTION _TechoSistemaData( cSistema )
     hSistema["PERF_PER"]     := ""
     hSistema["PLACA_A"]      := ""
 
-    IF Select( "SYS_REND" ) == 0
-        IF !ABRIR_TABLA( "SYS_REND", "SYS_REND", "SR_SIS" )
-            RETURN NIL
-        ENDIF
-        lAbierta := .T.
+    lAbierta := _SysRendAbrir()
+    IF !lAbierta .AND. Select( "SYS_REND" ) == 0
+        RETURN NIL
     ENDIF
 
     dbSelectArea( "SYS_REND" )
@@ -586,12 +584,7 @@ STATIC FUNCTION _TechoSistemaData( cSistema )
         dbSkip()
     ENDDO
 
-    IF lAbierta
-        dbCloseArea()
-    ENDIF
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
+    _SysRendCerrar( lAbierta, nArea )
 
 RETURN If( lEncontrado, hSistema, NIL )
 
@@ -610,11 +603,9 @@ STATIC FUNCTION _TechoSistemaPorMaterial( cRol, cCodigo )
         RETURN ""
     ENDIF
 
-    IF Select( "SYS_REND" ) == 0
-        IF !ABRIR_TABLA( "SYS_REND", "SYS_REND", "SR_SIS" )
-            RETURN ""
-        ENDIF
-        lAbierta := .T.
+    lAbierta := _SysRendAbrir()
+    IF !lAbierta .AND. Select( "SYS_REND" ) == 0
+        RETURN ""
     ENDIF
 
     dbSelectArea( "SYS_REND" )
@@ -635,12 +626,7 @@ STATIC FUNCTION _TechoSistemaPorMaterial( cRol, cCodigo )
         dbSkip()
     ENDDO
 
-    IF lAbierta
-        dbCloseArea()
-    ENDIF
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
+    _SysRendCerrar( lAbierta, nArea )
 
 RETURN cEncontrado
 
@@ -653,11 +639,9 @@ STATIC FUNCTION _TechoSistemasData()
     LOCAL hAgregados := {=>}
     LOCAL cSistema
 
-    IF Select( "SYS_REND" ) == 0
-        IF !ABRIR_TABLA( "SYS_REND", "SYS_REND", "SR_SIS" )
-            RETURN aData
-        ENDIF
-        lAbierta := .T.
+    lAbierta := _SysRendAbrir()
+    IF !lAbierta .AND. Select( "SYS_REND" ) == 0
+        RETURN aData
     ENDIF
 
     dbSelectArea( "SYS_REND" )
@@ -673,12 +657,7 @@ STATIC FUNCTION _TechoSistemasData()
         dbSkip()
     ENDDO
 
-    IF lAbierta
-        dbCloseArea()
-    ENDIF
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
+    _SysRendCerrar( lAbierta, nArea )
 
 RETURN aData
 

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * ARCHIVO  : MenuInit.prg
  * PROPOSITO: Definicion del arbol de menu de la aplicacion.
  *
@@ -74,6 +74,15 @@ EXTERNAL RolesEdit
 EXTERNAL ReindexarTodo
 EXTERNAL App_Exit
 
+EXTERNAL ProyectoActual
+EXTERNAL VerTareas
+EXTERNAL Procesa
+EXTERNAL Valorar
+EXTERNAL GrabaPres
+EXTERNAL DrywallGenPresupuesto
+EXTERNAL InformeClientesDrywall
+EXTERNAL SistemasView
+
 
 FUNCTION Menu_Init()
 
@@ -94,6 +103,7 @@ FUNCTION Menu_Init()
     LOCAL aSubCob
     LOCAL aSubPag
     LOCAL aSubBan
+    LOCAL aDryw
     LOCAL lEsAdm
     LOCAL lEsCont
     LOCAL lEsCaja
@@ -169,6 +179,17 @@ FUNCTION Menu_Init()
     AAdd( aSubBan, { "Listado", {|| BancosView() }, NIL, "Cuentas bancarias" } )
     AAdd( aSubBan, { "Nuevo",   {|| BancoNuevo() }, NIL, "Nueva cuenta bancaria" } )
 
+    // Drywall
+    aDryw := {}
+    AAdd( aDryw, { "Proyecto Actual", {|| ProyectoActual() }, NIL, "Crear/editar proyecto activo de calculo" } )
+    AAdd( aDryw, { "Ver Tareas",      {|| VerTareas() },      NIL, "Grid de tramos del proyecto activo" } )
+    AAdd( aDryw, { "Calcular",        {|| Procesa() },        NIL, "Ejecutar calculo de materiales" } )
+    AAdd( aDryw, { "Valorar",         {|| Valorar() },        NIL, "Editar precios y ver resultado" } )
+    AAdd( aDryw, { "Guardar en firme", {|| GrabaPres() },     NIL, "Pasar a historico" } )
+    AAdd( aDryw, { "Generar Presupuesto", {|| DrywallGenPresupuesto( NIL, NIL ) }, NIL, "Crear presupuesto formal" } )
+    AAdd( aDryw, { "Sistemas",         {|| SistemasView() },   NIL, "Mantenimiento de sistemas constructivos" } )
+    AAdd( aDryw, { "Clientes Drywall", {|| InformeClientesDrywall() }, NIL, "Listado de clientes" } )
+
     // -------------------------------------------------------------------------
     // MAESTROS
     // -------------------------------------------------------------------------
@@ -235,6 +256,7 @@ FUNCTION Menu_Init()
         AAdd( aSistema, { "Roles",      {|| RolesEdit()      }, NIL, "Mantenimiento roles" } )
         AAdd( aSistema, { "Reindexar",  {|| ReindexarTodo()  }, NIL, "Reindexar tablas (ADM + backup previo)" } )
     ENDIF
+    AAdd( aSistema, { "Tema Visual", {|| _AppTemaVisual() }, NIL, "Cambiar colores de la interfaz" } )
     AAdd( aSistema, { "Salir", {|| App_Exit() }, NIL, "Salir del sistema" } )
 
     // -------------------------------------------------------------------------
@@ -252,9 +274,35 @@ FUNCTION Menu_Init()
     ENDIF
 
     AAdd( aMenu, { "INFORMES", NIL, aInform,  "Centro de reportes" } )
+    AAdd( aMenu, { "DRYWALL",  NIL, aDryw,    "Modulo de calculo de tabiqueria seca" } )
     AAdd( aMenu, { "SISTEMA",  NIL, aSistema, "Configuracion del sistema" } )
 
 RETURN aMenu
+
+
+STATIC FUNCTION _AppTemaVisual()
+
+    LOCAL aData := { ;
+        { "CLASICO", "Clasico N/W", "Negro sobre blanco" }, ;
+        { "AZUL",    "Azul W/B",    "Blanco sobre azul" }, ;
+        { "CYAN",    "Cyan N/BG",   "Negro sobre cyan" } }
+    LOCAL cSel
+
+    cSel := PopupSelect( "TEMA VISUAL", aData, ;
+        { { "Codigo", 10, "@!", 1 }, ;
+          { "Tema",   22, "@!", 2 }, ;
+          { "Detalle", 28, "@!", 3 } }, 2 )
+
+    IF Empty( cSel )
+        RETURN NIL
+    ENDIF
+
+    TMenuCloseAll()
+    GfxThemeSet( cSel )
+    CLS
+
+RETURN NIL
+
 
 // ============================================================================
 // FIN DE MenuInit.prg

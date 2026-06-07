@@ -561,9 +561,6 @@ METHOD Run() CLASS TWindow
     LOCAL nFirst
     LOCAL aPrev := NIL           // bloques del nivel previo (para POP)
     LOCAL nT, nL, nB, nR         // coordenadas ampliadas (Save y Restore)
-    LOCAL oErr
-    LOCAL bOld
-    LOCAL lHadError := .F.
 
     ::lVisible := .T.
     ::lExit    := .F.
@@ -577,53 +574,35 @@ METHOD Run() CLASS TWindow
     nB := Min( ::nBottom + PADWIN, GfxMaxRow() )
     nR := Min( ::nRight  + PADWIN, GfxMaxCol() )
 
-    bOld := ErrorBlock( {| e | Break( e ) } )
+    // [1] Detectar ventana padre. Si ya hay una ventana activa, esa es
+    //     nuestra padre. Pasamos a ser nosotros la activa.
+    ::oOwner      := s_oCurrentWnd
+    s_oCurrentWnd := Self
 
-    BEGIN SEQUENCE
+    // [2] PUSH del stack de bloques.
+    aPrev := GfxPaintPush()
 
-        // [1] Detectar ventana padre.  Si ya hay una ventana activa, ESA es
-        //     nuestra padre.  Pasamos a ser nosotros la activa.
-        ::oOwner      := s_oCurrentWnd
-        s_oCurrentWnd := Self
+    // [3] SAVE clasico ampliado.
+    ::xBackup := GfxSave( nT, nL, nB, nR )
 
-        // [2] PUSH del stack de bloques.  A partir de aqui, los GfxPaintAdd
-        //     se registraran en NUESTRO array (vacio inicialmente).  Los
-        //     bloques de niveles superiores quedan guardados en aPrev.
-        aPrev := GfxPaintPush()
+    // [4] Pintar nuestro contenido.
+    ::Paint()
 
-        // [3] SAVE clasico ampliado.  Capturamos el estado EXACTO de la zona
-        //     antes de pintar nada nuestro.  Incluye caracteres + capa
-        //     grafica WVG.  El margen PADWIN garantiza que cubrimos las
-        //     lineas finas que se pintan fuera del rectangulo de celdas.
-        ::xBackup := GfxSave( nT, nL, nB, nR )
+    // [5] Establecer foco inicial.
+    nFirst := ::FindFirstFocus()
 
-        // [4] Pintar nuestro contenido (registra bloques + pinta caracteres)
-        ::Paint()
+    IF nFirst > 0
+        ::SetFocus( nFirst )
+    ENDIF
 
-        // [5] Establecer foco inicial
-        nFirst := ::FindFirstFocus()
+    // [6] Bucle de teclas.
+    DO WHILE ! ::lExit
 
-        IF nFirst > 0
-            ::SetFocus( nFirst )
-        ENDIF
+        nKey := Inkey( 0 )
 
-        // [6] Bucle de teclas
-        DO WHILE ! ::lExit
+        ::HandleKey( nKey )
 
-            nKey := Inkey( 0 )
-
-            ::HandleKey( nKey )
-
-        ENDDO
-
-    RECOVER USING oErr
-
-        lHadError := .T.
-        ErrorLogError( oErr, "TWindow:Run " + hb_ValToStr( ::cTitle ) )
-
-    END SEQUENCE
-
-    ErrorBlock( bOld )
+    ENDDO
 
     // Si la ventana se cierra con ESC o por boton, puede no producirse un
     // cambio normal de foco.  Limpiamos el foco sin repintar sobre la zona
@@ -663,12 +642,6 @@ METHOD Run() CLASS TWindow
                                 // a registrar los bloques desde cero.
 
     _WinFlushKeys()
-
-    IF lHadError
-        MsgStop( "Se ha registrado un error en error.log." + hb_Eol() + ;
-                 "La ventana se cerrara para evitar un estado inconsistente.", ;
-                 "Error interno" )
-    ENDIF
 
 RETURN NIL
 

@@ -19,12 +19,14 @@ FUNCTION InformeClientes()
     LOCAL cTexto
     LOCAL nArea
 
+    nArea  := Select()
+
     IF !ABRIR_TABLA( "CLIENTES", "CLI_I", "CLI_NOM" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto := ""
-    nArea  := Select()
 
     DbSelectArea( "CLI_I" )
     OrdSetFocus( "CLI_NOM" )
@@ -70,12 +72,14 @@ FUNCTION InformeFacturas()
     LOCAL cTexto
     LOCAL nArea
 
+    nArea  := Select()
+
     IF !ABRIR_TABLA( "FACTURA", "FAC_I", "FAC_FEC" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto := ""
-    nArea  := Select()
 
     DbSelectArea( "FAC_I" )
     OrdSetFocus( "FAC_FEC" )
@@ -123,12 +127,14 @@ FUNCTION InformePresupuestos()
     LOCAL cTexto
     LOCAL nArea
 
+    nArea  := Select()
+
     IF !ABRIR_TABLA( "PRESUPUEST", "PRE_I", "PRE_FEC" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto := ""
-    nArea  := Select()
 
     DbSelectArea( "PRE_I" )
     OrdSetFocus( "PRE_FEC" )
@@ -196,12 +202,14 @@ FUNCTION InformeVencimientos()
     LOCAL nDias
     LOCAL cAlerta
 
+    nArea  := Select()
+
     IF !ABRIR_TABLA( "FACTURA", "FAC_IV", "FAC_VTO" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto := ""
-    nArea  := Select()
 
     DbSelectArea( "FAC_IV" )
     OrdSetFocus( "FAC_VTO" )
@@ -249,12 +257,14 @@ FUNCTION InformeProveedores()
     LOCAL cTexto
     LOCAL nArea
 
+    nArea  := Select()
+
     IF !ABRIR_TABLA( "PROVEED", "PRV_IP", "PRV_NOM" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto := ""
-    nArea  := Select()
 
     DbSelectArea( "PRV_IP" )
     OrdSetFocus( "PRV_NOM" )
@@ -302,12 +312,14 @@ FUNCTION InformeDiario()
     LOCAL nDebe
     LOCAL nHaber
 
+    nArea  := Select()
+
     IF !ABRIR_TABLA( "LDIARIO", "DIA_IP", "DIA_FEC" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto := ""
-    nArea  := Select()
     nEjer  := Year( Date() )
     nDebe  := 0
     nHaber := 0
@@ -385,12 +397,14 @@ STATIC FUNCTION _InformeMayorCuenta( cCuenta )
         RETURN NIL
     ENDIF
 
+    nArea  := Select()
+
     IF !ABRIR_TABLA( "LDIARIO", "DIA_MR", "DIA_MAY" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto := ""
-    nArea  := Select()
     nEjer  := Year( Date() )
     nSaldo := 0
 
@@ -452,12 +466,14 @@ FUNCTION InformeAsientosDescuadrados()
     LOCAL nDif
     LOCAL nCnt
 
+    nArea   := Select()
+
     IF !ABRIR_TABLA( "LDIARIO", "DIA_DQ", "DIA_ASI" )
+        Select( nArea )
         RETURN NIL
     ENDIF
 
     cTexto  := ""
-    nArea   := Select()
     nEjer   := Year( Date() )
     cAsiAct := ""
     nDebe   := 0

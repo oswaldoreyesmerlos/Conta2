@@ -435,6 +435,7 @@ STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, 
 
     IF !DbSeek( cNum )
         MsgStop( "Presupuesto " + cNum + " no encontrado.", "Error" )
+        PRE_C->( DbCloseArea() )
         RETURN .F.
     ENDIF
 
@@ -460,6 +461,7 @@ STATIC FUNCTION _PreCargarCab( cNum, cCli, cNom, cInfo, dFec, dVal, cFP, nDias, 
         CLI_P->( DbCloseArea() )
     ENDIF
 
+    PRE_C->( DbCloseArea() )
 RETURN .T.
 
 
@@ -1176,40 +1178,7 @@ RETURN .F.
 
 
 STATIC FUNCTION _PreSiguiente()
-
-    LOCAL cAnio
-    LOCAL cPref
-    LOCAL cNum
-    LOCAL nMax
-    LOCAL nSeq
-
-    cAnio := StrZero( Year( Date() ), 4 )
-    cPref := "P" + cAnio
-    nMax  := 0
-
-    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_N", "PRE_NUM" )
-        RETURN ""
-    ENDIF
-
-    DbSelectArea( "PRE_N" )
-    DbGoTop()
-
-    DO WHILE !Eof()
-        IF !Deleted()
-            cNum := AllTrim( PRE_N->NUMERO )
-            IF Left( cNum, Len( cPref ) ) == cPref
-                nSeq := Val( SubStr( cNum, Len( cPref ) + 1, 4 ) )
-                IF nSeq > nMax
-                    nMax := nSeq
-                ENDIF
-            ENDIF
-        ENDIF
-        DbSkip()
-    ENDDO
-
-    PRE_N->( DbCloseArea() )
-
-RETURN cPref + StrZero( nMax + 1, 4 )
+RETURN GetNextNum( "PRE", "Presupuestos" )
 
 
 STATIC FUNCTION _PreClienteExiste( cCli )

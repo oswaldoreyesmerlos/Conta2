@@ -47,6 +47,7 @@ FUNCTION Main()
     MEMVAR cUserID, cUserRol, cEmpNom
 
     InitApp()
+    GfxThemeLoad()
     ErrorBlock( { |e| ErrSys( e ) } )
 
     IF !AppLockAcquire()
@@ -132,11 +133,12 @@ FUNCTION Main()
 
     // ------------------------------------------------------------------
     // PASO 4b: TABLAS ESPECIFICAS DRYWALL
-    //         InicioDrywall() crea las tablas del modulo de calculo
-    //         de tabiqueria seca (OOPTRAMO).
-    //         Guardamos y restauramos el CWD para no afectar al resto.
     // ------------------------------------------------------------------
-    //InicioDrywall()
+    IF !InicioDrywall()
+        MsgStop( "Error creando tablas del modulo Drywall.", "Inicio" )
+        App_Exit()
+        RETURN NIL
+    ENDIF
 
     // ------------------------------------------------------------------
     // PASO 5: MENU PRINCIPAL

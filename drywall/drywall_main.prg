@@ -11,36 +11,8 @@ STATIC s_oDryMenu := NIL
 FUNCTION Main()
 
     LOCAL oMenu, aMenuDef
-    LOCAL cArg := Lower( hb_CStr( hb_ArgV( 0 ) ) + " " + ;
-                         hb_CStr( hb_ArgV( 1 ) ) + " " + ;
-                         hb_CStr( hb_ArgV( 2 ) ) + " " + ;
-                         hb_CStr( hb_ArgV( 3 ) ) )
 
     rddSetDefault( "DBFCDX" )
-
-    // Modo seed desde linea de comandos
-    IF "seed" $ cArg
-        SET DATE BRIT
-        SET DATE FORMAT TO "DD/MM/YYYY"
-        SET CENTURY ON
-        InicioDrywall()
-        SeedDrywall()
-        ? "Seed completado."
-        RETURN 0
-    ENDIF
-
-    // Modo inicializacion: crea tablas/indices y sale sin abrir interfaz.
-    IF "migrate" $ cArg
-        SET DATE BRIT
-        SET DATE FORMAT TO "DD/MM/YYYY"
-        SET CENTURY ON
-        IF InicioDrywall()
-            ? "Inicializacion Drywall completada."
-            RETURN 0
-        ENDIF
-        ? "Error inicializando tablas Drywall."
-        RETURN 1
-    ENDIF
 
     ErrorBlock( { |e| ErrSys( e ) } )
 
@@ -55,7 +27,6 @@ FUNCTION Main()
     CLS
     GfxCursor( SC_NONE )
 
-    // Activar raton
     BEGIN SEQUENCE
         SET EVENTMASK TO ( INKEY_KEYBOARD + INKEY_LDOWN + INKEY_LUP + INKEY_RDOWN + INKEY_RUP )
         wvt_SetMouseMove( .T. )
@@ -78,50 +49,36 @@ RETURN 0
 STATIC FUNCTION _DrywallMenu()
 
     LOCAL aMenu      := {}
-    LOCAL aProyecto  := {}
     LOCAL aMaestros  := {}
-    LOCAL aAux       := {}
-    LOCAL aInformes  := {}
     LOCAL aSistema   := {}
 
-    AAdd( aProyecto, { "Proyecto Actual",         {|| ProyectoActual() },     NIL, "Crear o editar cabecera" } )
-    AAdd( aProyecto, { "Proyectos en Curso",      {|| VisorProyectosCurso() },NIL, "Trabajos temporales TMP" } )
-    AAdd( aProyecto, { "Proyectos Historicos",    {|| VisorProyectosHistorico() }, NIL, "Calculados y cerrados HIS" } )
-    AAdd( aProyecto, { "Eliminar Proyecto Actual",{|| _DrywallLimpiar() },    NIL, "Borrar borrador" } )
+    AAdd( aMaestros, { "Articulos",  {|| ArticulosView() }, 		NIL, "Base de Datos de Materiales" } )
+    AAdd( aMaestros, { "Familias",   {|| M_Familias()    }, 		NIL, "Familias de articulos" } )
+    AAdd( aMaestros, { "Sistemas",   {|| SistemasView()  }, 		NIL, "Sistemas y rendimientos por m2" } )
+    AAdd( aMaestros, { "Familias Art.", {|| EditAux("FAMILIA") },	NIL, "Placas, Perfiles..." } )
+    AAdd( aMaestros, { "Unidad Medida", {|| EditAux("UNIDAD")  }, 	NIL, "Metros, Unidades..." } )
+    AAdd( aMaestros, { "Tipos Obra",    {|| EditAux("OBRA")    }, 	NIL, "Tabique, Techo..." } )
 
-    AAdd( aAux, { "Familias Art.", {|| EditAux("FAMILIA") }, NIL, "Placas, Perfiles..." } )
-    AAdd( aAux, { "Unidad Medida", {|| EditAux("UNIDAD")  }, NIL, "Metros, Unidades..." } )
-    AAdd( aAux, { "Tipos Obra",    {|| EditAux("OBRA")    }, NIL, "Tabique, Techo..." } )
+    AAdd( aSistema, { "Tema Visual", {|| _DrywallTemaVisual() }, 	NIL, "Cambiar colores de la interfaz" } )
+    AAdd( aSistema, { "Salir",       {|| __Quit() },             	NIL, "Cerrar aplicacion" } )
 
-    AAdd( aMaestros, { "Articulos",  {|| ArticulosView() }, NIL, "Base de Datos de Materiales" } )
-    AAdd( aMaestros, { "Familias",   {|| M_Familias()    }, NIL, "Familias de articulos" } )
-    AAdd( aMaestros, { "Sistemas",   {|| SistemasView()  }, NIL, "Sistemas y rendimientos por m2" } )
-    AAdd( aMaestros, { "Tablas Aux", NIL, aAux, "Configuracion general" } )
-
-    AAdd( aInformes, { "Proyectos en Curso", {|| VisorProyectosCurso() },      NIL, "Trabajos temporales TMP" } )
-    AAdd( aInformes, { "Proyectos Historicos",{|| VisorProyectosHistorico() }, NIL, "Calculados y cerrados HIS" } )
-    AAdd( aInformes, { "Proyectos (texto)",  {|| InformeProyectos() },         NIL, "Listado de proyectos activos" } )
-    AAdd( aInformes, { "Historicos",         {|| InformeHistoricos() },        NIL, "Proyectos archivados" } )
-    AAdd( aInformes, { "Clientes",           {|| InformeClientesDrywall() },   NIL, "Listado de clientes" } )
-    AAdd( aInformes, { "Articulos",          {|| InformeArticulos() },         NIL, "Listado de articulos" } )
-    AAdd( aInformes, { "Stock Minimo",       {|| InformeStockMinimo() },       NIL, "Alertas de stock" } )
-
-    AAdd( aSistema, { "Tema Visual", {|| _DrywallTemaVisual() }, NIL, "Cambiar colores de la interfaz" } )
-    AAdd( aSistema, { "Salir",       {|| __Quit() },             NIL, "Cerrar aplicacion" } )
-
-    AAdd( aMenu, { "Proyecto", NIL, aProyecto, "Ciclo de Presupuestacion" } )
+    AAdd( aMenu, { "Proyecto", NIL, { ;
+        { "Proyecto Actual",    {|| ProyectoActual() },     		NIL, "Crear o editar cabecera" }, ;
+        { "Proyectos en Curso", {|| VisorProyectosCurso() },		NIL, "Trabajos temporales TMP" }, ;
+        { "Proyectos Historicos",{|| VisorProyectosHistorico() }, 	NIL, "Calculados y cerrados HIS" }, ;
+        { "Eliminar Actual",    {|| _LimpiaTemporales() },  		NIL, "Borrar borrador" } }, "Ciclo de Presupuestacion" } )
     AAdd( aMenu, { "Maestros", NIL, aMaestros, "Bases de Datos" } )
-    AAdd( aMenu, { "Informes", NIL, aInformes, "Impresion y Salidas" } )
+    AAdd( aMenu, { "Informes", NIL, { ;
+        { "Proyectos en Curso", {|| VisorProyectosCurso() },      NIL, "Trabajos temporales TMP" }, ;
+        { "Proyectos Historicos",{|| VisorProyectosHistorico() }, NIL, "Calculados y cerrados HIS" }, ;
+        { "Proyectos (texto)",  {|| InformeProyectos() },         NIL, "Listado de proyectos activos" }, ;
+        { "Historicos",         {|| InformeHistoricos() },        NIL, "Proyectos archivados" }, ;
+        { "Clientes",           {|| InformeClientesDrywall() },   NIL, "Listado de clientes" }, ;
+        { "Articulos",          {|| InformeArticulos() },         NIL, "Listado de articulos" }, ;
+        { "Stock Minimo",       {|| InformeStockMinimo() },       NIL, "Alertas de stock" } }, "Impresion y Salidas" } )
     AAdd( aMenu, { "Sistema",  NIL, aSistema,  "Configuracion" } )
 
 RETURN aMenu
-
-
-STATIC FUNCTION _DrywallLimpiar()
-
-    _LimpiaTemporales()
-
-RETURN NIL
 
 
 STATIC FUNCTION _DrywallTemaVisual()
@@ -141,11 +98,8 @@ STATIC FUNCTION _DrywallTemaVisual()
         RETURN NIL
     ENDIF
 
-    // Cerrar popups primero para que restauren sus fondos (aun en color viejo)
     TMenuCloseAll()
-
     GfxThemeSet( cSel )
-
     CLS
 
     IF s_oDryMenu != NIL

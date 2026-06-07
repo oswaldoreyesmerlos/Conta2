@@ -13,6 +13,7 @@
 # LIBRERIAS
 # =============================================================================
 gtwvg.hbc
+hbct.hbc
 
 # =============================================================================
 # CABECERAS
@@ -44,17 +45,19 @@ Util.prg
 InicioDBF.prg
 drywall\InicioDrywall.prg
 drywall\CalcUtils.prg
+drywall\SysRendApi.prg
 drywall\OOPTRAMO.prg
 drywall\CALC_ADD.prg
 drywall\CALC_EDIT.prg
 drywall\CALC_MOD.prg
 drywall\EDIT_MOD.prg
-
+drywall\VALID_MOD.prg
 drywall\PRES_MOD.prg
 drywall\TARE_MOD.prg
 drywall\VAL_MOD.prg
 drywall\M_Articulos.prg
 drywall\M_Familias.prg
+drywall\M_Sistemas.prg
 drywall\GenPresupuesto.prg
 drywall\Informes_Inventario.prg
 ReglasNegocio.prg

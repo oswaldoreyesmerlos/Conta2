@@ -234,25 +234,28 @@ METHOD Calc_Rendimientos() CLASS OOPTRAMO
       END SEQUENCE
    ENDIF
 
-   dbSelectArea( "SYS_REND" )
-   dbGoTop()
+    dbSelectArea( "SYS_REND" )
+    OrdSetFocus( "SR_TIPO" )
+    dbSeek( cTipo + Str( nMod, 5, 2 ) + Str( nCaras, 1 ) + Str( nCapas, 1 ) )
 
-   DO WHILE !Eof()
-      IF !Deleted() .AND. ;
-         ::MatchRendimiento( cSistema, cTipo, nMod, nCaras, nCapas, nAncho )
-         cFam  := Upper( AllTrim( FIELD->FAMILIA ) )
-         cRol  := Upper( AllTrim( FIELD->ROL_MAT ) )
-         cUd   := Upper( AllTrim( FIELD->UD_TEC ) )
-         cCod  := ::CodigoRendimiento( cRol, FIELD->CODIGO_DEF )
-         nCant := nArea * FIELD->REND_M2
+    DO WHILE !Eof() .AND. Upper( FIELD->TIPO_OBRA ) == cTipo .AND. ;
+              FIELD->MODUL == nMod .AND. FIELD->CARAS == nCaras .AND. ;
+              FIELD->CAPAS == nCapas
+       IF !Deleted() .AND. ;
+          ::MatchRendimiento( cSistema, cTipo, nMod, nCaras, nCapas, nAncho )
+          cFam  := Upper( AllTrim( FIELD->FAMILIA ) )
+          cRol  := Upper( AllTrim( FIELD->ROL_MAT ) )
+          cUd   := Upper( AllTrim( FIELD->UD_TEC ) )
+          cCod  := ::CodigoRendimiento( cRol, FIELD->CODIGO_DEF )
+          nCant := nArea * FIELD->REND_M2
 
-         IF !_OptionalCode( cCod ) .AND. nCant > 0
-            ::AddMat( cFam, cCod, nCant, cRol, cUd )
-            lTieneRend := .T.
-         ENDIF
-      ENDIF
-      dbSkip()
-   ENDDO
+          IF !_OptionalCode( cCod ) .AND. nCant > 0
+             ::AddMat( cFam, cCod, nCant, cRol, cUd )
+             lTieneRend := .T.
+          ENDIF
+       ENDIF
+       dbSkip()
+    ENDDO
 
    IF lAbriRend
       dbCloseArea()
@@ -374,32 +377,32 @@ METHOD Calc_Tabique() CLASS OOPTRAMO
    nM2Total := nArea * nCaras * Max( nCapas, 1 )
    
    ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMont, "Montantes verticales", "UD" )
-   ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetCan * K_DESP_PER, "Guia Suelo/Techo", "ML" )
-   
-    IF If( ValType( FIELD->L_BANDA ) == "L", FIELD->L_BANDA, .F. )
+    ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetCan * ::GetRendimientoRol( "DESP_PER", K_DESP_PER ), "Guia Suelo/Techo", "ML" )
+    
+     IF If( ValType( FIELD->L_BANDA ) == "L", FIELD->L_BANDA, .F. )
       ::AddMat( "ACCESORIO", "BANDA_ACUS", nMetCan, "Banda Estanqueidad", "ML" )
    ENDIF
 
    FOR nCapa := 1 TO Max( nCapas, 1 )
-      ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, ;
-         If( nCapa == 1, "Revestimiento Cara A", AllTrim( Str( nCapa ) ) + "a Capa Cara A" ), "M2" )
-
-      IF lCaraB
-         ::AddMat( "PLACA", FIELD->ID_PLACA_B, nArea * K_DESP_PLA, ;
+      ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), ;
+          If( nCapa == 1, "Revestimiento Cara A", AllTrim( Str( nCapa ) ) + "a Capa Cara A" ), "M2" )
+ 
+       IF lCaraB
+          ::AddMat( "PLACA", FIELD->ID_PLACA_B, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), ;
             If( nCapa == 1, "Revestimiento Cara B", AllTrim( Str( nCapa ) ) + "a Capa Cara B" ), "M2" )
       ENDIF
 
       ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
-         nArea * nCaras * K_TORN_M2, "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
-   NEXT
-   
-   ::AddMat( "PASTA", "PASTA_JUNT", nM2Total * K_PASTA_M2, "Tratamiento Juntas", "KG" )
+          nArea * nCaras * ::GetRendimientoRol( "TORN_M2", K_TORN_M2 ), "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
+    NEXT
+    
+    ::AddMat( "PASTA", "PASTA_JUNT", nM2Total * ::GetRendimientoRol( "PASTA_M2", K_PASTA_M2 ), "Tratamiento Juntas", "KG" )
     ::AddMat( "CINTA", "CINTA_PAP", ;
        nM2Total * ::GetRendimientoRol( "CINTA_JUNT", K_CINTA_M2 ), ;
        "Cinta Papel", "ML" )
    
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Lana Mineral Interior", "M2" )
+       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Lana Mineral Interior", "M2" )
    ENDIF
 RETURN NIL
 
@@ -418,32 +421,32 @@ METHOD Calc_Techo() CLASS OOPTRAMO
 
    nMetSec := nArea / nMod
 
-   ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMetSec * K_DESP_PER, "Perfil Secundario", "ML" )
+    ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMetSec * ::GetRendimientoRol( "DESP_PER", K_DESP_PER ), "Perfil Secundario", "ML" )
 
-   IF nSepPrim > 0 .AND. !_OptionalCode( FIELD->ID_PER_HOR )
-       nMetPri := nArea / nSepPrim
-       nCruces := nArea / ( nMod * nSepPrim )
-       ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetPri * K_DESP_PER, "Perfil Primario", "ML" )
+    IF nSepPrim > 0 .AND. !_OptionalCode( FIELD->ID_PER_HOR )
+        nMetPri := nArea / nSepPrim
+        nCruces := nArea / ( nMod * nSepPrim )
+        ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetPri * ::GetRendimientoRol( "DESP_PER", K_DESP_PER ), "Perfil Primario", "ML" )
        ::AddMat( "ACCESORIO", "PIEZA_CRUCE", nCruces, "Union Prim-Sec", "UD" )
    ENDIF
 
-   ::AddMat( "PERFIL", FIELD->ID_PER_PER, nPerim  * K_DESP_PER, "Angular Perimetral", "ML" )
+    ::AddMat( "PERFIL", FIELD->ID_PER_PER, nPerim  * ::GetRendimientoRol( "DESP_PER", K_DESP_PER ), "Angular Perimetral", "ML" )
    
-   FOR nCapa := 1 TO nCapas
-      ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, ;
-         If( nCapa == 1, "Techo Continuo", AllTrim( Str( nCapa ) ) + "a Capa Techo" ), "M2" )
-      ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
-         nArea * K_TORN_M2, "Fijacion Placa " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
+    FOR nCapa := 1 TO nCapas
+       ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), ;
+          If( nCapa == 1, "Techo Continuo", AllTrim( Str( nCapa ) ) + "a Capa Techo" ), "M2" )
+       ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
+          nArea * ::GetRendimientoRol( "TORN_M2", K_TORN_M2 ), "Fijacion Placa " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
    NEXT
 
     ::DesgloseAnclaje( FIELD->ID_ANCLAJE, nArea, If( nSepPrim > 0, nSepPrim, 1.00 ), nMod )
-   ::AddMat( "PASTA",    "PASTA_JUNT", nArea * nCapas * K_PASTA_M2, "Juntas Techo", "KG" )
+    ::AddMat( "PASTA",    "PASTA_JUNT", nArea * nCapas * ::GetRendimientoRol( "PASTA_M2", K_PASTA_M2 ), "Juntas Techo", "KG" )
     ::AddMat( "CINTA", "CINTA_PAP", ;
        nArea * nCapas * ::GetRendimientoRol( "CINTA_JUNT", K_CINTA_M2 ), ;
        "Cinta Techo", "ML" )
    
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Aislamiento", "M2" )
+       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Aislamiento", "M2" )
     ENDIF
 
 RETURN NIL
@@ -461,8 +464,8 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
    LOCAL nMont := 0
    LOCAL nMetHor  := 0
    
-   IF lDirect
-      ::AddMat( "PASTA", "PASTA_AGAR", nArea * K_PASTA_M2, "Pasta Agarre", "KG" )
+    IF lDirect
+       ::AddMat( "PASTA", "PASTA_AGAR", nArea * ::GetRendimientoRol( "PASTA_M2", K_PASTA_M2 ), "Pasta Agarre", "KG" )
    ELSE
       IF nMod == 0; nMod := 0.60; ENDIF
 
@@ -471,34 +474,34 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
 
       ::AddMat( "PERFIL", FIELD->ID_PER_VER, nMont, "Maestra/Montante" , "UD" )
 
-      IF !_OptionalCode( FIELD->ID_PER_HOR )
-         ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetHor * K_DESP_PER, "Canal Suelo/Techo", "ML" )
+       IF !_OptionalCode( FIELD->ID_PER_HOR )
+          ::AddMat( "PERFIL", FIELD->ID_PER_HOR, nMetHor * ::GetRendimientoRol( "DESP_PER", K_DESP_PER ), "Canal Suelo/Techo", "ML" )
       ENDIF
    ENDIF
    
-   FOR nCapa := 1 TO nCapas
-      ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * K_DESP_PLA, ;
-         If( nCapa == 1, "Trasdosado", AllTrim( Str( nCapa ) ) + "a Capa Trasdosado" ), "M2" )
-      IF !lDirect
-         ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
-            nArea * K_TORN_M2, "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
+    FOR nCapa := 1 TO nCapas
+       ::AddMat( "PLACA", FIELD->ID_PLACA_A, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), ;
+          If( nCapa == 1, "Trasdosado", AllTrim( Str( nCapa ) ) + "a Capa Trasdosado" ), "M2" )
+       IF !lDirect
+          ::AddMat( "TORNILLO", If( nCapa == 1, "TORN_PM_25", "TORN_PM_35" ), ;
+             nArea * ::GetRendimientoRol( "TORN_M2", K_TORN_M2 ), "Fijacion " + AllTrim( Str( nCapa ) ) + "a Capa", "UD" )
       ENDIF
    NEXT
 
-   ::AddMat( "PASTA", "PASTA_JUNT", nArea * nCapas * K_PASTA_M2, "Juntas", "KG" )
+    ::AddMat( "PASTA", "PASTA_JUNT", nArea * nCapas * ::GetRendimientoRol( "PASTA_M2", K_PASTA_M2 ), "Juntas", "KG" )
     ::AddMat( "CINTA", "CINTA_PAP", ;
        nArea * nCapas * ::GetRendimientoRol( "CINTA_JUNT", K_CINTA_M2 ), ;
        "Cinta Juntas Trasdosado", "ML" )
 
-   IF !lDirect
-      ::AddMat( "TORNILLO", "TORN_MM_LN", nArea * K_TORN_MM, "Tornillo Fijacion Estructura", "UD" )
-   ENDIF
-
-   ::AddMat( "CINTA", "CINTA_GUAR", nArea * K_GUARDA_M2, "Guardavivos", "ML" )
-
-    IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Aislamiento", "M2" )
+    IF !lDirect
+       ::AddMat( "TORNILLO", "TORN_MM_LN", nArea * ::GetRendimientoRol( "TORN_MM", K_TORN_MM ), "Tornillo Fijacion Estructura", "UD" )
     ENDIF
+
+    ::AddMat( "CINTA", "CINTA_GUAR", nArea * ::GetRendimientoRol( "GUARDA_M2", K_GUARDA_M2 ), "Guardavivos", "ML" )
+
+     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
+        ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Aislamiento", "M2" )
+     ENDIF
 
 RETURN NIL
 
@@ -509,12 +512,12 @@ METHOD Calc_Generico() CLASS OOPTRAMO
    LOCAL nArea  := nLargo * nAlto
    LOCAL cMat   := FIELD->ID_PLACA_A
 
-   IF !Empty( cMat )
-      ::AddMat( "GENERICO", cMat, nArea * K_DESP_PLA, "Material base", "M2" )
-   ENDIF
+    IF !Empty( cMat )
+       ::AddMat( "GENERICO", cMat, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Material base", "M2" )
+    ENDIF
 
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * K_DESP_PLA, "Aislamiento", "M2" )
+       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Aislamiento", "M2" )
     ENDIF
 
 RETURN NIL
@@ -688,24 +691,26 @@ METHOD AddMat( cFam, cCod, nCant, cDet, cUdTec ) CLASS OOPTRAMO
       nPesoTot := nCant * nPesoU
    ENDIF
 
-   dbSelectArea( "TMP_MAT" )
-   IF !NetFLock()
-      ::nErrores++
-      AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
-                     ": No se pudo bloquear TMP_MAT para anadir material [" + cCod + "]." )
-      dbSelectArea( nAreaArt )
-      RETURN NIL
-   ENDIF
+    dbSelectArea( "TMP_MAT" )
+    IF !NetFLock()
+       dbSetOrder( nOrdArt )
+       ::nErrores++
+       AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
+                      ": No se pudo bloquear TMP_MAT para anadir material [" + cCod + "]." )
+       dbSelectArea( nAreaArt )
+       RETURN NIL
+    ENDIF
 
-   DbAppend()
-   IF NetErr()
-      dbUnlock()
-      ::nErrores++
-      AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
-                     ": No se pudo anadir material [" + cCod + "]." )
-      dbSelectArea( nAreaArt )
-      RETURN NIL
-   ENDIF
+    DbAppend()
+    IF NetErr()
+       dbSetOrder( nOrdArt )
+       dbUnlock()
+       ::nErrores++
+       AAdd( ::aLog, "Lin " + AllTrim( Str( TMP_TRA->ID_LINEA ) ) + ;
+                      ": No se pudo anadir material [" + cCod + "]." )
+       dbSelectArea( nAreaArt )
+       RETURN NIL
+    ENDIF
    
    REPLACE FIELD->NUMERO    WITH TMP_TRA->NUMERO
    REPLACE FIELD->ID_LINEA  WITH TMP_TRA->ID_LINEA

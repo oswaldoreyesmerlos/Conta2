@@ -523,19 +523,9 @@ METHOD ExecItem() CLASS TMenuPop
 
     LOCAL bA   := ::aItems[::nSel, 2]
     LOCAL lSub := ::aItems[::nSel, 3]
-    LOCAL oErr
-    LOCAL bErr
 
     IF ValType( bA ) == "B"
-        bErr := ErrorBlock( {| e | Break( e ) } )
-        BEGIN SEQUENCE
-            Eval( bA, ::nTop + ::nSel - 1, ::nRight - 1 )
-        RECOVER USING oErr
-        END SEQUENCE
-        ErrorBlock( bErr )
-        IF oErr != NIL
-            _MenuError( oErr )
-        ENDIF
+        Eval( bA, ::nTop + ::nSel - 1, ::nRight - 1 )
     ENDIF
 
 RETURN lSub
@@ -576,75 +566,6 @@ STATIC FUNCTION _RedrawStack()
     FOR nI := 1 TO Len( aPopStack )
         aPopStack[nI]:Paint()
     NEXT
-
-RETURN NIL
-
-
-STATIC FUNCTION _MenuError( oErr )
-
-    LOCAL cMsg
-    LOCAL cLog
-    LOCAL cArgs := ""
-    LOCAL nI    := 2
-    LOCAL i
-
-    cMsg := "La opcion no pudo ejecutarse."
-    cLog := Replicate( "=", 70 ) + hb_Eol() + ;
-        "FECHA: " + DToC( Date() ) + " HORA: " + Time() + hb_Eol() + ;
-        "ERROR EN OPCION DE MENU" + hb_Eol()
-
-    IF oErr != NIL
-        cMsg += Chr( 13 ) + Chr( 10 ) + ;
-            AllTrim( hb_CStr( oErr:Operation ) ) + ": " + ;
-            AllTrim( hb_CStr( oErr:Description ) )
-        BEGIN SEQUENCE
-            cLog += "Subsistema  : " + hb_ValToStr( oErr:SubSystem )   + hb_Eol()
-            cLog += "Codigo      : " + hb_ValToStr( oErr:SubCode )     + hb_Eol()
-            cLog += "Operacion   : " + hb_ValToStr( oErr:Operation )   + hb_Eol()
-            cLog += "Descripcion : " + hb_ValToStr( oErr:Description ) + hb_Eol()
-            cLog += "Severidad   : " + hb_ValToStr( oErr:Severity )    + hb_Eol()
-            cLog += "CanRetry    : " + hb_ValToStr( oErr:CanRetry )    + hb_Eol()
-            IF !Empty( oErr:FileName )
-                cLog += "Fichero     : " + hb_ValToStr( oErr:FileName ) + hb_Eol()
-            ENDIF
-            IF !Empty( oErr:OsCode )
-                cLog += "OS code     : " + hb_ValToStr( oErr:OsCode )  + hb_Eol()
-            ENDIF
-        RECOVER
-            cLog += "(no se pudieron leer todos los campos del error)" + hb_Eol()
-        END SEQUENCE
-
-        BEGIN SEQUENCE
-            IF HB_ISARRAY( oErr:Args )
-                cArgs := "Argumentos:" + hb_Eol()
-                FOR i := 1 TO Len( oErr:Args )
-                    cArgs += "  [" + AllTrim( Str( i ) ) + "] " + ;
-                             hb_ValToStr( oErr:Args[ i ] ) + hb_Eol()
-                NEXT
-            ENDIF
-        RECOVER
-            cArgs := "(argumentos no accesibles)" + hb_Eol()
-        END SEQUENCE
-
-        IF !Empty( cArgs )
-            cLog += cArgs
-        ENDIF
-
-        cLog += "Pila de llamadas:" + hb_Eol()
-        DO WHILE !Empty( ProcName( nI ) )
-            cLog += "  " + PadR( ProcFile( nI ), 24 ) + ;
-                    " -> " + PadR( ProcName( nI ), 30 ) + ;
-                    " (linea " + AllTrim( Str( ProcLine( nI ) ) ) + ")" + hb_Eol()
-            nI++
-            IF nI > 50
-                EXIT
-            ENDIF
-        ENDDO
-    ENDIF
-
-    ErrorLogAppend( cLog )
-
-    MsgStop( cMsg, "Menu" )
 
 RETURN NIL
 

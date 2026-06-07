@@ -337,10 +337,11 @@ STATIC FUNCTION _ValCargarDesde( cAlias, cProyecto )
     LOCAL aData := {}
 
     dbSelectArea( cAlias )
-    dbGoTop()
+    OrdSetFocus( "RES_PK" )
+    dbSeek( PadR( cProyecto, 6 ) )
 
-    DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+    DO WHILE !Eof() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+        IF !Deleted()
             AAdd( aData, { ;
                 AllTrim( FIELD->CODIGO ), ;
                 AllTrim( FIELD->DESCRIP ), ;
@@ -407,20 +408,17 @@ RETURN _ValGuardarEn( "TMP_RES", cProyecto, aData )
 STATIC FUNCTION _ValGuardarEn( cAlias, cProyecto, aData )
 
     LOCAL i
+    LOCAL nArea := Select()
+    LOCAL cKey
+
+    dbSelectArea( cAlias )
+    OrdSetFocus( "RES_PK" )
 
     FOR i := 1 TO Len( aData )
-        dbSelectArea( cAlias )
-        dbGoTop()
-        DO WHILE !Eof()
-            IF !Deleted() .AND. ;
-               AllTrim( FIELD->NUMERO ) == cProyecto .AND. ;
-               AllTrim( FIELD->CODIGO ) == AllTrim( aData[i, 1] )
-                EXIT
-            ENDIF
-            dbSkip()
-        ENDDO
-
-        IF !Eof()
+        cKey := PadR( cProyecto, 6 ) + PadR( AllTrim( aData[i, 1] ), 15 )
+        dbSeek( cKey )
+        IF !Eof() .AND. AllTrim( FIELD->NUMERO ) == cProyecto .AND. ;
+           AllTrim( FIELD->CODIGO ) == AllTrim( aData[i, 1] )
             IF NetRLock()
                 REPLACE FIELD->PRECIO  WITH aData[i, 5]
                 REPLACE FIELD->IMP_TOT WITH aData[i, 6]
@@ -429,6 +427,10 @@ STATIC FUNCTION _ValGuardarEn( cAlias, cProyecto, aData )
             ENDIF
         ENDIF
     NEXT
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
 
 RETURN NIL
 

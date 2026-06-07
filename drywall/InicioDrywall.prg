@@ -55,6 +55,7 @@ FUNCTION InicioDrywall()
         AAdd( aFlds, { "L_CAB_DIR",  "L",  1, 0 } )
 
         aInds := {}
+        AAdd( aInds, { "TMP_NUM", "NUMERO" } )
 
         AAdd( aAllDefs, { "TMP_CAB", aFlds, aInds, .T. } )
 

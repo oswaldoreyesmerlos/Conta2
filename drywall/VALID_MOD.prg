@@ -3,92 +3,15 @@
 // DV_MAX_MSG eliminado — se muestran todos los errores
 
 FUNCTION DrywallMarkCalcDirty( cProyecto )
-
-    LOCAL nArea := Select()
-
-    IF ValType( cProyecto ) != "C"
-        cProyecto := DrywallProyectoActualNumero()
-    ENDIF
-    cProyecto := AllTrim( cProyecto )
-
-    IF Empty( cProyecto )
-        RETURN .F.
-    ENDIF
-
-    IF !_DvOpen( "TMP_CAB", "TMP_CAB", "" )
-        RETURN .F.
-    ENDIF
-
-    dbSelectArea( "TMP_CAB" )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
-            IF NetRLock()
-                IF FieldPos( "ESTADO" ) > 0
-                    REPLACE FIELD->ESTADO WITH "P"
-                ENDIF
-                IF FieldPos( "L_CALC_DIR" ) > 0
-                    REPLACE FIELD->L_CALC_DIR WITH .T.
-                ENDIF
-                IF FieldPos( "L_SUCIO" ) > 0
-                    REPLACE FIELD->L_SUCIO WITH .T.
-                ENDIF
-                dbCommit()
-                dbUnlock()
-            ENDIF
-            EXIT
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN .T.
-
+RETURN _MarkEstado( cProyecto, "P", .T., NIL, .T. )
 
 FUNCTION DrywallMarkCabDirty( cProyecto )
-
-    LOCAL nArea := Select()
-
-    IF ValType( cProyecto ) != "C"
-        cProyecto := DrywallProyectoActualNumero()
-    ENDIF
-    cProyecto := AllTrim( cProyecto )
-
-    IF Empty( cProyecto )
-        RETURN .F.
-    ENDIF
-
-    IF !_DvOpen( "TMP_CAB", "TMP_CAB", "" )
-        RETURN .F.
-    ENDIF
-
-    dbSelectArea( "TMP_CAB" )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
-            IF NetRLock()
-                IF FieldPos( "L_CAB_DIR" ) > 0
-                    REPLACE FIELD->L_CAB_DIR WITH .T.
-                ENDIF
-                dbCommit()
-                dbUnlock()
-            ENDIF
-            EXIT
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN .T.
-
+RETURN _MarkEstado( cProyecto, NIL, NIL, .T., NIL )
 
 FUNCTION DrywallMarkCalculated( cProyecto )
+RETURN _MarkEstado( cProyecto, "C", .F., NIL, .F. )
+
+STATIC FUNCTION _MarkEstado( cProyecto, cEstado, lCalcDir, lCabDir, lSucio )
 
     LOCAL nArea := Select()
 
@@ -101,29 +24,30 @@ FUNCTION DrywallMarkCalculated( cProyecto )
         RETURN .F.
     ENDIF
 
-    IF !_DvOpen( "TMP_CAB", "TMP_CAB", "" )
+    IF !_DvOpen( "TMP_CAB", "TMP_CAB", "TMP_NUM" )
         RETURN .F.
     ENDIF
 
     dbSelectArea( "TMP_CAB" )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
-            IF NetRLock()
-                REPLACE FIELD->ESTADO WITH "C"
-                IF FieldPos( "L_CALC_DIR" ) > 0
-                    REPLACE FIELD->L_CALC_DIR WITH .F.
-                ENDIF
-                IF FieldPos( "L_SUCIO" ) > 0
-                    REPLACE FIELD->L_SUCIO WITH .F.
-                ENDIF
-                dbCommit()
-                dbUnlock()
+    OrdSetFocus( "TMP_NUM" )
+    IF dbSeek( PadR( cProyecto, 6 ) )
+        IF NetRLock()
+            IF cEstado != NIL .AND. FieldPos( "ESTADO" ) > 0
+                REPLACE FIELD->ESTADO WITH cEstado
             ENDIF
-            EXIT
+            IF lCalcDir != NIL .AND. FieldPos( "L_CALC_DIR" ) > 0
+                REPLACE FIELD->L_CALC_DIR WITH lCalcDir
+            ENDIF
+            IF lCabDir != NIL .AND. FieldPos( "L_CAB_DIR" ) > 0
+                REPLACE FIELD->L_CAB_DIR WITH lCabDir
+            ENDIF
+            IF lSucio != NIL .AND. FieldPos( "L_SUCIO" ) > 0
+                REPLACE FIELD->L_SUCIO WITH lSucio
+            ENDIF
+            dbCommit()
+            dbUnlock()
         ENDIF
-        dbSkip()
-    ENDDO
+    ENDIF
 
     IF nArea > 0
         dbSelectArea( nArea )

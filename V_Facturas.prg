@@ -390,6 +390,7 @@ STATIC FUNCTION _FacCargarCab( cNum, cCli, cNom, dFec, cFP, nDias, ;
 
     IF !DbSeek( _FacKey( cNum ) )
         MsgStop( "Factura " + cNum + " no encontrada.", "Error" )
+        FAC->( DbCloseArea() )
         RETURN .F.
     ENDIF
 
@@ -417,6 +418,7 @@ STATIC FUNCTION _FacCargarCab( cNum, cCli, cNom, dFec, cFP, nDias, ;
         CLI_F->( DbCloseArea() )
     ENDIF
 
+    FAC->( DbCloseArea() )
 RETURN .T.
 
 
@@ -931,6 +933,8 @@ RETURN NIL
 
 FUNCTION FacturaGuardar( hFac, aLins, lNuevo )
 
+    LOCAL lOk := .T.
+
     DEFAULT lNuevo TO .T.
 
     IF !lNuevo .AND. FacturaContabilizada( hFac[ "SERIE" ], hFac[ "NUMERO" ] )
@@ -940,27 +944,35 @@ FUNCTION FacturaGuardar( hFac, aLins, lNuevo )
         RETURN .F.
     ENDIF
 
-    IF !_FacGuardarCab( hFac, lNuevo )
-        RETURN .F.
-    ENDIF
+    BEGIN SEQUENCE
 
-    IF !_FacGuardarLins( hFac, aLins )
-        IF lNuevo
-            _FacBorrarCabDB( hFac[ "NUMERO" ] )
+        IF !_FacGuardarCab( hFac, lNuevo )
+            lOk := .F.
+        ELSEIF !_FacGuardarLins( hFac, aLins )
+            IF lNuevo
+                _FacBorrarCabDB( hFac[ "NUMERO" ] )
+            ENDIF
+            lOk := .F.
+        ELSEIF !_FacGenVencim( hFac[ "NUMERO" ], hFac[ "CLIENTE_" ], ;
+                               hFac[ "FECHA_VT" ], hFac[ "TOTAL" ] )
+            IF lNuevo
+                _FacBorrarLinsDB( hFac[ "NUMERO" ] )
+                _FacBorrarCabDB( hFac[ "NUMERO" ] )
+            ENDIF
+            lOk := .F.
         ENDIF
-        RETURN .F.
-    ENDIF
 
-    IF !_FacGenVencim( hFac[ "NUMERO" ], hFac[ "CLIENTE_" ], ;
-                       hFac[ "FECHA_VT" ], hFac[ "TOTAL" ] )
+    RECOVER
         IF lNuevo
             _FacBorrarLinsDB( hFac[ "NUMERO" ] )
             _FacBorrarCabDB( hFac[ "NUMERO" ] )
         ENDIF
-        RETURN .F.
-    ENDIF
+        lOk := .F.
+        MsgStop( "Error de escritura al guardar la factura. " + ;
+                 "Se ha intentado deshacer los cambios.", "Error" )
+    END SEQUENCE
 
-RETURN .T.
+RETURN lOk
 
 
 STATIC FUNCTION _FacGuardarCab( hFac, lNuevo )
