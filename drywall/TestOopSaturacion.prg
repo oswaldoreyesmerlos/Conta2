@@ -76,6 +76,9 @@ PROCEDURE Main()
     _Assert( "Techo sin primario no genera T45", !_HasCodeLine( 4, "T45" ), @nOk, @nFail )
     _Assert( "Techo sin primario no genera pieza cruce", !_HasCodeLine( 4, "PIEZA_CRUCE" ), @nOk, @nFail )
     _Assert( "Sistema SYS_REND genera pasta", _HasCodeLine( 1, "PASTA_JUNT" ), @nOk, @nFail )
+    _Assert( "Lana SYS_REND conserva area fisica", ;
+             Abs( _AmountCodeLine( 1, "LANA_40" ) - 9.750 ) < 0.001, ;
+             @nOk, @nFail )
     _Assert( "Fallback tabique genera canal", _HasCodeLine( 2, "CAN_48" ), @nOk, @nFail )
     _Assert( "Trasdosado directo genera pasta agarre", _HasCodeLine( 7, "PASTA_AGAR" ), @nOk, @nFail )
 
@@ -233,6 +236,7 @@ STATIC FUNCTION _CreateArticulos( cPath )
     _AddArt( "CINTA_PAP",  "Cinta papel juntas 90m",       "CINTA",     "rollo", 5.95, 0,    0,    0.200 )
     _AddArt( "CINTA_GUAR", "Cinta guardavivos",             "CINTA",     "ud",   12.60, 0,    0,    0.150 )
     _AddArt( "TORN_PM_25", "Tornillo PM 25mm caja 1000",   "TORNILLO",  "caja",  8.95, 0,    0,    0.001 )
+    _AddArt( "TORN_MM_LN", "Tornillo fijacion estructura",  "TORNILLO",  "caja",  8.95, 0,    0,    0.001 )
     _AddArt( "BANDA_ACUS", "Banda estanqueidad acustica",  "ACCESORIO", "rollo", 2.50, 30000,0,    0.050 )
     _AddArt( "PIEZA_CRUCE","Pieza cruce primario-sec",     "ACCESORIO", "ud",    1.20, 0,    0,    0.020 )
     _AddArt( "TACO_LATON", "Taco expansion laton",         "ANCLAJE",   "ud",    0.35, 0,    0,    0.000 )
@@ -292,14 +296,14 @@ STATIC FUNCTION _CreateSysRend( cPath )
     _Rend( "TAB_SENCILLO_1X1", "TABIQUE", 0.60, 2, 1, 0, 60, "TORNILLO", "TORN_PM_1",  "TORN_PM_25", "UD", 13.000 )
     _Rend( "TAB_SENCILLO_1X1", "TABIQUE", 0.60, 2, 1, 0, 70, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 3.150 )
     _Rend( "TAB_SENCILLO_1X1", "TABIQUE", 0.60, 2, 1, 0, 80, "ACCESORIO","JUNTA_EST",  "BANDA_ACUS", "ML", 1.720 )
-    _Rend( "TAB_SENCILLO_1X1", "TABIQUE", 0.60, 2, 1, 0, 90, "AISLAN",   "AISLANTE",   "",           "M2", 1.050 )
+    _Rend( "TAB_SENCILLO_1X1", "TABIQUE", 0.60, 2, 1, 0, 90, "AISLAN",   "AISLANTE",   "",           "M2", 1.000 )
 
     _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 10, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
     _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 20, "PERFIL",   "MONTANTE",   "",           "ML", 2.330 )
     _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 30, "PERFIL",   "CANAL",      "",           "ML", 0.950 )
     _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 40, "PASTA",    "PASTA_JUNT", "PASTA_JUNT", "KG", 0.360 )
     _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 50, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 1.300 )
-    _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 60, "AISLAN",   "AISLANTE",   "",           "M2", 1.050 )
+    _Rend( "TR_AUT_MONT_1P", "TRASDOSADO_AUT", 0.60, 1, 1, 0, 60, "AISLAN",   "AISLANTE",   "",           "M2", 1.000 )
 
     _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 10, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
     _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 20, "PERFIL",   "PERF_SEC",   "MAS_82X16", "ML", 2.450 )
@@ -308,6 +312,8 @@ STATIC FUNCTION _CreateSysRend( cPath )
     _Rend( "TECHO_SEMI_MAES_1P", "TECHO", 0.60, 1, 1, 0, 50, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 1.890 )
 
     INDEX ON Upper( SISTEMA_ID ) + Str( ORDEN, 4 ) TAG SR_SIS
+    INDEX ON Upper( TIPO_OBRA ) + Str( MODUL, 5, 2 ) + Str( CARAS, 1 ) + ;
+             Str( CAPAS, 1 ) + Str( ANCHO_PERF, 3 ) + Str( ORDEN, 4 ) TAG SR_TIPO
     dbCloseArea()
 
 RETURN NIL
@@ -640,6 +646,25 @@ STATIC FUNCTION _HasCodeLine( nLine, cCode )
     ENDDO
 
 RETURN lFound
+
+
+STATIC FUNCTION _AmountCodeLine( nLine, cCode )
+
+    LOCAL nAmount := 0
+
+    dbSelectArea( "TMP_MAT" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. ;
+           AllTrim( FIELD->NUMERO ) == TEST_PROJECT .AND. ;
+           FIELD->ID_LINEA == nLine .AND. ;
+           Upper( AllTrim( FIELD->CODIGO ) ) == Upper( AllTrim( cCode ) )
+            nAmount += FIELD->CANTIDAD
+        ENDIF
+        dbSkip()
+    ENDDO
+
+RETURN nAmount
 
 
 STATIC FUNCTION _Assert( cName, lCond, nOk, nFail )

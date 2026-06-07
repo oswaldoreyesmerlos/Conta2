@@ -510,7 +510,7 @@ STATIC FUNCTION _LinForm( cSis, aRow, lNuevo )
     oWin := TWindow():New( 7, 22, 28, 111, ;
         If( lNuevo, "NUEVO RENDIMIENTO", "EDITAR RENDIMIENTO" ) )
     oWin:lStatusBar := .T.
-    oWin:SetStatus( "Techo: PERF_SEC, PERF_PRI, PERF_PER, PLACA_A y componentes CUELGUE_*" )
+    oWin:SetStatus( "PLACA suele incluir merma; AISLANTE 1.000 conserva los m2 fisicos." )
 
     oWin:AddCtrl( TLabel():New(  2, 3, "Orden      :", oWin ) )
     oWin:AddCtrl( TLabel():New(  4, 3, "Familia    :", oWin ) )

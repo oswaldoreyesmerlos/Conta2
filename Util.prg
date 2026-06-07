@@ -451,7 +451,7 @@ RETURN NIL
 // 5) CONTADOR CORRELATIVO DE DOCUMENTOS
 // ============================================================================
 
-FUNCTION GetNextNum( cCodDoc, cDescrip )
+FUNCTION GetNextNum( cCodDoc, cDescrip, cPrefDef, nDigDef )
 
     LOCAL cProxCod := ""
     LOCAL nAreaIni := Select()
@@ -468,7 +468,28 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
         RETURN ""
     ENDIF
 
-    cCodDoc := PadR( AllTrim( Upper( cCodDoc ) ), 3 )
+    cCodDoc := AllTrim( Upper( cCodDoc ) )
+
+    IF Len( cCodDoc ) > 10
+        MsgStop( "GetNextNum: el codigo de documento supera 10 caracteres.", "Contador" )
+        RETURN ""
+    ENDIF
+
+    IF ValType( cPrefDef ) != "C"
+        cPrefDef := ""
+    ENDIF
+
+    IF ValType( nDigDef ) != "N" .OR. nDigDef <= 0
+        nDigDef := 0
+    ENDIF
+
+    IF Len( cCodDoc ) > 3 .AND. Empty( cPrefDef )
+        cPrefDef := cCodDoc
+    ENDIF
+
+    IF Len( cCodDoc ) > 3 .AND. nDigDef == 0
+        nDigDef := Max( 1, 10 - Len( cPrefDef ) )
+    ENDIF
 
     IF !ABRIR_TABLA( "CONTADOR", "CON", "COD_DOC" )
         MsgStop( "No se puede acceder al contador.", "Error critico" )
@@ -497,7 +518,8 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
 
     ELSE
 
-        cPrefijo := _PrefijoEmp()
+        cPrefijo := If( Empty( cPrefDef ), _PrefijoEmp(), AllTrim( cPrefDef ) )
+        nDigitos := If( nDigDef > 0, nDigDef, 7 )
 
         IF !NetFLock()
             IF !lFueAbierta
@@ -520,6 +542,17 @@ FUNCTION GetNextNum( cCodDoc, cDescrip )
             REPLACE CON->DIGITOS WITH nDigitos
         ENDIF
 
+    ENDIF
+
+    IF Len( cPrefijo ) + nDigitos > 12
+        DbUnlock()
+        IF !lFueAbierta
+            CON->( DbCloseArea() )
+        ENDIF
+        Select( nAreaIni )
+        MsgStop( "La configuracion del contador " + cCodDoc + ;
+                 " genera numeros de mas de 12 caracteres.", "Contador" )
+        RETURN ""
     ENDIF
 
     nUltNum++

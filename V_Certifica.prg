@@ -106,34 +106,9 @@ RETURN aData
 STATIC FUNCTION _CertSiguiente()
 
     LOCAL cAnio := StrZero( Year( Date() ), 4 )
-    LOCAL cPref := "CER" + cAnio
-    LOCAL nMax  := 0
-    LOCAL cNum
-    LOCAL nSeq
+    LOCAL cSerie := "CER" + cAnio
 
-    IF !ABRIR_TABLA( "CERTIFICA", "CER_N", "CERT_NUM" )
-        RETURN ""
-    ENDIF
-
-    DbSelectArea( "CER_N" )
-    DbGoTop()
-
-    DO WHILE !Eof()
-        IF !Deleted()
-            cNum := AllTrim( CER_N->ID )
-            IF Left( cNum, Len( cPref ) ) == cPref
-                nSeq := Val( SubStr( cNum, Len( cPref ) + 1, 4 ) )
-                IF nSeq > nMax
-                    nMax := nSeq
-                ENDIF
-            ENDIF
-        ENDIF
-        DbSkip()
-    ENDDO
-
-    CER_N->( DbCloseArea() )
-
-RETURN cPref + StrZero( nMax + 1, 4 )
+RETURN GetNextNum( cSerie, "Certificaciones " + cAnio, cSerie, 4 )
 
 
 STATIC FUNCTION _CertObraPresupuesto( cIdObra )

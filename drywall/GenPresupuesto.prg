@@ -445,35 +445,7 @@ RETURN .T.
 
 STATIC FUNCTION _PreSiguienteDry()
 
-    LOCAL cAnio, cPref, cNum
-    LOCAL nMax := 0, nSeq
-
-    cAnio := StrZero( Year( Date() ), 4 )
-    cPref := "P" + cAnio
-
-    IF !ABRIR_TABLA( "PRESUPUEST", "PRE_SIG", "PRE_NUM" )
-        RETURN ""
-    ENDIF
-
-    dbSelectArea( "PRE_SIG" )
-    dbGoTop()
-
-    DO WHILE !Eof()
-        IF !Deleted()
-            cNum := AllTrim( PRE_SIG->NUMERO )
-            IF Left( cNum, Len( cPref ) ) == cPref
-                nSeq := Val( SubStr( cNum, Len( cPref ) + 1 ) )
-                IF nSeq > nMax
-                    nMax := nSeq
-                ENDIF
-            ENDIF
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    PRE_SIG->( DbCloseArea() )
-
-RETURN cPref + StrZero( nMax + 1, 4 )
+RETURN GetNextNum( "PRE", "Presupuestos" )
 
 
 STATIC FUNCTION _CliSeleccionar()

@@ -38,19 +38,47 @@
 - **Integración Drywall en AppGestion**: menú DRYWALL en MenuInit.prg con 8 opciones.
   `VALID_MOD.prg` y `M_Sistemas.prg` añadidos a build. `Main.prg` llama `InicioDrywall()` y `GfxThemeLoad()`.
   EXTERNALs corregidos (SistemasView, AltaFact). 128 tests verdes.
+- **Ejecución durante desarrollo**: AppGestion es el destino principal y ya integra Drywall.
+  El ejecutable standalone de Drywall se mantiene como banco de pruebas para compilar,
+  sembrar datos temporales y validar cálculos con mayor rapidez.
 - **Tema Visual migrado** de `drywall_main.prg` a `MenuInit.prg` (`_AppTemaVisual()` estática).
   Carga automática al arranque vía `GfxThemeLoad()` en `Main.prg`.
 - **SeedDrywall eliminado** permanentemente (ya no se usará).
 - **Numeración CONTADOR**: `_PreSiguiente()` reemplazada por `GetNextNum("PRE", "Presupuestos")`
   en `V_Presupuesto.prg` — O(1), lock atómico, sin duplicados ni huecos.
-- **Auditoría completa AppGestion**: 46 hallazgos (18 críticos, 16 altos, 5 medios, 7 bajos)
-  documentados por módulo. Pendiente corregir progresivamente.
+- **Seed CONTADOR en InicioDBF.prg**: `_SiembraContador()` crea registros iniciales para
+  PRE, PAG, REC, NA, ASI, CER, OBR y PRY. La siembra es idempotente: completa los
+  registros ausentes sin depender de que la tabla esté vacía.
+- **Series anuales corregidas en CONTADOR**:
+  - `COD_DOC` y `PREFIJO` ampliados de 3 a 10 caracteres.
+  - `GetNextNum()` conserva claves como FAC2026, ASI2026, REC2026 y NA2026.
+  - Las series anuales se generan con longitud compatible con los campos de documento.
+  - Certificaciones recuperan el formato CER + año + cuatro dígitos.
+  - `DATA/CONTADOR` reconstruida conservando sus 3 registros existentes.
+- **BEGIN SEQUENCE en Tesorería**: `_PagoGuardar()` y `_RecGuardar()` envueltos en
+  `BEGIN SEQUENCE...RECOVER`; solo devuelven éxito cuando cabecera, detalle, asiento y
+  marcado terminan correctamente. Ante fallo limpian detalle, asiento, marcas y cabecera.
+- **Refino de cálculo Drywall contra Excel**:
+  - Placas y perfiles se consolidan y convierten a unidades de compra por tramo.
+  - Pastas, cintas, tornillos y complementarios se acumulan en unidad técnica y se
+    convierten al final del proyecto.
+  - El aislamiento usa superficie física: rendimiento `1.000` por defecto, separado de
+    la merma de placa `DESP_PLA`.
+  - Corregida la búsqueda `SR_TIPO`: clave con `TIPO_OBRA` rellenado, búsqueda suave y
+    comparación sin espacios finales. Antes los techos con sistema podían no encontrar
+    su receta y quedar sin materiales.
+  - `SYS_REND` reconstruida con `SEP_PRIM`; se conservaron 31 registros y se ajustaron
+    dos líneas `AISLANTE` a `1.000`.
+  - Saturación validada con 320 tramos, 2.080 líneas de material y cero errores.
 
 ## Pendientes
-- **Extender patrón CONTADOR** a FACTURA, COMPRAS, RECIBOS, PAGOS, CERTIFICACIONES y demás documentos
-- Corregir críticos de auditoría: CierreEjercicio stub, CTA_CONT faltante en CLIENTES,
-  alias duplicado DIA_C, fugas PRE_C/FAC, nArea en informes, NetFLock→NetRLock
-- Añadir seed de CONTADOR para todos los tipos de documento en InicioDBF
+- **Refinar cálculo Drywall contra Control appGestion.xlsm**:
+  - Revisar que tamaños de placa y composición del sistema seleccionado coincidan con
+    los usados en la hoja antes de comparar resultados.
+  - Recalcular el proyecto comparativo desde la interfaz y contrastar el resumen final
+    con la hoja usando exactamente los mismos artículos y sistemas.
+- Unificar `_TareNextLinea()` / `_NextTramoLinea()` para evitar lógica duplicada.
+- Corregir críticos de auditoría: CTA_CONT faltante en CLIENTES
 
 ## Decisiones tomadas
 - Numeración de documentos mediante GetNextNum() (CONTADOR) al momento de guardar,
@@ -64,6 +92,13 @@
 - Tests en consola pura (`-std` + `hbct.hbc`), sin DBF ni GTWVG
 - `::GetRendimientoRol()` híbrido: SYS_REND + #define fallback
 - Harbour DBFCDX no soporta `BEGIN TRANSACTION` → `BEGIN SEQUENCE...RECOVER`
+- AppGestion es la aplicación principal; Drywall standalone continúa disponible para
+  desarrollo y pruebas.
+- Convenciones de código: `LOCAL` al inicio, sangría de 4 espacios, arrays `[x, y]` y
+  evitar instrucciones anidadas con `;`. Se permiten nombres de más de 10 caracteres
+  cuando mejoran claramente la legibilidad.
+- Actualizar este archivo al completar etapas relevantes, decisiones de arquitectura o
+  cambios importantes de flujo; no es necesario hacerlo por cada corrección menor.
 
 ## Notas
 - `CalcUtils.prg` (138 líneas) compila en drywall y tests. Sin dependencias DBF/GUI.

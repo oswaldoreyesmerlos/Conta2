@@ -694,85 +694,67 @@ RETURN GetNextNum( "FAC" + cAnio, "Facturas " + cAnio )
 
 
 // ============================================================================
-// _ObraSiguiente()
-// Genera ID OBR+año+4dig: OBR20260001
+// _ObraSiguiente() — ID OBR+año+4dig: OBR20260001
 // ============================================================================
 STATIC FUNCTION _ObraSiguiente()
 
-   LOCAL cId      := ""
-   LOCAL cCodDoc  := PadR( "OBR", 3 )
-   LOCAL cPrefijo := "OBR"
-   LOCAL cAnio    := AllTrim( Str( Year( Date() ) ) )
-   LOCAL cDescrip := "Obras " + cAnio
-   LOCAL nUltNum  := 0
-   LOCAL cUsuario := "SISTEMA"
-   LOCAL nArea    := Select()
+    LOCAL cId      := ""
+    LOCAL cAnio    := StrZero( Year( Date() ), 4 )
+    LOCAL cDescrip := "Obras " + cAnio
+    LOCAL nUltNum  := 0
+    LOCAL nArea    := Select()
+    LOCAL cUsuario := "SISTEMA"
 
-   MEMVAR cUserID
+    MEMVAR cUserID
 
-   IF Type( "cUserID" ) == "C" .AND. !Empty( cUserID )
-      cUsuario := PadR( AllTrim( cUserID ), 10 )
-   ENDIF
+    IF Type( "cUserID" ) == "C" .AND. !Empty( cUserID )
+        cUsuario := PadR( AllTrim( cUserID ), 10 )
+    ENDIF
 
-   IF !ABRIR_TABLA( "CONTADOR", "CON_OBR", "COD_DOC" )
-      Select( nArea )
-      RETURN ""
-   ENDIF
+    IF !ABRIR_TABLA( "CONTADOR", "CON_OBR", "COD_DOC" )
+        Select( nArea )
+        RETURN ""
+    ENDIF
 
-   DbSelectArea( "CON_OBR" )
-   OrdSetFocus( "COD_DOC" )
+    DbSelectArea( "CON_OBR" )
+    OrdSetFocus( "COD_DOC" )
 
-   IF DbSeek( cCodDoc )
-      IF !NetRLock()
-         CON_OBR->( DbCloseArea() )
-         Select( nArea )
-         RETURN ""
-      ENDIF
-      DbSkip( 0 )
-      nUltNum := CON_OBR->ULT_NUM
-      // Si cambia el año, reinicia la serie anual.
-      IF AllTrim( CON_OBR->DESCRIP ) != cDescrip
-         nUltNum := 0
-         REPLACE CON_OBR->PREFIJO WITH cPrefijo
-         REPLACE CON_OBR->DESCRIP WITH cDescrip
-         REPLACE CON_OBR->DIGITOS WITH 4
-      ENDIF
-   ELSE
-      IF !NetFLock()
-         CON_OBR->( DbCloseArea() )
-         Select( nArea )
-         RETURN ""
-      ENDIF
-      IF DbSeek( cCodDoc )
-         DbSkip( 0 )
-         nUltNum := CON_OBR->ULT_NUM
-         IF AllTrim( CON_OBR->DESCRIP ) != cDescrip
-            nUltNum := 0
-            REPLACE CON_OBR->PREFIJO WITH cPrefijo
-            REPLACE CON_OBR->DESCRIP WITH cDescrip
-            REPLACE CON_OBR->DIGITOS WITH 4
-         ENDIF
-      ELSE
-         DbAppend()
-         REPLACE CON_OBR->COD_DOC WITH cCodDoc
-         REPLACE CON_OBR->DESCRIP WITH cDescrip
-         REPLACE CON_OBR->PREFIJO WITH cPrefijo
-         REPLACE CON_OBR->DIGITOS WITH 4
-      ENDIF
-   ENDIF
+    IF !DbSeek( "OBR" )
+        IF !NetFLock()
+            CON_OBR->( DbCloseArea() )
+            Select( nArea )
+            RETURN ""
+        ENDIF
+        DbAppend()
+        REPLACE CON_OBR->COD_DOC WITH "OBR"
+        REPLACE CON_OBR->DESCRIP WITH cDescrip
+        REPLACE CON_OBR->PREFIJO WITH "OBR"
+        REPLACE CON_OBR->DIGITOS WITH 4
+    ELSE
+        IF !NetRLock()
+            CON_OBR->( DbCloseArea() )
+            Select( nArea )
+            RETURN ""
+        ENDIF
+    ENDIF
 
-   nUltNum++
-   cId := cPrefijo + cAnio + StrZero( nUltNum, 4 )
+    DbSkip( 0 )
+    nUltNum := CON_OBR->ULT_NUM
+    IF AllTrim( CON_OBR->DESCRIP ) != cDescrip
+        nUltNum := 0
+        REPLACE CON_OBR->DESCRIP WITH cDescrip
+    ENDIF
 
-   REPLACE CON_OBR->ULT_NUM WITH nUltNum
-   REPLACE CON_OBR->ULT_USR WITH cUsuario
-   REPLACE CON_OBR->ULT_FEC WITH Date()
-   REPLACE CON_OBR->ULT_HOR WITH Time()
-
-   DbCommit()
-   DbUnlock()
-   CON_OBR->( DbCloseArea() )
-   Select( nArea )
+    nUltNum++
+    cId := "OBR" + cAnio + StrZero( nUltNum, 4 )
+    REPLACE CON_OBR->ULT_NUM WITH nUltNum
+    REPLACE CON_OBR->ULT_USR WITH cUsuario
+    REPLACE CON_OBR->ULT_FEC WITH Date()
+    REPLACE CON_OBR->ULT_HOR WITH Time()
+    DbCommit()
+    DbUnlock()
+    CON_OBR->( DbCloseArea() )
+    Select( nArea )
 
 RETURN cId
 

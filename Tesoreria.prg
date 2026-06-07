@@ -544,6 +544,10 @@ STATIC FUNCTION _RecGuardar( cNumRec, dFecha, cCliente, cConcepto, ;
     cFormaPa, nTotal, cNumFac )
 
     LOCAL cUsuario := "SISTEMA"
+    LOCAL lNewRec := .F.
+    LOCAL lDetRec := .F.
+    LOCAL lFacMarc := .F.
+    LOCAL lOk := .F.
 
     MEMVAR cUserID
 
@@ -551,8 +555,10 @@ STATIC FUNCTION _RecGuardar( cNumRec, dFecha, cCliente, cConcepto, ;
         cUsuario := AllTrim( cUserID )
     ENDIF
 
+    BEGIN SEQUENCE
+
     IF !ABRIR_TABLA( "RECIBOS", "REC_G", "REC_NUM" )
-        RETURN .F.
+        BREAK
     ENDIF
 
     DbSelectArea( "REC_G" )
@@ -561,19 +567,20 @@ STATIC FUNCTION _RecGuardar( cNumRec, dFecha, cCliente, cConcepto, ;
     IF DbSeek( PadR( cNumRec, 10 ) )
         REC_G->( DbCloseArea() )
         MsgStop( "El recibo ya existe.", "Recibo" )
-        RETURN .F.
+        BREAK
     ENDIF
 
     IF !NetFLock()
         REC_G->( DbCloseArea() )
-        RETURN .F.
+        BREAK
     ENDIF
 
     DbAppend()
+    lNewRec := .T.
     IF !NetRLock()
         DbUnlock()
         REC_G->( DbCloseArea() )
-        RETURN .F.
+        BREAK
     ENDIF
 
     REPLACE REC_G->NUMERO   WITH PadR( cNumRec, 10 )
@@ -589,13 +596,44 @@ STATIC FUNCTION _RecGuardar( cNumRec, dFecha, cCliente, cConcepto, ;
     REC_G->( DbCloseArea() )
 
     IF !Empty( AllTrim( cNumFac ) )
-        _RecGuardarDetalle( cNumRec, cNumFac, nTotal )
-        _RecMarcarFactura( cNumFac )
+        IF !_RecGuardarDetalle( cNumRec, cNumFac, nTotal )
+            BREAK
+        ENDIF
+        lDetRec := .T.
     ENDIF
 
-    AsientoAutomatico( "REC", cNumRec )
+    IF !AsientoAutomatico( "REC", cNumRec )
+        BREAK
+    ENDIF
 
-RETURN .T.
+    IF !Empty( AllTrim( cNumFac ) )
+        IF !_RecMarcarFactura( cNumFac )
+            BREAK
+        ENDIF
+        lFacMarc := .T.
+    ENDIF
+
+    lOk := .T.
+
+    RECOVER
+
+    IF !lOk
+        IF lFacMarc
+            _RecDesmarcarFactura( cNumFac )
+        ENDIF
+        _TesBorrarAsiento( "REC", cNumRec )
+        IF lDetRec
+            _TesBorrarRegistro( "RC_DETAL", "RCD_X", "RCD_NUM", ;
+                                PadR( cNumRec, 10 ) + Str( 1, 3 ) )
+        ENDIF
+        IF lNewRec
+            _TesBorrarRegistro( "RECIBOS", "REC_X", "REC_NUM", PadR( cNumRec, 10 ) )
+        ENDIF
+    ENDIF
+
+    END SEQUENCE
+
+RETURN lOk
 
 
 STATIC FUNCTION _RecGuardarDetalle( cNumRec, cNumFac, nTotal )
@@ -611,15 +649,18 @@ STATIC FUNCTION _RecGuardarDetalle( cNumRec, cNumFac, nTotal )
     ENDIF
 
     DbAppend()
-    IF NetRLock()
-        REPLACE RCD_G->NUMERO  WITH PadR( cNumRec, 10 )
-        REPLACE RCD_G->LINEA   WITH 1
-        REPLACE RCD_G->NUM_FAC WITH PadR( cNumFac, 10 )
-        REPLACE RCD_G->IMPORTE WITH nTotal
-        DbCommit()
+    IF !NetRLock()
         DbUnlock()
+        RCD_G->( DbCloseArea() )
+        RETURN .F.
     ENDIF
 
+    REPLACE RCD_G->NUMERO  WITH PadR( cNumRec, 10 )
+    REPLACE RCD_G->LINEA   WITH 1
+    REPLACE RCD_G->NUM_FAC WITH PadR( cNumFac, 10 )
+    REPLACE RCD_G->IMPORTE WITH nTotal
+    DbCommit()
+    DbUnlock()
     RCD_G->( DbCloseArea() )
 
 RETURN .T.
@@ -627,9 +668,7 @@ RETURN .T.
 
 STATIC FUNCTION _RecMarcarFactura( cNumFac )
 
-    IF FacturaContabilizada( "A", cNumFac )
-        RETURN .T.
-    ENDIF
+    LOCAL lOk := .F.
 
     IF !ABRIR_TABLA( "FACTURA", "FAC_RG", "FAC_NUM" )
         RETURN .F.
@@ -644,11 +683,37 @@ STATIC FUNCTION _RecMarcarFactura( cNumFac )
         ENDIF
         DbCommit()
         DbUnlock()
+        lOk := .T.
     ENDIF
 
     FAC_RG->( DbCloseArea() )
 
-RETURN .T.
+RETURN lOk
+
+
+STATIC FUNCTION _RecDesmarcarFactura( cNumFac )
+
+    LOCAL lOk := .F.
+
+    IF !ABRIR_TABLA( "FACTURA", "FAC_RX", "FAC_NUM" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "FAC_RX" )
+    OrdSetFocus( "FAC_NUM" )
+
+    IF DbSeek( PadR( "A", 4 ) + PadR( AllTrim( cNumFac ), 10 ) ) .AND. NetRLock()
+        IF FieldPos( "COBRADA" ) > 0
+            REPLACE FAC_RX->COBRADA WITH .F.
+        ENDIF
+        DbCommit()
+        DbUnlock()
+        lOk := .T.
+    ENDIF
+
+    FAC_RX->( DbCloseArea() )
+
+RETURN lOk
 
 
 // ============================================================================
@@ -1148,6 +1213,10 @@ STATIC FUNCTION _PagoGuardar( cNumPag, dFecha, cProv, cBenef, cConcepto, ;
 
     LOCAL cUsuario := "SISTEMA"
     LOCAL cAsi
+    LOCAL lNewPago := .F.
+    LOCAL lDetPago := .F.
+    LOCAL lComMarc := .F.
+    LOCAL lOk := .F.
 
     MEMVAR cUserID
 
@@ -1155,8 +1224,10 @@ STATIC FUNCTION _PagoGuardar( cNumPag, dFecha, cProv, cBenef, cConcepto, ;
         cUsuario := AllTrim( cUserID )
     ENDIF
 
+    BEGIN SEQUENCE
+
     IF !ABRIR_TABLA( "PAGOS", "PAG_G", "PAG_NUM" )
-        RETURN .F.
+        BREAK
     ENDIF
 
     DbSelectArea( "PAG_G" )
@@ -1165,19 +1236,20 @@ STATIC FUNCTION _PagoGuardar( cNumPag, dFecha, cProv, cBenef, cConcepto, ;
     IF DbSeek( PadR( cNumPag, 10 ) )
         PAG_G->( DbCloseArea() )
         MsgStop( "El pago ya existe.", "Pago" )
-        RETURN .F.
+        BREAK
     ENDIF
 
     IF !NetFLock()
         PAG_G->( DbCloseArea() )
-        RETURN .F.
+        BREAK
     ENDIF
 
     DbAppend()
+    lNewPago := .T.
     IF !NetRLock()
         DbUnlock()
         PAG_G->( DbCloseArea() )
-        RETURN .F.
+        BREAK
     ENDIF
 
     REPLACE PAG_G->NUMERO   WITH PadR( cNumPag, 10 )
@@ -1198,17 +1270,49 @@ STATIC FUNCTION _PagoGuardar( cNumPag, dFecha, cProv, cBenef, cConcepto, ;
     DbUnlock()
     PAG_G->( DbCloseArea() )
 
-    _PagoGuardarDetalle( cNumPag, cNumCom, cConcepto, nTotal, cCtaDebe )
+    IF !_PagoGuardarDetalle( cNumPag, cNumCom, cConcepto, nTotal, cCtaDebe )
+        BREAK
+    ENDIF
+    lDetPago := .T.
+
     cAsi := _PagoAsiento( cNumPag )
 
-    IF !Empty( cAsi )
-        _PagoActualizarAsiento( cNumPag, cAsi )
-        IF !Empty( AllTrim( cNumCom ) )
-            _PagoMarcarCompra( cNumCom, cFormPag )
+    IF Empty( cAsi )
+        BREAK
+    ENDIF
+
+    IF !_PagoActualizarAsiento( cNumPag, cAsi )
+        BREAK
+    ENDIF
+
+    IF !Empty( AllTrim( cNumCom ) )
+        IF !_PagoMarcarCompra( cNumCom, cFormPag )
+            BREAK
+        ENDIF
+        lComMarc := .T.
+    ENDIF
+
+    lOk := .T.
+
+    RECOVER
+
+    IF !lOk
+        IF lComMarc
+            _PagoDesmarcarCompra( cNumCom )
+        ENDIF
+        _TesBorrarAsiento( "PAG", cNumPag )
+        IF lDetPago
+            _TesBorrarRegistro( "PAGO_DET", "PGD_X", "PGD_LIN", ;
+                                PadR( cNumPag, 10 ) + Str( 1, 3 ) )
+        ENDIF
+        IF lNewPago
+            _TesBorrarRegistro( "PAGOS", "PAG_X", "PAG_NUM", PadR( cNumPag, 10 ) )
         ENDIF
     ENDIF
 
-RETURN !Empty( cAsi )
+    END SEQUENCE
+
+RETURN lOk
 
 
 STATIC FUNCTION _PagoGuardarDetalle( cNumPag, cRefDoc, cConcepto, nTotal, cCtaDebe )
@@ -1224,17 +1328,20 @@ STATIC FUNCTION _PagoGuardarDetalle( cNumPag, cRefDoc, cConcepto, nTotal, cCtaDe
     ENDIF
 
     DbAppend()
-    IF NetRLock()
-        REPLACE PGD_G->NUMERO   WITH PadR( cNumPag, 10 )
-        REPLACE PGD_G->LINEA    WITH 1
-        REPLACE PGD_G->REF_DOC  WITH PadR( cRefDoc, 15 )
-        REPLACE PGD_G->CONCEPTO WITH PadR( cConcepto, 60 )
-        REPLACE PGD_G->IMPORTE  WITH nTotal
-        REPLACE PGD_G->CTA_CONT WITH PadR( cCtaDebe, 10 )
-        DbCommit()
+    IF !NetRLock()
         DbUnlock()
+        PGD_G->( DbCloseArea() )
+        RETURN .F.
     ENDIF
 
+    REPLACE PGD_G->NUMERO   WITH PadR( cNumPag, 10 )
+    REPLACE PGD_G->LINEA    WITH 1
+    REPLACE PGD_G->REF_DOC  WITH PadR( cRefDoc, 15 )
+    REPLACE PGD_G->CONCEPTO WITH PadR( cConcepto, 60 )
+    REPLACE PGD_G->IMPORTE  WITH nTotal
+    REPLACE PGD_G->CTA_CONT WITH PadR( cCtaDebe, 10 )
+    DbCommit()
+    DbUnlock()
     PGD_G->( DbCloseArea() )
 
 RETURN .T.
@@ -1314,6 +1421,8 @@ RETURN cAsi
 
 STATIC FUNCTION _PagoActualizarAsiento( cNumPag, cAsi )
 
+    LOCAL lOk := .F.
+
     IF !ABRIR_TABLA( "PAGOS", "PAG_AU", "PAG_NUM" )
         RETURN .F.
     ENDIF
@@ -1325,18 +1434,17 @@ STATIC FUNCTION _PagoActualizarAsiento( cNumPag, cAsi )
         REPLACE PAG_AU->ASIENTO WITH PadR( cAsi, 10 )
         DbCommit()
         DbUnlock()
+        lOk := .T.
     ENDIF
 
     PAG_AU->( DbCloseArea() )
 
-RETURN .T.
+RETURN lOk
 
 
 STATIC FUNCTION _PagoMarcarCompra( cNumCom, cFormPag )
 
-    IF CompraContabilizada( cNumCom )
-        RETURN .T.
-    ENDIF
+    LOCAL lOk := .F.
 
     IF !ABRIR_TABLA( "COMPRAS", "COM_PR", "COM_INT" )
         RETURN .F.
@@ -1352,11 +1460,90 @@ STATIC FUNCTION _PagoMarcarCompra( cNumCom, cFormPag )
         ENDIF
         DbCommit()
         DbUnlock()
+        lOk := .T.
     ENDIF
 
     COM_PR->( DbCloseArea() )
 
-RETURN NIL
+RETURN lOk
+
+
+STATIC FUNCTION _PagoDesmarcarCompra( cNumCom )
+
+    LOCAL lOk := .F.
+
+    IF !ABRIR_TABLA( "COMPRAS", "COM_PX", "COM_INT" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "COM_PX" )
+    OrdSetFocus( "COM_INT" )
+
+    IF DbSeek( cNumCom ) .AND. NetRLock()
+        REPLACE COM_PX->PAGADA WITH .F.
+        IF FieldPos( "METODO_P" ) > 0
+            REPLACE COM_PX->METODO_P WITH Space( 3 )
+        ENDIF
+        DbCommit()
+        DbUnlock()
+        lOk := .T.
+    ENDIF
+
+    COM_PX->( DbCloseArea() )
+
+RETURN lOk
+
+
+STATIC FUNCTION _TesBorrarAsiento( cTipo, cNumDoc )
+
+    LOCAL lOk := .F.
+
+    IF !ABRIR_TABLA( "LDIARIO", "DIA_TX", "DIA_ASI" )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( "DIA_TX" )
+
+    IF NetFLock()
+        DbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( DIA_TX->TIP_ORIG ) == AllTrim( cTipo ) .AND. ;
+               AllTrim( DIA_TX->DOC_ORIG ) == AllTrim( cNumDoc )
+                DbDelete()
+            ENDIF
+            DbSkip()
+        ENDDO
+        DbCommit()
+        DbUnlock()
+        lOk := .T.
+    ENDIF
+
+    DIA_TX->( DbCloseArea() )
+
+RETURN lOk
+
+
+STATIC FUNCTION _TesBorrarRegistro( cTabla, cAlias, cIndice, cClave )
+
+    LOCAL lOk := .F.
+
+    IF !ABRIR_TABLA( cTabla, cAlias, cIndice )
+        RETURN .F.
+    ENDIF
+
+    DbSelectArea( cAlias )
+    OrdSetFocus( cIndice )
+
+    IF DbSeek( cClave ) .AND. NetRLock()
+        DbDelete()
+        DbCommit()
+        DbUnlock()
+        lOk := .T.
+    ENDIF
+
+    ( cAlias )->( DbCloseArea() )
+
+RETURN lOk
 
 
 STATIC FUNCTION _AliasLogical( cAlias, cField, lDefault )

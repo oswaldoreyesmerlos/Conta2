@@ -577,45 +577,11 @@ RETURN .T.
 
 STATIC FUNCTION _NextProyectoNumero()
 
-    LOCAL nMax := 0
-
-    nMax := _MaxProyectoAlias( "TMP_CAB", nMax )
-
-    IF Select( "HIS_CAB" ) == 0 .AND. File( "HIS_CAB.DBF" )
-        ABRIR_TABLA( "HIS_CAB", "HIS_CAB", "" )
-    ENDIF
-
-    IF Select( "HIS_CAB" ) > 0
-        nMax := _MaxProyectoAlias( "HIS_CAB", nMax )
-    ENDIF
-
-RETURN PadL( AllTrim( Str( nMax + 1 ) ), 6, "0" )
+RETURN GetNextNum( "PRY", "Proyectos" )
 
 
-STATIC FUNCTION _MaxProyectoAlias( cAlias, nMax )
-
-    LOCAL nArea := Select()
-    LOCAL nVal
-
-    dbSelectArea( cAlias )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted()
-            nVal := Val( AllTrim( FIELD->NUMERO ) )
-            IF nVal > nMax
-                nMax := nVal
-            ENDIF
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN nMax
-
-
+// ============================================================================
+// FIN DE TARE_MOD.prg
 // ============================================================================
 // VALIDACION - Validaciones
 // ============================================================================

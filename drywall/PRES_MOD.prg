@@ -173,37 +173,8 @@ RETURN NIL
 // Descripción: Gestiona el contador de la empresa de forma aislada.
 // ============================================================================
 STATIC FUNCTION _GetNextDoc()
-    LOCAL cNum := ""
-    LOCAL nVal := 0
-    LOCAL nAreaTmp := Select()
 
-    // Usa la tabla Contador (compartida con AppGestion)
-    IF Select( "CONTADOR" ) == 0
-        ABRIR_TABLA( "CONTADOR", "CONTADOR", "" )
-    ENDIF
-
-    dbSelectArea( "CONTADOR" )
-    IF DbSeek( "PRE" )
-        IF NetRLock()
-            nVal := FIELD->ULT_NUM + 1
-            REPLACE FIELD->ULT_NUM WITH nVal
-            DbCommit()
-            dbUnlock()
-        ENDIF
-    ELSE
-        IF NetFLock()
-            DbAppend()
-            REPLACE FIELD->COD_DOC WITH "PRE"
-            REPLACE FIELD->ULT_NUM WITH 1
-            nVal := 1
-            DbCommit()
-            dbUnlock()
-        ENDIF
-    ENDIF
-
-    cNum := PadL( AllTrim( Str( nVal ) ), 6, "0" )
-    dbSelectArea( nAreaTmp )
-RETURN cNum
+RETURN GetNextNum( "PRE", "Presupuestos" )
 
 // ============================================================================
 // FUNCION: _LimpiaTemporales

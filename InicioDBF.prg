@@ -779,9 +779,9 @@ FUNCTION InicioDBF()
     // -- 28. CONTADOR --
     aCampos  := {}
     aIndices := {}
-    AAdd( aCampos, { "COD_DOC",  "C",  3, 0 } )
+    AAdd( aCampos, { "COD_DOC",  "C", 10, 0 } )
     AAdd( aCampos, { "DESCRIP",  "C", 40, 0 } )
-    AAdd( aCampos, { "PREFIJO",  "C",  3, 0 } )
+    AAdd( aCampos, { "PREFIJO",  "C", 10, 0 } )
     AAdd( aCampos, { "ULT_NUM",  "N", 10, 0 } )
     AAdd( aCampos, { "DIGITOS",  "N",  2, 0 } )
     AAdd( aCampos, { "ULT_USR",  "C", 10, 0 } )
@@ -936,6 +936,7 @@ FUNCTION InicioDBF()
     // =========================================================================
     _SiembraIVA()
     _SiembraCatalogo()
+    _SiembraContador()
 
 RETURN .T.
 
@@ -1270,6 +1271,60 @@ FUNCTION ReindexarTodo()
     MsgInfo( cMsg, "Reindexar" )
 
 RETURN .T.
+
+
+STATIC FUNCTION _SiembraContador()
+
+    LOCAL nArea := Select()
+    LOCAL cPref := ""
+
+    IF !ABRIR_TABLA( "CONTADOR", "CON_S", "COD_DOC" )
+        RETURN NIL
+    ENDIF
+
+    DbSelectArea( "CON_S" )
+    OrdSetFocus( "COD_DOC" )
+
+    IF Select( "EMPRESA" ) > 0
+        cPref := AllTrim( EMPRESA->PREFIJO )
+    ENDIF
+
+    IF !NetFLock()
+        CON_S->( DbCloseArea() )
+        Select( nArea )
+        RETURN NIL
+    ENDIF
+
+    _SiembraContadorFila( "PRE", "Presupuestos", cPref, 7 )
+    _SiembraContadorFila( "PAG", "Pagos", cPref, 7 )
+    _SiembraContadorFila( "REC", "Recibos", cPref, 7 )
+    _SiembraContadorFila( "NA", "Notas Abono", cPref, 7 )
+    _SiembraContadorFila( "ASI", "Asientos", cPref, 4 )
+    _SiembraContadorFila( "CER", "Certificaciones", cPref, 4 )
+    _SiembraContadorFila( "OBR", "Obras", "OBR", 4 )
+    _SiembraContadorFila( "PRY", "Proyectos", "", 6 )
+
+    DbCommit()
+    DbUnlock()
+    CON_S->( DbCloseArea() )
+    Select( nArea )
+
+RETURN NIL
+
+
+STATIC FUNCTION _SiembraContadorFila( cCodDoc, cDescrip, cPrefijo, nDigitos )
+
+    IF CON_S->( DbSeek( cCodDoc ) )
+        RETURN NIL
+    ENDIF
+
+    CON_S->( DbAppend() )
+    REPLACE CON_S->COD_DOC WITH cCodDoc
+    REPLACE CON_S->DESCRIP WITH cDescrip
+    REPLACE CON_S->PREFIJO WITH cPrefijo
+    REPLACE CON_S->DIGITOS WITH nDigitos
+
+RETURN NIL
 
 
 // ----------------------------------------------------------------------------

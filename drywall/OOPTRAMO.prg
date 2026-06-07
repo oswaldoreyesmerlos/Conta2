@@ -3,6 +3,7 @@
  
 // Constantes de Rendimiento
 #define K_DESP_PLA   1.05
+#define K_DESP_AIS   1.00
 #define K_DESP_PER   1.10
 #define K_TORN_M2    15  
 #define K_TORN_MM    4   
@@ -236,11 +237,14 @@ METHOD Calc_Rendimientos() CLASS OOPTRAMO
 
     dbSelectArea( "SYS_REND" )
     OrdSetFocus( "SR_TIPO" )
-    dbSeek( cTipo + Str( nMod, 5, 2 ) + Str( nCaras, 1 ) + Str( nCapas, 1 ) )
+    dbSeek( PadR( cTipo, 15 ) + Str( nMod, 5, 2 ) + ;
+            Str( nCaras, 1 ) + Str( nCapas, 1 ), .T. )
 
-    DO WHILE !Eof() .AND. Upper( FIELD->TIPO_OBRA ) == cTipo .AND. ;
-              FIELD->MODUL == nMod .AND. FIELD->CARAS == nCaras .AND. ;
-              FIELD->CAPAS == nCapas
+    DO WHILE !Eof() .AND. ;
+             Upper( AllTrim( FIELD->TIPO_OBRA ) ) == cTipo .AND. ;
+             Abs( FIELD->MODUL - nMod ) <= 0.001 .AND. ;
+             FIELD->CARAS == nCaras .AND. ;
+             FIELD->CAPAS == nCapas
        IF !Deleted() .AND. ;
           ::MatchRendimiento( cSistema, cTipo, nMod, nCaras, nCapas, nAncho )
           cFam  := Upper( AllTrim( FIELD->FAMILIA ) )
@@ -402,7 +406,9 @@ METHOD Calc_Tabique() CLASS OOPTRAMO
        "Cinta Papel", "ML" )
    
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Lana Mineral Interior", "M2" )
+       ::AddMat( "AISLAN", FIELD->ID_AISLANT, ;
+          nArea * ::GetRendimientoRol( "DESP_AISL", K_DESP_AIS ), ;
+          "Lana Mineral Interior", "M2" )
    ENDIF
 RETURN NIL
 
@@ -446,7 +452,9 @@ METHOD Calc_Techo() CLASS OOPTRAMO
        "Cinta Techo", "ML" )
    
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Aislamiento", "M2" )
+       ::AddMat( "AISLAN", FIELD->ID_AISLANT, ;
+          nArea * ::GetRendimientoRol( "DESP_AISL", K_DESP_AIS ), ;
+          "Aislamiento", "M2" )
     ENDIF
 
 RETURN NIL
@@ -500,7 +508,9 @@ METHOD Calc_Trasdos() CLASS OOPTRAMO
     ::AddMat( "CINTA", "CINTA_GUAR", nArea * ::GetRendimientoRol( "GUARDA_M2", K_GUARDA_M2 ), "Guardavivos", "ML" )
 
      IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-        ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Aislamiento", "M2" )
+        ::AddMat( "AISLAN", FIELD->ID_AISLANT, ;
+           nArea * ::GetRendimientoRol( "DESP_AISL", K_DESP_AIS ), ;
+           "Aislamiento", "M2" )
      ENDIF
 
 RETURN NIL
@@ -517,7 +527,9 @@ METHOD Calc_Generico() CLASS OOPTRAMO
     ENDIF
 
     IF If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. )
-       ::AddMat( "AISLAN", FIELD->ID_AISLANT, nArea * ::GetRendimientoRol( "DESP_PLA", K_DESP_PLA ), "Aislamiento", "M2" )
+       ::AddMat( "AISLAN", FIELD->ID_AISLANT, ;
+          nArea * ::GetRendimientoRol( "DESP_AISL", K_DESP_AIS ), ;
+          "Aislamiento", "M2" )
     ENDIF
 
 RETURN NIL
