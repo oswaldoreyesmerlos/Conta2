@@ -22,8 +22,10 @@ FUNCTION Procesa()
     LOCAL nTramos := 0
     LOCAL nMat := 0
     LOCAL nRes := 0
+    LOCAL cProyecto := ""
 
     lOk := _EnsureCalcTables()
+    cProyecto := _CalcProyectoActual()
 
     // 1. VERIFICACIÓN DE TABLAS ABIERTAS (Individual para depuración clara)
     IF Select( "TMP_TRA" ) == 0
@@ -48,13 +50,28 @@ FUNCTION Procesa()
         RETURN NIL
     ENDIF
 
+    IF Empty( cProyecto )
+        MsgStop( "Debe activar o crear un proyecto antes de calcular.", "Error de Proceso" )
+        IF !Empty( cAreaAct ) .AND. Select( cAreaAct ) > 0
+            dbSelectArea( cAreaAct )
+        ENDIF
+        RETURN NIL
+    ENDIF
+
     // 2. CONFIRMACIÓN NATIVA WVG
     IF !MsgYesNo( "¿Desea iniciar el cálculo de materiales de toda la obra?", "Atencion" )
         RETURN NIL
     ENDIF
 
     // 3. PREPARACIÓN DEL TERRENO (Limpieza)
-    IF !_LimpiaBD( "TMP_MAT" ) .OR. !_LimpiaBD( "TMP_RES" )
+    IF !DrywallValidarTramos( cProyecto, .T. )
+        IF !Empty( cAreaAct ) .AND. Select( cAreaAct ) > 0
+            dbSelectArea( cAreaAct )
+        ENDIF
+        RETURN NIL
+    ENDIF
+
+    IF !_LimpiaBD( "TMP_MAT", cProyecto ) .OR. !_LimpiaBD( "TMP_RES", cProyecto )
         IF !Empty( cAreaAct ) .AND. Select( cAreaAct ) > 0
             dbSelectArea( cAreaAct )
         ENDIF
@@ -148,32 +165,18 @@ RETURN .T.
 
 STATIC FUNCTION _OpenShared( cAlias )
 
-    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
-        USE ( cAlias ) NEW SHARED VIA "DBFCDX" ALIAS ( cAlias )
-    RECOVER
+    IF !ABRIR_TABLA( cAlias, cAlias, "" )
         RETURN .F.
-    END SEQUENCE
+    ENDIF
 
 RETURN ( Select( cAlias ) > 0 )
 
 
 STATIC FUNCTION _MarkCabCalculated()
 
-    LOCAL nArea := Select()
+    LOCAL cProyecto := _CalcProyectoActual()
 
-    IF Select( "TMP_CAB" ) > 0
-        dbSelectArea( "TMP_CAB" )
-        dbGoTop()
-        IF NetRLock()
-            REPLACE FIELD->L_SUCIO WITH .F.
-            dbCommit()
-            dbUnlock()
-        ENDIF
-    ENDIF
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
+    DrywallMarkCalculated( cProyecto )
 
 RETURN NIL
 
@@ -181,43 +184,43 @@ RETURN NIL
 // FUNCION: _LimpiaBD
 // Descripción: Borrado físico seguro de tablas temporales.
 // ============================================================================
-STATIC FUNCTION _LimpiaBD( cAlias )
+STATIC FUNCTION _LimpiaBD( cAlias, cProyecto )
+
     LOCAL cAreaAct := Alias()
-    LOCAL lOk := .T.
 
-    IF Select( cAlias ) > 0
-        dbSelectArea( cAlias )
-        dbCloseArea()
+    cProyecto := AllTrim( cProyecto )
+
+    IF Empty( cProyecto )
+        MsgStop( "No hay proyecto activo para limpiar " + cAlias + ".", "Error de Proceso" )
+        RETURN .F.
     ENDIF
 
-    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
-        USE ( cAlias ) NEW EXCLUSIVE VIA "DBFCDX" ALIAS ( cAlias )
-        __dbZap()
-        dbCloseArea()
-    RECOVER
-        lOk := .F.
-    END SEQUENCE
-
-    IF Select( cAlias ) > 0
-        dbSelectArea( cAlias )
-        dbCloseArea()
+    IF Select( cAlias ) == 0
+        IF !_OpenShared( cAlias )
+            MsgStop( "No se pudo abrir la tabla " + cAlias + " en modo compartido.", "Error de Proceso" )
+            RETURN .F.
+        ENDIF
     ENDIF
 
-    IF !_OpenShared( cAlias )
-        MsgStop( "No se pudo reabrir la tabla " + cAlias + " en modo compartido.", "Error de Proceso" )
+    dbSelectArea( cAlias )
+    IF !NetFLock()
+        MsgStop( "No se pudo bloquear " + cAlias + " para limpiar el proyecto.", "Error de Proceso" )
         IF !Empty( cAreaAct ) .AND. Select( cAreaAct ) > 0
             dbSelectArea( cAreaAct )
         ENDIF
         RETURN .F.
     ENDIF
 
-    IF !lOk
-        MsgStop( "No se pudo limpiar la tabla " + cAlias + " en modo exclusivo.", "Error de Proceso" )
-        IF !Empty( cAreaAct ) .AND. Select( cAreaAct ) > 0
-            dbSelectArea( cAreaAct )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+            dbDelete()
         ENDIF
-        RETURN .F.
-    ENDIF
+        dbSkip()
+    ENDDO
+
+    dbCommit()
+    dbUnlock()
 
     IF !Empty( cAreaAct ) .AND. Select( cAreaAct ) > 0
         dbSelectArea( cAreaAct )
@@ -306,26 +309,7 @@ RETURN NIL
 
 STATIC FUNCTION _CalcProyectoActual()
 
-    LOCAL nArea := Select()
-    LOCAL cProyecto := ""
-
-    IF Select( "TMP_CAB" ) > 0
-        dbSelectArea( "TMP_CAB" )
-        dbGoTop()
-        DO WHILE !Eof()
-            IF !Deleted()
-                cProyecto := AllTrim( FIELD->NUMERO )
-                EXIT
-            ENDIF
-            dbSkip()
-        ENDDO
-    ENDIF
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN cProyecto
+RETURN DrywallProyectoActualNumero()
 
 
 STATIC FUNCTION _ConvierteResumenCompra()
@@ -343,6 +327,7 @@ STATIC FUNCTION _ConvierteResumenCompra()
     LOCAL nLargo
     LOCAL nAncho
     LOCAL nPesoTot
+    LOCAL cProyecto := _CalcProyectoActual()
 
     IF Select( "ARTICULOS" ) == 0 .OR. Select( "TMP_RES" ) == 0
         RETURN NIL
@@ -350,13 +335,13 @@ STATIC FUNCTION _ConvierteResumenCompra()
 
     dbSelectArea( "ARTICULOS" )
     nOrdArt := IndexOrd()
-    dbSetOrder( 1 )
+    OrdSetFocus( "ART_COD" )
 
     dbSelectArea( "TMP_RES" )
     dbGoTop()
 
     DO WHILE !Eof()
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
             cCod       := Upper( AllTrim( FIELD->CODIGO ) )
             cFam       := AllTrim( FIELD->FAMILIA )
             cUniCons   := Upper( AllTrim( FIELD->UNIDAD ) )

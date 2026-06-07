@@ -66,7 +66,7 @@ STATIC FUNCTION _LoadData( nIdLinea )
     LOCAL cProyecto := _EditProyectoActual()
 
     IF Select( "TMP_TRA" ) == 0
-        USE TMP_TRA NEW SHARED VIA "DBFCDX"
+        ABRIR_TABLA( "TMP_TRA", "TMP_TRA", "" )
         lWeOpened := .T.
     ENDIF
 
@@ -79,13 +79,14 @@ STATIC FUNCTION _LoadData( nIdLinea )
            FIELD->ID_LINEA == nIdLinea
             hData["ID_LINEA"]   := FIELD->ID_LINEA
             hData["TIPO"]       := Upper( AllTrim( FIELD->TIPO_OBRA ) )
+            hData["SISTEMA_ID"] := If( FieldPos( "SISTEMA_ID" ) > 0, FIELD->SISTEMA_ID, Space(20) )
             hData["CONCEPTO"]   := FIELD->CONCEPTO
             hData["LARGO"]      := FIELD->LARGO
             hData["ALTO"]       := FIELD->ALTO
             hData["MODUL"]      := FIELD->MODUL
             hData["ANCHO_PERF"] := If( FieldPos( "ANCHO_PERF" ) > 0, FIELD->ANCHO_PERF, 0 )
             hData["SEP_PRIM"]   := FIELD->SEP_PRIM
-            hData["NUM_PLACAS"] := FIELD->PLAC_CARA
+            hData["NUM_PLACAS"] := If( ValType( FIELD->PLAC_CARA ) == "N", FIELD->PLAC_CARA, 0 )
             hData["SAME_B"]     := "S"
             hData["ID_PERFIL"]  := FIELD->ID_PER_VER
             hData["ID_PERFIL2"] := FIELD->ID_PER_HOR
@@ -94,8 +95,8 @@ STATIC FUNCTION _LoadData( nIdLinea )
             hData["ID_PLACA_A"] := FIELD->ID_PLACA_A
             hData["ID_PLACA_B"] := FIELD->ID_PLACA_B
             hData["ID_AISLAN"]  := FIELD->ID_AISLANT
-            hData["AIS"]        := If( FIELD->L_AISLANT, "S", "N" )
-            hData["BANDA"]      := If( FIELD->L_BANDA, "S", "N" )
+            hData["AIS"]        := If( If( ValType( FIELD->L_AISLANT ) == "L", FIELD->L_AISLANT, .F. ), "S", "N" )
+            hData["BANDA"]      := If( If( ValType( FIELD->L_BANDA ) == "L", FIELD->L_BANDA, .F. ), "S", "N" )
 
             cTipo := AllTrim( FIELD->TIPO_OBRA )
             IF cTipo == "TABIQUE" .AND. !Empty( FIELD->ID_PLACA_B ) .AND. ;
@@ -134,8 +135,17 @@ STATIC FUNCTION _UpdateData( hData )
         RETURN .F.
     ENDIF
 
+    IF cTipo == "TECHO"
+        IF hData["SEP_PRIM"] <= 0
+            hData["ID_PERFIL2"] := "0"
+        ELSEIF _OptionalCode( hData["ID_PERFIL2"] )
+            MsgStop( "Falta seleccionar perfil primario.", "Validacion" )
+            RETURN .F.
+        ENDIF
+    ENDIF
+
     IF Select( "TMP_TRA" ) == 0
-        USE TMP_TRA NEW SHARED VIA "DBFCDX"
+        ABRIR_TABLA( "TMP_TRA", "TMP_TRA", "" )
         lWeOpened := .T.
     ENDIF
 
@@ -148,6 +158,9 @@ STATIC FUNCTION _UpdateData( hData )
            FIELD->ID_LINEA == hData["ID_LINEA"]
             IF NetRLock()
                 REPLACE FIELD->TIPO_OBRA  WITH cTipo
+                IF FieldPos( "SISTEMA_ID" ) > 0 .AND. hb_HHasKey( hData, "SISTEMA_ID" )
+                    REPLACE FIELD->SISTEMA_ID WITH hData["SISTEMA_ID"]
+                ENDIF
                 REPLACE FIELD->CONCEPTO   WITH hData["CONCEPTO"]
                 REPLACE FIELD->LARGO      WITH hData["LARGO"]
                 REPLACE FIELD->ALTO       WITH hData["ALTO"]
@@ -191,51 +204,13 @@ RETURN .F.
 
 STATIC FUNCTION _EditProyectoActual()
 
-    LOCAL nArea := Select()
-    LOCAL cProyecto := ""
-
-    IF Select( "TMP_CAB" ) > 0
-        dbSelectArea( "TMP_CAB" )
-        dbGoTop()
-        DO WHILE !Eof()
-            IF !Deleted()
-                cProyecto := AllTrim( FIELD->NUMERO )
-                EXIT
-            ENDIF
-            dbSkip()
-        ENDDO
-    ENDIF
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN cProyecto
+RETURN DrywallProyectoActualNumero()
 
 
 STATIC FUNCTION _MarkCabDirty()
 
-    LOCAL nArea := Select()
     LOCAL cProyecto := _EditProyectoActual()
 
-    IF Select( "TMP_CAB" ) > 0
-        dbSelectArea( "TMP_CAB" )
-        dbGoTop()
-        DO WHILE !Eof()
-            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
-                IF NetRLock()
-                    REPLACE FIELD->L_SUCIO WITH .T.
-                    dbCommit()
-                    dbUnlock()
-                ENDIF
-                EXIT
-            ENDIF
-            dbSkip()
-        ENDDO
-    ENDIF
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
+    DrywallMarkCalcDirty( cProyecto )
 
 RETURN NIL

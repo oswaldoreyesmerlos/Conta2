@@ -84,8 +84,8 @@ STATIC FUNCTION _DrywallMenu()
     LOCAL aSistema   := {}
 
     AAdd( aProyecto, { "Proyecto Actual",         {|| ProyectoActual() },     NIL, "Crear o editar cabecera" } )
-    AAdd( aProyecto, { "Definir Tramos",          {|| VerTareas() },          NIL, "Tramos, calculo y cierre" } )
-    AAdd( aProyecto, { "Historico de Proyectos",  {|| VisorProyectos() },     NIL, "Consultar o recuperar archivados" } )
+    AAdd( aProyecto, { "Proyectos en Curso",      {|| VisorProyectosCurso() },NIL, "Trabajos temporales TMP" } )
+    AAdd( aProyecto, { "Proyectos Historicos",    {|| VisorProyectosHistorico() }, NIL, "Calculados y cerrados HIS" } )
     AAdd( aProyecto, { "Eliminar Proyecto Actual",{|| _DrywallLimpiar() },    NIL, "Borrar borrador" } )
 
     AAdd( aAux, { "Familias Art.", {|| EditAux("FAMILIA") }, NIL, "Placas, Perfiles..." } )
@@ -94,9 +94,11 @@ STATIC FUNCTION _DrywallMenu()
 
     AAdd( aMaestros, { "Articulos",  {|| ArticulosView() }, NIL, "Base de Datos de Materiales" } )
     AAdd( aMaestros, { "Familias",   {|| M_Familias()    }, NIL, "Familias de articulos" } )
+    AAdd( aMaestros, { "Sistemas",   {|| SistemasView()  }, NIL, "Sistemas y rendimientos por m2" } )
     AAdd( aMaestros, { "Tablas Aux", NIL, aAux, "Configuracion general" } )
 
-    AAdd( aInformes, { "Visor Proyectos",     {|| VisorProyectos() },           NIL, "Lista interactiva de proyectos" } )
+    AAdd( aInformes, { "Proyectos en Curso", {|| VisorProyectosCurso() },      NIL, "Trabajos temporales TMP" } )
+    AAdd( aInformes, { "Proyectos Historicos",{|| VisorProyectosHistorico() }, NIL, "Calculados y cerrados HIS" } )
     AAdd( aInformes, { "Proyectos (texto)",  {|| InformeProyectos() },         NIL, "Listado de proyectos activos" } )
     AAdd( aInformes, { "Historicos",         {|| InformeHistoricos() },        NIL, "Proyectos archivados" } )
     AAdd( aInformes, { "Clientes",           {|| InformeClientesDrywall() },   NIL, "Listado de clientes" } )

@@ -386,6 +386,10 @@ STATIC FUNCTION _ValEditarPrecio( oGrid, aData )
     oWin:Run()
 
     IF lOk
+        IF nNuevo < 0
+            MsgStop( "Precio no puede ser negativo.", "Validacion" )
+            RETURN NIL
+        ENDIF
         aRow[5] := nNuevo
         aRow[6] := aRow[4] * nNuevo
     ENDIF
@@ -460,23 +464,4 @@ RETURN cEstado
 
 STATIC FUNCTION _ResultadoProyectoActual()
 
-    LOCAL nArea := Select()
-    LOCAL cProyecto := ""
-
-    IF Select( "TMP_CAB" ) > 0
-        dbSelectArea( "TMP_CAB" )
-        dbGoTop()
-        DO WHILE !Eof()
-            IF !Deleted()
-                cProyecto := AllTrim( FIELD->NUMERO )
-                EXIT
-            ENDIF
-            dbSkip()
-        ENDDO
-    ENDIF
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN cProyecto
+RETURN DrywallProyectoActualNumero()

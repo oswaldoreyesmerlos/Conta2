@@ -71,14 +71,21 @@ CLASS TWindow
                                 // posterior duplique bloques en el stack.
 
     DATA oOwner                 // Ventana padre (otro TWindow), si esta
-                                // ventana es modal anidada.  Se establece
-                                // automaticamente desde Run() detectando si
-                                // hay otra ventana ya activa.  Al cerrar,
-                                // pedimos al padre que repinte sus
-                                // caracteres (los relieves los repinta WVG
-                                // solo, gracias al stack).
+                                 // ventana es modal anidada.  Se establece
+                                 // automaticamente desde Run() detectando si
+                                 // hay otra ventana ya activa.  Al cerrar,
+                                 // pedimos al padre que repinte sus
+                                 // caracteres (los relieves los repinta WVG
+                                 // solo, gracias al stack).
+
+    DATA lStatusBar             // .T. activa barra de estado en la ultima fila
+    DATA cStatusMsg             // Texto actual de la barra de estado
+    DATA lStatusExpanded        // .T. si la ventana ya crecio para la barra
 
     METHOD New()
+
+    METHOD EnsureStatusSpace()
+    METHOD SetStatus()
 
     METHOD AddCtrl()
 
@@ -129,6 +136,10 @@ METHOD New( nT, nL, nB, nR, cTit ) CLASS TWindow
     ::lModal := .T.
     ::nStyle := 0
 
+    ::lStatusBar := .F.
+    ::cStatusMsg := ""
+    ::lStatusExpanded := .F.
+
     ::lRegistered := .F.
 
     ::oOwner := NIL
@@ -141,6 +152,21 @@ RETURN Self
 // ----------------------------------------------------------------------------
 METHOD AddCtrl( oCtrl ) CLASS TWindow
     AAdd( ::aCtrls, oCtrl )
+RETURN Self
+
+
+// ----------------------------------------------------------------------------
+// Reservar espacio para barra de estado
+// ----------------------------------------------------------------------------
+METHOD EnsureStatusSpace() CLASS TWindow
+
+    IF ::lStatusBar .AND. ! ::lStatusExpanded
+        IF ::nBottom < GfxMaxRow()
+            ::nBottom++
+            ::lStatusExpanded := .T.
+        ENDIF
+    ENDIF
+
 RETURN Self
 
 
@@ -314,6 +340,8 @@ METHOD Center() CLASS TWindow
     LOCAL nH
     LOCAL nW
 
+    ::EnsureStatusSpace()
+
     nH := ::nBottom - ::nTop
     nW := ::nRight  - ::nLeft
 
@@ -376,8 +404,18 @@ METHOD Paint() CLASS TWindow
     ENDIF
 
     // Cuerpo separado del titulo
-    GfxClear( ::nTop + 1, ::nLeft + 1, ;
-            ::nBottom - 1, ::nRight - 1, CLR_WIN_BODY )
+    IF ::lStatusBar
+        GfxClear( ::nTop + 1, ::nLeft + 1, ;
+                ::nBottom - 2, ::nRight - 1, CLR_WIN_BODY )
+        GfxClear( ::nBottom - 1, ::nLeft + 1, ;
+                ::nBottom - 1, ::nRight - 1, CLR_WIN_STATUS )
+        GfxText( ::nBottom - 1, ::nLeft + 1, ;
+            PadR( " " + ::cStatusMsg, ::nRight - ::nLeft - 1 ), ;
+            CLR_WIN_STATUS )
+    ELSE
+        GfxClear( ::nTop + 1, ::nLeft + 1, ;
+                ::nBottom - 1, ::nRight - 1, CLR_WIN_BODY )
+    ENDIF
 
     // -- Pintar controles hijos
     AEval( ::aCtrls, ;
@@ -397,6 +435,26 @@ RETURN Self
 
 METHOD Redraw() CLASS TWindow
     ::Paint()
+RETURN Self
+
+
+// ----------------------------------------------------------------------------
+// SetStatus - Actualiza la barra de estado
+// ----------------------------------------------------------------------------
+METHOD SetStatus( cMsg ) CLASS TWindow
+
+    ::cStatusMsg := hb_CStr( cMsg )
+
+    IF ::lVisible .AND. ::lStatusBar
+        ::Lock()
+        GfxClear( ::nBottom - 1, ::nLeft + 1, ;
+                ::nBottom - 1, ::nRight - 1, CLR_WIN_STATUS )
+        GfxText( ::nBottom - 1, ::nLeft + 1, ;
+            PadR( " " + ::cStatusMsg, ::nRight - ::nLeft - 1 ), ;
+            CLR_WIN_STATUS )
+        ::Unlock()
+    ENDIF
+
 RETURN Self
 
 
@@ -509,6 +567,8 @@ METHOD Run() CLASS TWindow
 
     ::lVisible := .T.
     ::lExit    := .F.
+
+    ::EnsureStatusSpace()
 
     // Coordenadas ampliadas para el snapshot.  DEBEN ser identicas en
     // el Save y en el Restore para que el handle no se descuadre.

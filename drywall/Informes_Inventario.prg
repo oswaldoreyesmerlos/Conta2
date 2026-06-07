@@ -239,22 +239,29 @@ RETURN _MostrarInformeTexto( "PROYECTOS HISTORICOS", cTexto, "LISTADO_HISTORICOS
 // Grid interactivo de todos los proyectos (TMP + HIS).
 // ENTER sobre un proyecto → muestra su cálculo (TMP_RES / HIS_RES).
 // ============================================================================
-FUNCTION VisorProyectos()
+FUNCTION VisorProyectos( cModo )
 
     LOCAL nArea := Select()
     LOCAL oWin, oGrid, aData
+    LOCAL cTitulo
+    LOCAL cAyuda
 
-    aData := _VisorCargarDatos()
+    DEFAULT cModo TO "ALL"
+    cModo := Upper( AllTrim( cModo ) )
+
+    aData := _VisorCargarDatos( cModo )
 
     IF Empty( aData )
-        MsgInfo( "No hay proyectos registrados.", "Visor" )
+        MsgInfo( _VisorMensajeVacio( cModo ), "Visor" )
         RETURN NIL
     ENDIF
 
-    oWin := TWindow():New( 2, 2, GfxMaxRow() - 2, GfxMaxCol() - 2, "VISOR DE PROYECTOS" )
+    cTitulo := _VisorTitulo( cModo )
+    cAyuda  := _VisorAyuda( cModo )
 
-    oWin:AddCtrl( TLabel():New( 1, 2, ;
-        "[ENTER] Ver calculo   [VALORAR] Editar valoracion   [RECUPERAR] Reabrir   [ESC] Salir", oWin ) )
+    oWin := TWindow():New( 2, 2, GfxMaxRow() - 2, GfxMaxCol() - 2, cTitulo )
+
+    oWin:AddCtrl( TLabel():New( 1, 2, cAyuda, oWin ) )
 
     oGrid := TGrid():New( 3, 1, GfxMaxRow() - 6, GfxMaxCol() - 4, oWin )
     oGrid:aData    := aData
@@ -270,15 +277,15 @@ FUNCTION VisorProyectos()
 
     oWin:AddCtrl( oGrid )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 2, GfxMaxRow() - 3, 18, oWin, "REFRESCAR", ;
-        {|| aData := _VisorCargarDatos(), oGrid:aData := aData, oGrid:Paint() } ) )
-    oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 20, GfxMaxRow() - 3, 38, oWin, "RECUPERAR", ;
-        {|| _VisorRecuperarHistorico( oGrid ), ;
-            aData := _VisorCargarDatos(), ;
+        {|| aData := _VisorCargarDatos( cModo ), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 20, GfxMaxRow() - 3, 38, oWin, _VisorBotonAccion( cModo ), ;
+        {|| _VisorAccionProyecto( oGrid, cModo ), ;
+            aData := _VisorCargarDatos( cModo ), ;
             oGrid:aData := aData, ;
             oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, 40, GfxMaxRow() - 3, 56, oWin, "VALORAR", ;
         {|| _VisorValorarHistorico( oGrid ), ;
-            aData := _VisorCargarDatos(), ;
+            aData := _VisorCargarDatos( cModo ), ;
             oGrid:aData := aData, ;
             oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( GfxMaxRow() - 4, GfxMaxCol() - 20, GfxMaxRow() - 3, GfxMaxCol() - 4, oWin, "CERRAR", ;
@@ -293,14 +300,78 @@ FUNCTION VisorProyectos()
 RETURN NIL
 
 
-STATIC FUNCTION _VisorCargarDatos()
+FUNCTION VisorProyectosCurso()
+
+RETURN VisorProyectos( "TMP" )
+
+
+FUNCTION VisorProyectosHistorico()
+
+RETURN VisorProyectos( "HIS" )
+
+
+STATIC FUNCTION _VisorTitulo( cModo )
+
+    DO CASE
+    CASE cModo == "TMP"
+        RETURN "PROYECTOS EN CURSO"
+    CASE cModo == "HIS"
+        RETURN "PROYECTOS HISTORICOS"
+    OTHERWISE
+        RETURN "VISOR DE PROYECTOS"
+    ENDCASE
+
+RETURN "VISOR DE PROYECTOS"
+
+
+STATIC FUNCTION _VisorAyuda( cModo )
+
+    DO CASE
+    CASE cModo == "TMP"
+        RETURN "[ENTER] Ver calculo   [ACTIVAR] Proyecto actual   [VALORAR] Valoracion temporal"
+    CASE cModo == "HIS"
+        RETURN "[ENTER] Ver calculo   [RECUPERAR] Reabrir calculado   [VALORAR] Historico"
+    OTHERWISE
+        RETURN "[ENTER] Ver calculo   [ACCION] Activar/Reabrir   [VALORAR] Editar valoracion"
+    ENDCASE
+
+RETURN ""
+
+
+STATIC FUNCTION _VisorBotonAccion( cModo )
+
+    IF cModo == "TMP"
+        RETURN "ACTIVAR"
+    ENDIF
+
+RETURN "RECUPERAR"
+
+
+STATIC FUNCTION _VisorMensajeVacio( cModo )
+
+    DO CASE
+    CASE cModo == "TMP"
+        RETURN "No hay proyectos en curso."
+    CASE cModo == "HIS"
+        RETURN "No hay proyectos historicos."
+    OTHERWISE
+        RETURN "No hay proyectos registrados."
+    ENDCASE
+
+RETURN "No hay proyectos registrados."
+
+
+STATIC FUNCTION _VisorCargarDatos( cModo )
 
     LOCAL aData := {}
     LOCAL cEstado
     LOCAL lResAbierta
 
+    DEFAULT cModo TO "ALL"
+    cModo := Upper( AllTrim( cModo ) )
+
     // Asegurar TMP_CAB abierta
-    IF Select( "TMP_CAB" ) == 0
+    IF cModo != "HIS" .AND. Select( "TMP_CAB" ) == 0
         IF !ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
             // No se pudo abrir, omitimos proyectos activos
         ENDIF
@@ -308,11 +379,11 @@ STATIC FUNCTION _VisorCargarDatos()
 
     // Asegurar TMP_RES abierta (para consultar estado)
     lResAbierta := .F.
-    IF Select( "TMP_RES" ) == 0
+    IF cModo != "HIS" .AND. Select( "TMP_RES" ) == 0
         IF ABRIR_TABLA( "TMP_RES", "TMP_RES", "RES_PK" )
             lResAbierta := .T.
         ENDIF
-    ELSE
+    ELSEIF cModo != "HIS"
         dbSelectArea( "TMP_RES" )
         BEGIN SEQUENCE WITH {|oErr| Break(oErr)}
             OrdSetFocus( "RES_PK" )
@@ -322,7 +393,7 @@ STATIC FUNCTION _VisorCargarDatos()
     ENDIF
 
     // Proyectos activos (TMP_CAB)
-    IF Select( "TMP_CAB" ) > 0
+    IF cModo != "HIS" .AND. Select( "TMP_CAB" ) > 0
         dbSelectArea( "TMP_CAB" )
         dbGoTop()
         DO WHILE !Eof()
@@ -337,6 +408,9 @@ STATIC FUNCTION _VisorCargarDatos()
                     RECOVER
                     END SEQUENCE
                 ENDIF
+                IF FieldPos( "L_ACTIVO" ) > 0 .AND. TMP_CAB->L_ACTIVO
+                    cEstado := "Actual"
+                ENDIF
                 AAdd( aData, { ;
                     "TMP", ;
                     AllTrim( TMP_CAB->NUMERO ), ;
@@ -350,14 +424,14 @@ STATIC FUNCTION _VisorCargarDatos()
     ENDIF
 
     // Asegurar HIS_CAB abierta
-    IF Select( "HIS_CAB" ) == 0
+    IF cModo != "TMP" .AND. Select( "HIS_CAB" ) == 0
         IF !ABRIR_TABLA( "HIS_CAB", "HIS_CAB", "" )
             // No se pudo abrir, omitimos archivados
         ENDIF
     ENDIF
 
     // Proyectos archivados (HIS_CAB)
-    IF Select( "HIS_CAB" ) > 0
+    IF cModo != "TMP" .AND. Select( "HIS_CAB" ) > 0
         dbSelectArea( "HIS_CAB" )
         dbGoTop()
         DO WHILE !Eof()
@@ -423,12 +497,32 @@ STATIC FUNCTION _VisorValorarHistorico( oGrid )
     ENDIF
 
     IF aRow[1] == "TMP"
+        DrywallActivarProyecto( aRow[2] )
         Valorar()
     ELSE
         ValorarHistorico( aRow[2] )
     ENDIF
 
 RETURN NIL
+
+
+STATIC FUNCTION _VisorAccionProyecto( oGrid, cModo )
+
+    LOCAL aRow := oGrid:CurrentRow()
+
+    IF aRow == NIL
+        RETURN .F.
+    ENDIF
+
+    IF aRow[1] == "TMP"
+        IF DrywallActivarProyecto( aRow[2] )
+            MsgInfo( "Proyecto " + aRow[2] + " marcado como actual.", "Proyectos en Curso" )
+            RETURN .T.
+        ENDIF
+        RETURN .F.
+    ENDIF
+
+RETURN _VisorRecuperarHistorico( oGrid )
 
 
 STATIC FUNCTION _VisorRecuperarHistorico( oGrid )
@@ -490,13 +584,13 @@ FUNCTION DrywallRecuperarHistorico( cHisNum )
     ENDIF
 
     IF !MsgYesNo( "Se reabrira el historico " + cHisNum + " como proyecto actual." + Chr(13) + ;
-                  "El proyecto actual temporal sera reemplazado." + Chr(13) + ;
+                  "Los demas proyectos temporales se conservaran." + Chr(13) + ;
                   "El historico original no se modifica. Continuar?", "Recuperar" )
         _RecRestoreArea( nArea, nOrd )
         RETURN .F.
     ENDIF
 
-    IF !_RecVaciarTemporales()
+    IF !_RecBorrarTemporal( cHisNum )
         _RecRestoreArea( nArea, nOrd )
         RETURN .F.
     ENDIF
@@ -560,69 +654,39 @@ STATIC FUNCTION _RecSeekHistorico( cHisNum )
 RETURN dbSeek( PadR( cHisNum, 6 ) )
 
 
-STATIC FUNCTION _RecVaciarTemporales()
+STATIC FUNCTION _RecBorrarTemporal( cProyecto )
 
     LOCAL aTabs := { "TMP_CAB", "TMP_TRA", "TMP_MAT", "TMP_RES" }
-    LOCAL aOpen := {}
-    LOCAL cAlias
     LOCAL i
 
-    _RecCloseAlias( "TPC_I" )
+    cProyecto := AllTrim( cProyecto )
 
     FOR i := 1 TO Len( aTabs )
-        _RecCloseAlias( aTabs[i] )
-    NEXT
+        IF Select( aTabs[i] ) == 0
+            IF !ABRIR_TABLA( aTabs[i], aTabs[i], "" )
+                RETURN .F.
+            ENDIF
+        ENDIF
 
-    FOR i := 1 TO Len( aTabs )
-        IF !File( aTabs[i] + ".DBF" )
-            MsgStop( "Falta archivo " + aTabs[i] + ".DBF.", "Recuperar" )
-            _RecCloseOpenList( aOpen )
+        dbSelectArea( aTabs[i] )
+        IF !NetFLock()
+            MsgStop( "No se pudo bloquear " + aTabs[i] + ".", "Recuperar" )
             RETURN .F.
         ENDIF
 
-        cAlias := "RECZ" + AllTrim( Str( i ) )
-        DbUseArea( .T., "DBFCDX", aTabs[i], cAlias, .F., .F. )
-        IF NetErr()
-            MsgStop( "No se pudo abrir " + aTabs[i] + " en modo exclusivo.", "Recuperar" )
-            _RecCloseOpenList( aOpen )
-            RETURN .F.
-        ENDIF
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+                dbDelete()
+            ENDIF
+            dbSkip()
+        ENDDO
 
-        AAdd( aOpen, cAlias )
+        dbCommit()
+        dbUnlock()
     NEXT
-
-    FOR i := 1 TO Len( aOpen )
-        dbSelectArea( aOpen[i] )
-        __dbZap()
-    NEXT
-
-    _RecCloseOpenList( aOpen )
 
 RETURN .T.
-
-
-STATIC FUNCTION _RecCloseAlias( cAlias )
-
-    IF IsDbUsed( cAlias )
-        dbSelectArea( cAlias )
-        dbCloseArea()
-    ENDIF
-
-RETURN NIL
-
-
-STATIC FUNCTION _RecCloseOpenList( aOpen )
-
-    LOCAL i
-
-    FOR i := Len( aOpen ) TO 1 STEP -1
-        IF IsDbUsed( aOpen[i] )
-            dbSelectArea( aOpen[i] )
-            dbCloseArea()
-        ENDIF
-    NEXT
-
-RETURN NIL
 
 
 STATIC FUNCTION _RecCopiarCabecera( cHisNum )
@@ -637,6 +701,14 @@ STATIC FUNCTION _RecCopiarCabecera( cHisNum )
         RETURN .F.
     ENDIF
 
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. FieldPos( "L_ACTIVO" ) > 0
+            REPLACE FIELD->L_ACTIVO WITH .F.
+        ENDIF
+        dbSkip()
+    ENDDO
+
     DbAppend()
     IF NetErr()
         dbUnlock()
@@ -650,7 +722,14 @@ STATIC FUNCTION _RecCopiarCabecera( cHisNum )
     REPLACE FIELD->ESTADO     WITH "P"
     REPLACE FIELD->MARGEN     WITH HIS_CAB->MARGEN
     REPLACE FIELD->OBSERV     WITH HIS_CAB->OBSERV
+    REPLACE FIELD->L_ACTIVO   WITH .T.
     REPLACE FIELD->L_SUCIO    WITH .T.
+    IF FieldPos( "L_CALC_DIR" ) > 0
+        REPLACE FIELD->L_CALC_DIR WITH .T.
+    ENDIF
+    IF FieldPos( "L_CAB_DIR" ) > 0
+        REPLACE FIELD->L_CAB_DIR WITH .F.
+    ENDIF
     dbCommit()
     dbUnlock()
 
@@ -684,6 +763,9 @@ STATIC FUNCTION _RecCopiarTramos( cHisNum )
             REPLACE FIELD->NUMERO      WITH cHisNum
             REPLACE FIELD->ID_LINEA    WITH HIS_TRA->ID_LINEA
             REPLACE FIELD->TIPO_OBRA   WITH HIS_TRA->TIPO_OBRA
+            IF FieldPos( "SISTEMA_ID" ) > 0 .AND. HIS_TRA->( FieldPos( "SISTEMA_ID" ) ) > 0
+                REPLACE FIELD->SISTEMA_ID WITH HIS_TRA->SISTEMA_ID
+            ENDIF
             REPLACE FIELD->CONCEPTO    WITH HIS_TRA->CONCEPTO
             REPLACE FIELD->LARGO       WITH HIS_TRA->LARGO
             REPLACE FIELD->ALTO        WITH HIS_TRA->ALTO
@@ -739,11 +821,8 @@ STATIC FUNCTION _VisorMostrarResultado( cAlias, cNum, cTitulo )
     // Abrir tabla si no está en uso
     IF Select( cAlias ) == 0
         IF File( cAlias + ".DBF" )
-            BEGIN SEQUENCE WITH {|oErr| Break(oErr)}
-                USE ( cAlias ) NEW SHARED VIA "DBFCDX" ALIAS ( cAlias )
-                lAbierta := ( Select( cAlias ) > 0 )
-            RECOVER
-            END SEQUENCE
+            ABRIR_TABLA( cAlias, cAlias, "" )
+            lAbierta := ( Select( cAlias ) > 0 )
         ENDIF
     ELSE
         lAbierta := .T.

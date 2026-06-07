@@ -20,6 +20,7 @@ FUNCTION GrabaPres( lConfirmar, lLimpiar )
     
     // --- VARIABLES DE NEGOCIO ---
     LOCAL cNueNum
+    LOCAL cProyecto := DrywallProyectoActualNumero()
     LOCAL nTotal := 0
     LOCAL lOk := .T.
 
@@ -35,6 +36,10 @@ FUNCTION GrabaPres( lConfirmar, lLimpiar )
     nOrdOri := IndexOrd()
 
     // 2. VALIDACIONES PREVIAS
+    IF !DrywallValidarParaHistorico( cProyecto )
+        RETURN NIL
+    ENDIF
+
     IF Select( "TMP_TRA" ) == 0
         MsgStop( "La tabla de tramos no está disponible.", "Error" )
         RETURN NIL
@@ -61,19 +66,18 @@ FUNCTION GrabaPres( lConfirmar, lLimpiar )
     ENDIF
 
     // 5. CÁLCULO DEL TOTAL DESDE EL RESUMEN VALORADO
-    dbSelectArea( "TMP_RES" )
-    SUM Field->IMP_TOT TO nTotal
+    nTotal := _TotalTmpRes( cProyecto )
 
     // 6. FASE DE TRANSFERENCIA (Paso a paso para facilitar el debug)
     
     // A. Copiado de Cabecera
-    _MoverCabecera( cNueNum, nTotal )
+    _MoverCabecera( cNueNum, nTotal, "C", cProyecto )
     
     // B. Copiado de Tramos
-    _MoverTramos( cNueNum )
+    _MoverTramos( cNueNum, cProyecto )
     
     // C. Copiado de Resumen de Materiales
-    _MoverResumen( cNueNum )
+    _MoverResumen( cNueNum, cProyecto )
 
     // 7. LIMPIEZA DEL BORRADOR (Boy Scout deja el sitio limpio)
     _LimpiaTemporales()
@@ -119,6 +123,9 @@ STATIC FUNCTION _MoverTramos( cDocNum, cProyecto )
             REPLACE Field->ID_LINEA     WITH TMP_TRA->ID_LINEA
             REPLACE Field->CONCEPTO     WITH TMP_TRA->CONCEPTO
             REPLACE Field->TIPO_OBRA    WITH TMP_TRA->TIPO_OBRA
+            IF FieldPos( "SISTEMA_ID" ) > 0 .AND. TMP_TRA->( FieldPos( "SISTEMA_ID" ) ) > 0
+                REPLACE Field->SISTEMA_ID WITH TMP_TRA->SISTEMA_ID
+            ENDIF
             REPLACE Field->LARGO        WITH TMP_TRA->LARGO
             REPLACE Field->ALTO         WITH TMP_TRA->ALTO
             REPLACE Field->MODUL        WITH TMP_TRA->MODUL
@@ -162,7 +169,7 @@ STATIC FUNCTION _GetNextDoc()
 
     // Usa la tabla Contador (compartida con AppGestion)
     IF Select( "CONTADOR" ) == 0
-        USE CONTADOR NEW SHARED VIA "DBFCDX"
+        ABRIR_TABLA( "CONTADOR", "CONTADOR", "" )
     ENDIF
 
     dbSelectArea( "CONTADOR" )
@@ -190,29 +197,26 @@ RETURN cNum
 
 // ============================================================================
 // FUNCION: _LimpiaTemporales
-// Descripción: Vaciado total de tablas temporales (Requiere Exclusivo)
+// Descripcion: Borra solo el proyecto temporal activo.
 // ============================================================================
 FUNCTION _LimpiaTemporales()
 
     LOCAL nOld := Select()
+    LOCAL cProyecto := DrywallProyectoActualNumero()
 
-    // 0. CONFIRMACION
-    IF !MsgYesNo( "¿Desea eliminar el proyecto actual y empezar uno nuevo?" + Chr(13) + ;
-                  "Se perderán todos los datos no guardados.", "Nuevo Proyecto" )
+    IF Empty( cProyecto )
+        MsgStop( "No hay proyecto temporal activo para eliminar.", "Eliminar Proyecto" )
         RETURN NIL
     ENDIF
 
-    // 1. Limpiamos Tramos
-    _SafeZap( "TMP_TRA" )
+    // 0. CONFIRMACION
+    IF !MsgYesNo( "Desea eliminar el proyecto temporal " + cProyecto + "?" + Chr(13) + ;
+                  "Los demas proyectos en curso se conservaran.", "Eliminar Proyecto" )
+        RETURN NIL
+    ENDIF
 
-    // 2. Limpiamos Cabeceras
-    _SafeZap( "TMP_CAB" )
-
-    // 3. Limpiamos Materiales
-    _SafeZap( "TMP_MAT" )
-
-    // 4. Limpiamos Resumen
-    _SafeZap( "TMP_RES" )
+    _BorraTemporalProyecto( cProyecto )
+    _ActivaPrimerTemporal()
 
     // 5. Boy Scout: Volvemos al area donde estabamos
     IF nOld > 0
@@ -223,9 +227,9 @@ RETURN NIL
 
 
 // ============================================================================
-// AUXILIAR: Gestiona el cierre, apertura exclusiva, zap y reapertura
+// AUXILIAR OBSOLETO: no usar para limpiar proyectos temporales.
 // ============================================================================
-STATIC FUNCTION _SafeZap( cFile )
+STATIC FUNCTION _BorradoTotalObsoleto( cFile )
 
     LOCAL cAlias   := Upper( cFile )
     LOCAL lWasOpen := .F.
@@ -244,7 +248,7 @@ STATIC FUNCTION _SafeZap( cFile )
         USE (cFile) NEW EXCLUSIVE ALIAS (cAlias)
         
         IF !NetErr()
-            __dbZap()      // Vacía la DBF completamente (resetea RecNo)
+            // Rutina obsoleta: no vaciar temporales completos desde Drywall.
             dbCloseArea()  // Cerramos el modo exclusivo
         ELSE
             MsgStop( "Error: No se pudo abrir " + cFile + " en modo exclusivo." + CRLF + ;
@@ -264,19 +268,110 @@ STATIC FUNCTION _SafeZap( cFile )
 
 RETURN NIL
 
+
+STATIC FUNCTION _BorraTemporalProyecto( cProyecto )
+
+    LOCAL aTabs := { "TMP_RES", "TMP_MAT", "TMP_TRA", "TMP_CAB" }
+    LOCAL i
+
+    cProyecto := AllTrim( cProyecto )
+    IF Empty( cProyecto )
+        RETURN .F.
+    ENDIF
+
+    FOR i := 1 TO Len( aTabs )
+        IF Select( aTabs[i] ) == 0
+            IF File( aTabs[i] + ".DBF" )
+                ABRIR_TABLA( aTabs[i], aTabs[i], "" )
+            ELSE
+                MsgStop( "Falta archivo " + aTabs[i] + ".DBF.", "Eliminar Proyecto" )
+                RETURN .F.
+            ENDIF
+        ENDIF
+
+        dbSelectArea( aTabs[i] )
+        IF !NetFLock()
+            MsgStop( "No se pudo bloquear " + aTabs[i] + ".", "Eliminar Proyecto" )
+            RETURN .F.
+        ENDIF
+
+        dbGoTop()
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+                dbDelete()
+            ENDIF
+            dbSkip()
+        ENDDO
+
+        dbCommit()
+        dbUnlock()
+    NEXT
+
+RETURN .T.
+
+
+STATIC FUNCTION _ActivaPrimerTemporal()
+
+    LOCAL cProyecto := ""
+
+    IF Select( "TMP_CAB" ) == 0
+        IF File( "TMP_CAB.DBF" )
+            ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
+        ELSE
+            RETURN .F.
+        ENDIF
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            cProyecto := AllTrim( FIELD->NUMERO )
+            EXIT
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF !Empty( cProyecto )
+        RETURN DrywallActivarProyecto( cProyecto )
+    ENDIF
+
+RETURN .T.
+
+
 // ============================================================================
 // FUNCION: _MoverCabecera
 // Descripción: Transfiere los datos de la cabecera al histórico HIS_CAB.
 // ============================================================================
-STATIC FUNCTION _MoverCabecera( cDoc, nTot, cEstado )
+STATIC FUNCTION _MoverCabecera( cDoc, nTot, cEstado, cProyecto )
+
     LOCAL nArea := Select()
 
     IF ValType( cEstado ) != "C"
         cEstado := "C"
     ENDIF
 
+    IF ValType( cProyecto ) != "C"
+        cProyecto := DrywallProyectoActualNumero()
+    ENDIF
+    cProyecto := AllTrim( cProyecto )
+
     IF Select( "TMP_CAB" ) == 0
         MsgStop( "No hay cabecera de presupuesto activa.", "Error" )
+        RETURN NIL
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+            EXIT
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF Eof()
+        MsgStop( "No se encontro la cabecera temporal " + cProyecto + ".", "Guardar en Firme" )
         RETURN NIL
     ENDIF
 
@@ -296,6 +391,9 @@ STATIC FUNCTION _MoverCabecera( cDoc, nTot, cEstado )
         REPLACE Field->OBSERV     WITH TMP_CAB->OBSERV
         REPLACE Field->MARGEN     WITH TMP_CAB->MARGEN
         REPLACE Field->ESTADO     WITH cEstado
+        DbFieldPutIf( "PRES_NUM",   Space( 10 ) )
+        DbFieldPutIf( "FEC_CALC",   Date() )
+        DbFieldPutIf( "FEC_CIERRE", Ctod( "" ) )
         dbCommit()
     ENDIF
     dbUnlock()
@@ -383,11 +481,11 @@ FUNCTION DrywallGuardarCalculado()
         RETURN .F.
     ENDIF
 
-    _MoverCabecera( cProyecto, _TotalTmpRes( cProyecto ), "C" )
+    _MoverCabecera( cProyecto, _TotalTmpRes( cProyecto ), "C", cProyecto )
     _MoverTramos( cProyecto, cProyecto )
     _MoverResumen( cProyecto, cProyecto )
     _MoverMateriales( cProyecto, cProyecto )
-    _VaciarTemporales()
+    _VaciarTemporales( cProyecto )
 
     MsgInfo( "Proyecto " + cProyecto + " guardado como calculado.", "Guardar en Firme" )
 
@@ -431,6 +529,13 @@ FUNCTION DrywallCerrarHistorico( cProyecto )
         RETURN .F.
     ENDIF
 
+    IF !DrywallValidarParaPresupuesto( cProyecto, "HIS" )
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
+        RETURN .F.
+    ENDIF
+
     IF !MsgYesNo( "Se cerrara el proyecto " + cProyecto + "." + Chr(13) + ;
                   "Despues solo podra consultarse." + Chr(13) + ;
                   "Desea continuar?", "Cerrar Proyecto" )
@@ -444,6 +549,8 @@ FUNCTION DrywallCerrarHistorico( cProyecto )
         OrdSetFocus( "HIS_NUM" )
         IF dbSeek( PadR( cProyecto, 6 ) ) .AND. NetRLock()
             REPLACE FIELD->ESTADO WITH "F"
+            DbFieldPutIf( "PRES_NUM", DrywallPresupuestoOrigenNumero( cProyecto ) )
+            DbFieldPutIf( "FEC_CIERRE", Date() )
             dbCommit()
             dbUnlock()
         ENDIF
@@ -460,18 +567,28 @@ RETURN lOk
 STATIC FUNCTION _MarkTmpGuardado()
 
     LOCAL nArea := Select()
+    LOCAL cProyecto := DrywallProyectoActualNumero()
 
     IF Select( "TMP_CAB" ) > 0
         dbSelectArea( "TMP_CAB" )
         dbGoTop()
-        IF NetRLock()
-            REPLACE FIELD->ESTADO WITH "G"
-            IF FieldPos( "L_SUCIO" ) > 0
-                REPLACE FIELD->L_SUCIO WITH .F.
+        DO WHILE !Eof()
+            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+                IF NetRLock()
+                    REPLACE FIELD->ESTADO WITH "G"
+                    IF FieldPos( "L_SUCIO" ) > 0
+                        REPLACE FIELD->L_SUCIO WITH .F.
+                    ENDIF
+                    IF FieldPos( "L_CALC_DIR" ) > 0
+                        REPLACE FIELD->L_CALC_DIR WITH .F.
+                    ENDIF
+                    dbCommit()
+                    dbUnlock()
+                ENDIF
+                EXIT
             ENDIF
-            dbCommit()
-            dbUnlock()
-        ENDIF
+            dbSkip()
+        ENDDO
     ENDIF
 
     IF nArea > 0
@@ -501,44 +618,14 @@ RETURN .T.
 
 STATIC FUNCTION _ValidaCierreProyecto( cProyecto )
 
-    cProyecto := ""
+    cProyecto := DrywallProyectoActualNumero()
 
-    IF Select( "TMP_CAB" ) == 0 .OR. Select( "TMP_TRA" ) == 0 .OR. ;
-       Select( "TMP_MAT" ) == 0 .OR. Select( "TMP_RES" ) == 0
-        MsgStop( "Faltan tablas temporales abiertas. Abra el proyecto antes de cerrar.", "Guardar en Firme" )
-        RETURN .F.
-    ENDIF
-
-    dbSelectArea( "TMP_CAB" )
-    IF LastRec() == 0
+    IF Empty( cProyecto )
         MsgStop( "No hay cabecera de proyecto activa.", "Guardar en Firme" )
         RETURN .F.
     ENDIF
-    dbGoTop()
-    cProyecto := AllTrim( FIELD->NUMERO )
 
-    IF FieldPos( "L_SUCIO" ) > 0 .AND. FIELD->L_SUCIO
-        MsgStop( "El proyecto tiene cambios sin recalcular. Ejecute Calcular Material antes de guardar.", ;
-                 "Guardar en Firme" )
-        RETURN .F.
-    ENDIF
-
-    IF _CuentaProyecto( "TMP_TRA", cProyecto ) == 0
-        MsgStop( "No hay tramos cargados.", "Guardar en Firme" )
-        RETURN .F.
-    ENDIF
-
-    IF _CuentaProyecto( "TMP_MAT", cProyecto ) == 0
-        MsgStop( "No hay despiece de materiales. Ejecute Calcular Material.", "Guardar en Firme" )
-        RETURN .F.
-    ENDIF
-
-    IF _CuentaProyecto( "TMP_RES", cProyecto ) == 0
-        MsgStop( "No hay resumen economico. Ejecute Calcular Material.", "Guardar en Firme" )
-        RETURN .F.
-    ENDIF
-
-RETURN .T.
+RETURN DrywallValidarParaHistorico( cProyecto )
 
 
 STATIC FUNCTION _TotalTmpRes( cProyecto )
@@ -663,11 +750,9 @@ STATIC FUNCTION _BorraHistoricoProyecto( cProyecto )
 RETURN .T.
 
 
-STATIC FUNCTION _VaciarTemporales()
+STATIC FUNCTION _VaciarTemporales( cProyecto )
 
-    _SafeZap( "TMP_TRA" )
-    _SafeZap( "TMP_CAB" )
-    _SafeZap( "TMP_MAT" )
-    _SafeZap( "TMP_RES" )
+    _BorraTemporalProyecto( cProyecto )
+    _ActivaPrimerTemporal()
 
 RETURN NIL

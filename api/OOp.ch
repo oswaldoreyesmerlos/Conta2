@@ -49,6 +49,7 @@
 // ============================================================================
 #define CLR_WIN_TITLE_ACT   GfxThemeColor( "WIN_TITLE_ACT" )
 #define CLR_WIN_TITLE_INA   GfxThemeColor( "WIN_TITLE_INA" )
+#define CLR_WIN_STATUS      GfxThemeColor( "WIN_STATUS" )
 #define CLR_WIN_BODY        CLR_WINDOW  // Cuerpo ventana
 
 

@@ -35,6 +35,7 @@ gtwvg.hbc
 # Modulo Drywall
 InicioDrywall.prg
 CalcUtils.prg
+VALID_MOD.prg
 OOPTRAMO.prg
 CALC_ADD.prg
 CALC_EDIT.prg
@@ -45,6 +46,7 @@ TARE_MOD.prg
 VAL_MOD.prg
 M_Articulos.prg
 M_Familias.prg
+M_Sistemas.prg
 GenPresupuesto.prg
 Informes_Inventario.prg
 SeedDrywall.prg

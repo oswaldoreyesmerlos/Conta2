@@ -272,8 +272,9 @@ FUNCTION Form_Techo( hData, lNuevo )
     oWin:AddCtrl( TLabel():New( 14,  2, "Primario(opc):", oWin ) )
     oGPer2 := TGet():New(14, 18, hData["ID_PERFIL2"], "@!", oWin )
     oBtBusP2 := TButton():New(14, 35, 14, 49, oWin, "BUSCAR", {|| _BtnPick( oGPer2, hData, "ID_PERFIL2", "PERFIL" ) } )
-    oBtBusP2:lEnabled := !_OptionalCode( hData["ID_PERFIL2"] )
     oGPer2:bValid := {|o| _TechoValidPrim( o, oBtBusP2, hData ) }
+    oGSepP:bValid := {|o| _TechoValidSepPrim( o, oGPer2, oBtBusP2, hData ) }
+    _TechoApplyPrimState( hData["SEP_PRIM"], oGPer2, oBtBusP2, hData )
 
     // -- Perimetral --
     oWin:AddCtrl( TLabel():New( 16,  2, "Perimetral...:", oWin ) )
@@ -326,7 +327,7 @@ FUNCTION Form_Techo( hData, lNuevo )
         hData["MODUL"]      := oGMod:GetValue()
         hData["SEP_PRIM"]   := oGSepP:GetValue()
         hData["ID_PERFIL"]  := oGPer1:GetValue()
-        IF _OptionalCode( oGPer2:GetValue() )
+        IF hData["SEP_PRIM"] <= 0
             hData["ID_PERFIL2"] := "0"
         ELSE
             hData["ID_PERFIL2"] := oGPer2:GetValue()
@@ -345,10 +346,34 @@ FUNCTION Form_Techo( hData, lNuevo )
 RETURN .F.
 
 
+STATIC FUNCTION _TechoValidSepPrim( oGet, oPrim, oBtn, hData )
+
+    _TechoApplyPrimState( oGet:uVar, oPrim, oBtn, hData )
+
+RETURN .T.
+
+
+STATIC FUNCTION _TechoApplyPrimState( nSepPrim, oPrim, oBtn, hData )
+    LOCAL lPrim := ( nSepPrim > 0 )
+
+    oPrim:lEnabled := lPrim
+    oBtn:lEnabled  := lPrim
+
+    IF !lPrim
+        oPrim:SetValue( "0" )
+        hData["ID_PERFIL2"] := "0"
+    ENDIF
+
+    oPrim:Paint()
+    oBtn:Paint()
+
+RETURN NIL
+
+
 STATIC FUNCTION _TechoValidPrim( oGet, oBtn, hData )
     LOCAL lPrim := !_OptionalCode( oGet:uVar )
 
-    oBtn:lEnabled := lPrim
+    oBtn:lEnabled := .T.
     IF !lPrim
         oGet:SetValue( "0" )
         hData["ID_PERFIL2"] := "0"
@@ -584,6 +609,7 @@ STATIC FUNCTION _InitData( cTipo, cTit )
     ENDIF
 
     hData["TIPO"]       := cTipo
+    hData["SISTEMA_ID"] := Space(20)
     hData["CONCEPTO"]   := PadR( cTit, 30 )
     hData["LARGO"]      := 0.00
     hData["ALTO"]       := 2.50
@@ -655,8 +681,9 @@ STATIC FUNCTION _CoreSave( hData )
         ENDIF
 
         IF cTipo == "TECHO"
-            IF !_OptionalCode( hData["ID_PERFIL2"] ) .AND. ;
-               !_RequireCode( hData["ID_PERFIL2"], "perfil primario" )
+            IF hData["SEP_PRIM"] <= 0
+                hData["ID_PERFIL2"] := "0"
+            ELSEIF !_RequireCode( hData["ID_PERFIL2"], "perfil primario" )
                 RETURN .F.
             ENDIF
         ELSEIF cTipo == "TABIQUE" .AND. !_RequireCode( hData["ID_PERFIL2"], "perfil secundario/canal" )
@@ -701,6 +728,9 @@ STATIC FUNCTION _CoreSave( hData )
     REPLACE FIELD->NUMERO     WITH cProyecto
     REPLACE FIELD->ID_LINEA   WITH nLinea
     REPLACE FIELD->TIPO_OBRA  WITH hData["TIPO"]
+    IF FieldPos( "SISTEMA_ID" ) > 0 .AND. hb_HHasKey( hData, "SISTEMA_ID" )
+        REPLACE FIELD->SISTEMA_ID WITH hData["SISTEMA_ID"]
+    ENDIF
     REPLACE FIELD->CONCEPTO   WITH hData["CONCEPTO"]
     REPLACE FIELD->LARGO      WITH hData["LARGO"]
     REPLACE FIELD->ALTO       WITH hData["ALTO"]
@@ -740,53 +770,14 @@ STATIC FUNCTION _CoreSave( hData )
     dbCommit()
     dbUnlock()
 
-    IF Select("TMP_CAB") > 0
-        dbSelectArea("TMP_CAB")
-        dbGoTop()
-        DO WHILE !Eof()
-            IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
-                IF NetRLock()
-                    REPLACE FIELD->L_SUCIO WITH .T.
-                    dbCommit()
-                    dbUnlock()
-                ENDIF
-                EXIT
-            ENDIF
-            dbSkip()
-        ENDDO
-    ENDIF
+    DrywallMarkCalcDirty( cProyecto )
 
 RETURN .T.
 
 
 STATIC FUNCTION _CurrentProyectoNumero()
 
-    LOCAL nArea := Select()
-    LOCAL cProyecto := ""
-
-    IF Select( "TMP_CAB" ) == 0
-        IF File( "TMP_CAB.DBF" )
-            USE TMP_CAB NEW SHARED VIA "DBFCDX"
-        ELSE
-            RETURN ""
-        ENDIF
-    ENDIF
-
-    dbSelectArea( "TMP_CAB" )
-    dbGoTop()
-    DO WHILE !Eof()
-        IF !Deleted()
-            cProyecto := AllTrim( FIELD->NUMERO )
-            EXIT
-        ENDIF
-        dbSkip()
-    ENDDO
-
-    IF nArea > 0
-        dbSelectArea( nArea )
-    ENDIF
-
-RETURN cProyecto
+RETURN DrywallProyectoActualNumero()
 
 
 STATIC FUNCTION _NextTramoLinea( cProyecto )

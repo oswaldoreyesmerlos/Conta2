@@ -12,8 +12,7 @@ FUNCTION ProyectoActual()
         RETURN NIL
     ENDIF
 
-    dbSelectArea( "TMP_CAB" )
-    IF !_CabeceraActiva()
+    IF Empty( DrywallProyectoActualNumero() )
         IF !_CrearProyectoActual()
             RETURN NIL
         ENDIF
@@ -95,25 +94,27 @@ FUNCTION VerTareas( cTipo )
     oWin:AddCtrl( oGrid )
     oWin:AddCtrl( TLabel():New( 22, 2, "[NUEVO] Agregar tramo   [ENTER] Editar", oWin ) )
     oWin:AddCtrl( TButton():New( 23,  2, 24, 18, oWin, "NUEVO (F5)", {|| _OnAppend( oGrid ), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
-    oWin:AddCtrl( TButton():New( 23, 20, 24, 36, oWin, "CALCULAR", {|| Procesa(), aData := _TareCargar(), oGrid:aData := aData, oGrid:Paint() } ) )
+    oWin:AddCtrl( TButton():New( 23, 20, 24, 36, oWin, "CALCULAR", ;
+        {|| _GuardarCabeceraTrabajo( cNum, oGTit, oGFec, oGCli, oGObs ), ;
+            Procesa(), ;
+            aData := _TareCargar(), ;
+            oGrid:aData := aData, ;
+            oGrid:Paint() } ) )
     oWin:AddCtrl( TButton():New( 23, 38, 24, 54, oWin, "RESUMEN", {|| ResultadoResumen() } ) )
     oWin:AddCtrl( TButton():New( 23, 56, 24, 72, oWin, "DESPIECE", {|| ResultadoDetalle() } ) )
-    oWin:AddCtrl( TButton():New( 25,  2, 26, 28, oWin, "VALORAR / CERRAR", {|| Valorar() } ) )
+    oWin:AddCtrl( TButton():New( 25,  2, 26, 28, oWin, "VALORAR / CERRAR", ;
+        {|| _GuardarCabeceraTrabajo( cNum, oGTit, oGFec, oGCli, oGObs ), ;
+            Valorar() } ) )
     oWin:AddCtrl( TButton():New( 23, 85, 24, 101, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()
 
-    dbSelectArea( "TMP_CAB" )
-    IF _CabeceraActiva() .AND. NetRLock()
-        REPLACE FIELD->TITULO     WITH oGTit:GetValue()
-        REPLACE FIELD->FECHA      WITH oGFec:GetValue()
-        REPLACE FIELD->ID_CLIENTE WITH oGCli:GetValue()
-        REPLACE FIELD->OBSERV     WITH oGObs:GetValue()
-        dbCommit()
-        dbUnlock()
-    ENDIF
+    _GuardarCabeceraTrabajo( cNum, oGTit, oGFec, oGCli, oGObs )
 
-    IF nArea > 0; dbSelectArea( nArea ); dbSetOrder( nOrd ); ENDIF
+    IF nArea > 0
+        dbSelectArea( nArea )
+        dbSetOrder( nOrd )
+    ENDIF
 RETURN NIL
 
 
@@ -121,7 +122,7 @@ STATIC FUNCTION _TareCargar()
 
     LOCAL aData := {}
     LOCAL cSistema
-    LOCAL cProyecto := _ProyectoActualNumero()
+    LOCAL cProyecto := DrywallProyectoActualNumero()
 
     dbSelectArea( "TMP_TRA" )
     dbGoTop()
@@ -226,21 +227,38 @@ STATIC FUNCTION _TareNextLinea( cProyecto )
 RETURN nMax + 1
 
 
-STATIC FUNCTION _ProyectoActualNumero()
+FUNCTION DrywallProyectoActualNumero()
 
     LOCAL nArea := Select()
     LOCAL cProyecto := ""
+    LOCAL cPrimero := ""
 
-    IF Select( "TMP_CAB" ) > 0
-        dbSelectArea( "TMP_CAB" )
-        dbGoTop()
-        DO WHILE !Eof()
-            IF !Deleted()
+    IF Select( "TMP_CAB" ) == 0
+        IF File( "TMP_CAB.DBF" )
+            ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
+        ELSE
+            RETURN ""
+        ENDIF
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            IF Empty( cPrimero )
+                cPrimero := AllTrim( FIELD->NUMERO )
+            ENDIF
+            IF FieldPos( "L_ACTIVO" ) > 0 .AND. FIELD->L_ACTIVO
                 cProyecto := AllTrim( FIELD->NUMERO )
                 EXIT
             ENDIF
-            dbSkip()
-        ENDDO
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF Empty( cProyecto ) .AND. !Empty( cPrimero )
+        cProyecto := cPrimero
+        DrywallActivarProyecto( cProyecto )
     ENDIF
 
     IF nArea > 0
@@ -248,6 +266,54 @@ STATIC FUNCTION _ProyectoActualNumero()
     ENDIF
 
 RETURN cProyecto
+
+
+FUNCTION DrywallActivarProyecto( cProyecto )
+
+    LOCAL nArea := Select()
+    LOCAL lOk := .F.
+
+    cProyecto := AllTrim( cProyecto )
+
+    IF Empty( cProyecto )
+        RETURN .F.
+    ENDIF
+
+    IF Select( "TMP_CAB" ) == 0
+        IF File( "TMP_CAB.DBF" )
+            ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
+        ELSE
+            RETURN .F.
+        ENDIF
+    ENDIF
+
+    dbSelectArea( "TMP_CAB" )
+    IF !NetFLock()
+        MsgStop( "No se pudo activar el proyecto " + cProyecto + ".", "Proyecto Actual" )
+        RETURN .F.
+    ENDIF
+
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            IF FieldPos( "L_ACTIVO" ) > 0
+                REPLACE FIELD->L_ACTIVO WITH ( AllTrim( FIELD->NUMERO ) == cProyecto )
+            ENDIF
+            IF AllTrim( FIELD->NUMERO ) == cProyecto
+                lOk := .T.
+            ENDIF
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    dbCommit()
+    dbUnlock()
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN lOk
 
 
 STATIC FUNCTION _OnAppend( oGrid )
@@ -324,7 +390,7 @@ STATIC FUNCTION _AbrirTablas()
     FOR i := 1 TO Len( aTabs )
         IF Select( aTabs[i] ) == 0
             IF File( aTabs[i] + ".DBF" )
-                USE ( aTabs[i] ) NEW SHARED VIA "DBFCDX"
+                ABRIR_TABLA( aTabs[i], aTabs[i], "" )
             ELSE
                 MsgStop( "Falta archivo " + aTabs[i] + ".DBF" )
                 lOk := .F.
@@ -337,16 +403,88 @@ RETURN lOk
 
 STATIC FUNCTION _CabeceraActiva()
 
+    LOCAL cProyecto := DrywallProyectoActualNumero()
+
+    IF Empty( cProyecto )
+        RETURN .F.
+    ENDIF
+
     dbSelectArea( "TMP_CAB" )
     dbGoTop()
     DO WHILE !Eof()
-        IF !Deleted()
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
             RETURN .T.
         ENDIF
         dbSkip()
     ENDDO
 
 RETURN .F.
+
+
+STATIC FUNCTION _SeleccionaProyectoTrabajo()
+
+    LOCAL aData := _ProyectosTemporalesData()
+    LOCAL cSel
+
+    IF Len( aData ) == 0
+        RETURN _CrearProyectoActual()
+    ENDIF
+
+    cSel := PopupSelect( "PROYECTOS EN CURSO", aData, ;
+        { { "NUMERO",   8, "@!", 1 }, ;
+          { "FECHA",   12, "@!", 2 }, ;
+          { "TITULO",  38, "@!", 3 }, ;
+          { "CLIENTE", 15, "@!", 4 }, ;
+          { "ESTADO",  12, "@!", 5 }, ;
+          { "ACT",      4, "@!", 6 } }, 3, "NUEVO" )
+
+    IF cSel == "__POPUP_NEW__"
+        RETURN _CrearProyectoActual()
+    ENDIF
+
+    IF Empty( cSel )
+        RETURN .F.
+    ENDIF
+
+RETURN DrywallActivarProyecto( cSel )
+
+
+STATIC FUNCTION _ProyectosTemporalesData()
+
+    LOCAL aData := {}
+    LOCAL cEstado
+    LOCAL cActivo
+
+    dbSelectArea( "TMP_CAB" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            cEstado := "Pendiente"
+            IF FieldPos( "L_CALC_DIR" ) > 0
+                IF !FIELD->L_CALC_DIR
+                    cEstado := "Calculado"
+                ENDIF
+            ELSEIF FieldPos( "L_SUCIO" ) > 0 .AND. !FIELD->L_SUCIO
+                cEstado := "Calculado"
+            ENDIF
+
+            cActivo := ""
+            IF FieldPos( "L_ACTIVO" ) > 0 .AND. FIELD->L_ACTIVO
+                cActivo := "SI"
+            ENDIF
+
+            AAdd( aData, { ;
+                AllTrim( FIELD->NUMERO ), ;
+                DToC( FIELD->FECHA ), ;
+                AllTrim( FIELD->TITULO ), ;
+                AllTrim( FIELD->ID_CLIENTE ), ;
+                cEstado, ;
+                cActivo } )
+        ENDIF
+        dbSkip()
+    ENDDO
+
+RETURN aData
 
 
 STATIC FUNCTION _CrearProyectoActual()
@@ -358,6 +496,14 @@ STATIC FUNCTION _CrearProyectoActual()
         MsgStop( "No se pudo bloquear TMP_CAB para crear el proyecto.", "Proyecto Actual" )
         RETURN .F.
     ENDIF
+
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. FieldPos( "L_ACTIVO" ) > 0
+            REPLACE FIELD->L_ACTIVO WITH .F.
+        ENDIF
+        dbSkip()
+    ENDDO
 
     DbAppend()
     IF NetErr()
@@ -373,7 +519,14 @@ STATIC FUNCTION _CrearProyectoActual()
     REPLACE FIELD->ESTADO     WITH "P"
     REPLACE FIELD->MARGEN     WITH 0
     REPLACE FIELD->OBSERV     WITH Space(200)
+    REPLACE FIELD->L_ACTIVO   WITH .T.
     REPLACE FIELD->L_SUCIO    WITH .T.
+    IF FieldPos( "L_CALC_DIR" ) > 0
+        REPLACE FIELD->L_CALC_DIR WITH .T.
+    ENDIF
+    IF FieldPos( "L_CAB_DIR" ) > 0
+        REPLACE FIELD->L_CAB_DIR WITH .T.
+    ENDIF
     dbCommit()
     dbUnlock()
 
@@ -392,6 +545,8 @@ STATIC FUNCTION _EditarCabeceraActual()
     LOCAL oGFec
     LOCAL oGTit
     LOCAL oGObs
+    LOCAL lAbrirTramos := .F.
+    LOCAL lCambiar := .F.
 
     dbSelectArea( "TMP_CAB" )
     IF !_CabeceraActiva()
@@ -425,40 +580,117 @@ STATIC FUNCTION _EditarCabeceraActual()
     oWin:AddCtrl( oGFec )
     oWin:AddCtrl( oGObs )
     oWin:AddCtrl( TButton():New( 8,  2, 9, 18, oWin, "GUARDAR", {|| oWin:Close() } ) )
+    oWin:AddCtrl( TButton():New( 8, 20, 9, 36, oWin, "TRAMOS", {|| lAbrirTramos := .T., oWin:Close() } ) )
+    oWin:AddCtrl( TButton():New( 8, 38, 9, 56, oWin, "CAMBIAR", {|| lCambiar := .T., oWin:Close() } ) )
     oWin:AddCtrl( TButton():New( 8, 62, 9, 78, oWin, "CERRAR", {|| oWin:Close() } ) )
 
     oWin:Run()
 
-    dbSelectArea( "TMP_CAB" )
-    IF _CabeceraActiva() .AND. NetRLock()
-        REPLACE FIELD->TITULO     WITH oGTit:GetValue()
-        REPLACE FIELD->FECHA      WITH oGFec:GetValue()
-        REPLACE FIELD->ID_CLIENTE WITH oGCli:GetValue()
-        REPLACE FIELD->OBSERV     WITH oGObs:GetValue()
-        REPLACE FIELD->L_SUCIO    WITH .T.
-        dbCommit()
-        dbUnlock()
+    _GuardarCabeceraTrabajo( cNum, oGTit, oGFec, oGCli, oGObs )
+
+    IF lCambiar
+        IF _SeleccionaProyectoTrabajo()
+            _EditarCabeceraActual()
+        ENDIF
+    ELSEIF lAbrirTramos
+        VerTareas()
     ENDIF
 
 RETURN NIL
 
 
-STATIC FUNCTION _NextProyectoNumero()
+STATIC FUNCTION _GuardarCabeceraTrabajo( cProyecto, oGTit, oGFec, oGCli, oGObs )
 
-    LOCAL nMax := 0
-    LOCAL nVal
+    LOCAL nArea := Select()
+    LOCAL cTitNew := oGTit:GetValue()
+    LOCAL dFecNew := oGFec:GetValue()
+    LOCAL cCliNew := oGCli:GetValue()
+    LOCAL cObsNew := oGObs:GetValue()
+    LOCAL lChanged := .F.
+
+    cProyecto := AllTrim( cProyecto )
+    IF Empty( cProyecto )
+        RETURN .F.
+    ENDIF
 
     dbSelectArea( "TMP_CAB" )
     dbGoTop()
     DO WHILE !Eof()
-        nVal := Val( AllTrim( FIELD->NUMERO ) )
-        IF nVal > nMax
-            nMax := nVal
+        IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == cProyecto
+            EXIT
         ENDIF
         dbSkip()
     ENDDO
 
+    IF Eof()
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
+        RETURN .F.
+    ENDIF
+
+    lChanged := ;
+        AllTrim( FIELD->TITULO ) != AllTrim( cTitNew ) .OR. ;
+        FIELD->FECHA != dFecNew .OR. ;
+        AllTrim( FIELD->ID_CLIENTE ) != AllTrim( cCliNew ) .OR. ;
+        AllTrim( FIELD->OBSERV ) != AllTrim( cObsNew )
+
+    IF lChanged .AND. NetRLock()
+        REPLACE FIELD->TITULO     WITH cTitNew
+        REPLACE FIELD->FECHA      WITH dFecNew
+        REPLACE FIELD->ID_CLIENTE WITH cCliNew
+        REPLACE FIELD->OBSERV     WITH cObsNew
+        dbCommit()
+        dbUnlock()
+        DrywallMarkCabDirty( cProyecto )
+    ENDIF
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN .T.
+
+
+STATIC FUNCTION _NextProyectoNumero()
+
+    LOCAL nMax := 0
+
+    nMax := _MaxProyectoAlias( "TMP_CAB", nMax )
+
+    IF Select( "HIS_CAB" ) == 0 .AND. File( "HIS_CAB.DBF" )
+        ABRIR_TABLA( "HIS_CAB", "HIS_CAB", "" )
+    ENDIF
+
+    IF Select( "HIS_CAB" ) > 0
+        nMax := _MaxProyectoAlias( "HIS_CAB", nMax )
+    ENDIF
+
 RETURN PadL( AllTrim( Str( nMax + 1 ) ), 6, "0" )
+
+
+STATIC FUNCTION _MaxProyectoAlias( cAlias, nMax )
+
+    LOCAL nArea := Select()
+    LOCAL nVal
+
+    dbSelectArea( cAlias )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted()
+            nVal := Val( AllTrim( FIELD->NUMERO ) )
+            IF nVal > nMax
+                nMax := nVal
+            ENDIF
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN nMax
 
 
 STATIC FUNCTION _ValidarCli( oGet )
@@ -474,7 +706,7 @@ STATIC FUNCTION _ValidarCli( oGet )
 
     IF Select( "CLIENTES" ) == 0
         IF File( "CLIENTES.DBF" )
-            USE CLIENTES NEW SHARED VIA "DBFCDX"
+            ABRIR_TABLA( "CLIENTES", "CLIENTES", "" )
         ELSE
             RETURN .T.
         ENDIF
@@ -506,7 +738,7 @@ STATIC FUNCTION _BuscarCli( oGCli )
 
     IF Select( "CLIENTES" ) == 0
         IF File( "CLIENTES.DBF" )
-            USE CLIENTES NEW SHARED VIA "DBFCDX"
+            ABRIR_TABLA( "CLIENTES", "CLIENTES", "" )
         ELSE
             RETURN NIL
         ENDIF

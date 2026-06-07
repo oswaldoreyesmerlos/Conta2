@@ -7,7 +7,7 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
 
     LOCAL nArea := Select()
     LOCAL aLineas := {}
-    LOCAL nSubtotal := 0, nIva := 0, nTotal := 0, nRetenc := 0
+    LOCAL nSubtotal := 0, nIva := 0, nTotal := 0, nRetenc := 0, nMargen := 0
     LOCAL nPorcIva := IVA_DEF, nPorcRet := 0
     LOCAL dFecha, dValidez
     LOCAL cCliId := "", cCliNom := ""
@@ -32,13 +32,22 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
     ENDIF
 
     IF Empty( cNumProyecto )
-        IF Select( cCabAlias ) > 0
+        IF cOrigen == "TMP"
+            cNumProyecto := DrywallProyectoActualNumero()
+        ENDIF
+
+        IF !Empty( cNumProyecto ) .AND. ABRIR_TABLA( cCabAlias, cCabAlias, "" )
             dbSelectArea( cCabAlias )
-            IF LastRec() > 0 .AND. !Eof()
-                cNumProyecto := AllTrim( FIELD->NUMERO )
-                cCliId := AllTrim( FIELD->ID_CLIENTE )
-                cObs   := AllTrim( FIELD->OBSERV )
-            ENDIF
+            dbGoTop()
+            DO WHILE !Eof()
+                IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cNumProyecto )
+                    cCliId := AllTrim( FIELD->ID_CLIENTE )
+                    cObs   := AllTrim( FIELD->OBSERV )
+                    nMargen := If( FieldPos( "MARGEN" ) > 0, FIELD->MARGEN, 0 )
+                    EXIT
+                ENDIF
+                dbSkip()
+            ENDDO
         ENDIF
     ELSE
         IF ABRIR_TABLA( cCabAlias, cCabAlias, "" )
@@ -48,6 +57,7 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
                 IF dbSeek( PadR( cNumProyecto, 6 ) )
                     cCliId := AllTrim( FIELD->ID_CLIENTE )
                     cObs   := AllTrim( FIELD->OBSERV )
+                    nMargen := If( FieldPos( "MARGEN" ) > 0, FIELD->MARGEN, 0 )
                 ENDIF
             ELSE
                 dbGoTop()
@@ -55,6 +65,7 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
                     IF !Deleted() .AND. AllTrim( FIELD->NUMERO ) == AllTrim( cNumProyecto )
                         cCliId := AllTrim( FIELD->ID_CLIENTE )
                         cObs   := AllTrim( FIELD->OBSERV )
+                        nMargen := If( FieldPos( "MARGEN" ) > 0, FIELD->MARGEN, 0 )
                         EXIT
                     ENDIF
                     dbSkip()
@@ -65,6 +76,13 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
 
     IF Empty( cNumProyecto )
         MsgStop( "No hay proyecto activo.", "Generar Presupuesto" )
+        IF nArea > 0
+            dbSelectArea( nArea )
+        ENDIF
+        RETURN .F.
+    ENDIF
+
+    IF !DrywallValidarParaPresupuesto( cNumProyecto, cOrigen )
         IF nArea > 0
             dbSelectArea( nArea )
         ENDIF
@@ -88,7 +106,7 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
             ENDIF
             RETURN .F.
         ENDIF
-        USE ( cResAlias ) NEW SHARED VIA "DBFCDX" ALIAS ( cResAlias )
+        ABRIR_TABLA( cResAlias, cResAlias, "" )
     ENDIF
 
     dbSelectArea( cResAlias )
@@ -124,6 +142,10 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
         ENDIF
         dbSkip()
     ENDDO
+
+    IF nMargen > 0
+        nSubtotal := Round( nSubtotal * ( 1 + nMargen / 100 ), 2 )
+    ENDIF
 
     nIva    := Round( nSubtotal * nPorcIva / 100, 2 )
     nRetenc := Round( nSubtotal * nPorcRet / 100, 2 )
@@ -228,6 +250,14 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
         nRetenc := Round( nSubtotal * nPorcRet / 100, 2 )
         nTotal  := nSubtotal + nIva - nRetenc
 
+        IF Empty( cCliId )
+            MsgStop( "Debe seleccionar un cliente para generar el presupuesto.", "Generar Presupuesto" )
+            IF nArea > 0
+                dbSelectArea( nArea )
+            ENDIF
+            RETURN .F.
+        ENDIF
+
         FOR i := 1 TO Len( aLineas )
             aLineas[i, 5] := nPorcIva
         NEXT
@@ -241,6 +271,40 @@ FUNCTION DrywallGenPresupuesto( cNumProyecto, cOrigen )
     ENDIF
 
 RETURN lRet
+
+
+FUNCTION DrywallPresupuestoOrigenNumero( cProy )
+
+    LOCAL nArea := Select()
+    LOCAL cNum := ""
+
+    cProy := AllTrim( cProy )
+    IF Empty( cProy )
+        RETURN ""
+    ENDIF
+
+    IF !ABRIR_TABLA( "PRESUPUEST", "PREONUM", "PRE_NUM" )
+        RETURN ""
+    ENDIF
+
+    dbSelectArea( "PREONUM" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. FieldPos( "ID_OBRA" ) > 0 .AND. ;
+           AllTrim( FIELD->ID_OBRA ) == cProy
+            cNum := AllTrim( FIELD->NUMERO )
+            EXIT
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    PREONUM->( DbCloseArea() )
+
+    IF nArea > 0
+        dbSelectArea( nArea )
+    ENDIF
+
+RETURN cNum
 
 
 STATIC FUNCTION _PreExisteOrigen( cProy )

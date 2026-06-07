@@ -47,9 +47,12 @@ FUNCTION InicioDrywall()
         AAdd( aFlds, { "TITULO",     "C", 60, 0 } )
         AAdd( aFlds, { "ID_CLIENTE", "C", 15, 0 } )
         AAdd( aFlds, { "ESTADO",     "C",  1, 0 } )
-		AAdd( aFlds, { "MARGEN",     "N",  5, 2 } )  //% utilidad a ese cliente
+        AAdd( aFlds, { "MARGEN",     "N",  5, 2 } )  //% utilidad a ese cliente
         AAdd( aFlds, { "OBSERV",     "C",200, 0 } )
+        AAdd( aFlds, { "L_ACTIVO",   "L",  1, 0 } )
         AAdd( aFlds, { "L_SUCIO",    "L",  1, 0 } )
+        AAdd( aFlds, { "L_CALC_DIR", "L",  1, 0 } )
+        AAdd( aFlds, { "L_CAB_DIR",  "L",  1, 0 } )
 
         aInds := {}
 
@@ -64,6 +67,7 @@ FUNCTION InicioDrywall()
 		AAdd( aFlds, { "NUMERO",        "C",  6, 0 } ) 
 		AAdd( aFlds, { "ID_LINEA",      "N",  4, 0 } ) 
 		AAdd( aFlds, { "TIPO_OBRA",     "C", 15, 0 } ) // TABIQUE, TECHO, TRASDOSADO_...
+		AAdd( aFlds, { "SISTEMA_ID",    "C", 20, 0 } ) // Sistema tecnico de rendimientos
 		AAdd( aFlds, { "CONCEPTO",      "C", 40, 0 } ) 
 		
 		// --- Geometría ---
@@ -181,8 +185,11 @@ FUNCTION InicioDrywall()
         AAdd( aFlds, { "TITULO",      "C", 60, 0 } )
         AAdd( aFlds, { "ID_CLIENTE",  "C", 15, 0 } )
         AAdd( aFlds, { "ESTADO",      "C",  1, 0 } )
-		AAdd( aFlds, { "MARGEN",     "N",  5, 2 } )
+        AAdd( aFlds, { "MARGEN",     "N",  5, 2 } )
         AAdd( aFlds, { "OBSERV",      "C",200, 0 } )
+        AAdd( aFlds, { "PRES_NUM",    "C", 10, 0 } )
+        AAdd( aFlds, { "FEC_CALC",    "D",  8, 0 } )
+        AAdd( aFlds, { "FEC_CIERRE",  "D",  8, 0 } )
 
         aInds := {}
         AAdd( aInds, { "HIS_NUM", "NUMERO" } )
@@ -204,7 +211,32 @@ FUNCTION InicioDrywall()
         AAdd( aAllDefs, { "TABLAS_AUX", aFlds, aInds } )
 
         // =========================================================
-        // 10. PRESUPUEST   (Cabecera de presupuesto AppGestion)
+        // 10. SYS_REND   (Rendimientos tecnicos por sistema)
+        // =========================================================
+        aFlds := {}
+        AAdd( aFlds, { "SISTEMA_ID", "C", 20, 0 } )
+        AAdd( aFlds, { "TIPO_OBRA",  "C", 15, 0 } )
+        AAdd( aFlds, { "DESC_SIS",   "C", 60, 0 } )
+        AAdd( aFlds, { "MODUL",      "N",  5, 2 } )
+        AAdd( aFlds, { "CARAS",      "N",  1, 0 } )
+        AAdd( aFlds, { "CAPAS",      "N",  1, 0 } )
+        AAdd( aFlds, { "ANCHO_PERF", "N",  3, 0 } )
+        AAdd( aFlds, { "ORDEN",      "N",  4, 0 } )
+        AAdd( aFlds, { "FAMILIA",    "C", 10, 0 } )
+        AAdd( aFlds, { "ROL_MAT",    "C", 15, 0 } )
+        AAdd( aFlds, { "CODIGO_DEF", "C", 15, 0 } )
+        AAdd( aFlds, { "UD_TEC",     "C",  5, 0 } )
+        AAdd( aFlds, { "REND_M2",    "N", 12, 3 } )
+        AAdd( aFlds, { "L_EDIT",     "L",  1, 0 } )
+
+        aInds := {}
+        AAdd( aInds, { "SR_SIS", "Upper(SISTEMA_ID) + Str(ORDEN,4)" } )
+        AAdd( aInds, { "SR_TIPO", "Upper(TIPO_OBRA) + Str(MODUL,5,2) + Str(CARAS,1) + Str(CAPAS,1) + Str(ANCHO_PERF,3) + Str(ORDEN,4)" } )
+
+        AAdd( aAllDefs, { "SYS_REND", aFlds, aInds } )
+
+        // =========================================================
+        // 11. PRESUPUEST   (Cabecera de presupuesto AppGestion)
         // =========================================================
         aFlds := {}
         AAdd( aFlds, { "NUMERO",   "C", 10, 0 } )
@@ -236,7 +268,7 @@ FUNCTION InicioDrywall()
         AAdd( aAllDefs, { "PRESUPUEST", aFlds, aInds } )
 
         // =========================================================
-        // 11. PRESUP_DE   (Lineas de presupuesto AppGestion)
+        // 12. PRESUP_DE   (Lineas de presupuesto AppGestion)
         // =========================================================
         aFlds := {}
         AAdd( aFlds, { "NUMERO",   "C", 10, 0 } )
@@ -261,6 +293,10 @@ FUNCTION InicioDrywall()
         cDbf        := aAllDefs[i, 1]
         aCamposR    := aAllDefs[i, 2]
         aIndicesR   := aAllDefs[i, 3]
+
+        IF File( cDbf + ".DBF" ) .AND. !_TieneCampos( cDbf, aCamposR )
+            _BorraDbf( cDbf )
+        ENDIF
 
         IF !File( cDbf + ".DBF" )
             DbCreate( cDbf, aCamposR, "DBFCDX", .T., "DRYWALL" )
@@ -303,3 +339,59 @@ FUNCTION InicioDrywall()
     NEXT
 
 RETURN .T.
+
+
+STATIC FUNCTION _TieneCampos( cDbf, aCampos )
+
+    LOCAL aActual := {}
+    LOCAL i
+
+    BEGIN SEQUENCE WITH {|oErr| Break( oErr )}
+        DbUseArea( .T., "DBFCDX", cDbf, "CHK_DBF", .T., .T. )
+        DbSelectArea( "CHK_DBF" )
+        aActual := DbStruct()
+        DbCloseArea()
+    RECOVER
+        RETURN .F.
+    END SEQUENCE
+
+    FOR i := 1 TO Len( aCampos )
+        IF _StructFieldPos( aActual, aCampos[i, 1] ) == 0
+            RETURN .F.
+        ENDIF
+    NEXT
+
+RETURN .T.
+
+
+STATIC FUNCTION _StructFieldPos( aStruct, cField )
+
+    LOCAL i
+
+    cField := Upper( AllTrim( cField ) )
+    FOR i := 1 TO Len( aStruct )
+        IF Upper( AllTrim( aStruct[i, 1] ) ) == cField
+            RETURN i
+        ENDIF
+    NEXT
+
+RETURN 0
+
+
+STATIC FUNCTION _BorraDbf( cDbf )
+
+    LOCAL aExt := { ".DBF", ".CDX", ".FPT", "_NEW.DBF", "_NEW.CDX", "_NEW.FPT" }
+    LOCAL i
+
+    IF Select( cDbf ) > 0
+        DbSelectArea( cDbf )
+        DbCloseArea()
+    ENDIF
+
+    FOR i := 1 TO Len( aExt )
+        IF File( cDbf + aExt[i] )
+            FErase( cDbf + aExt[i] )
+        ENDIF
+    NEXT
+
+RETURN NIL

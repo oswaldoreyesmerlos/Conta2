@@ -1,0 +1,9 @@
+-oTestOopSaturacion
+-w0
+-i..\api
+-i..\drywall
+-i..
+
+TestOopSaturacion.prg
+CalcUtils.prg
+OOPTRAMO.prg

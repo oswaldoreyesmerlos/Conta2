@@ -8,9 +8,13 @@ REQUEST DBFCDX
 
 FUNCTION SeedDrywall()
 
-    _CrearTablas()
+    _SetDataPath()
+    IF !_CrearTablas()
+        RETURN NIL
+    ENDIF
     _SeedAuxiliares()
     _SeedArticulos()
+    _SeedRendimientos()
     _SeedProyectos()
 
 RETURN NIL
@@ -21,55 +25,32 @@ RETURN NIL
 // ============================================================================
 STATIC FUNCTION _CrearTablas()
 
-    LOCAL aFlds := {}
-    LOCAL aInds := {}
-    LOCAL nAreaAnt := Select()
+    LOCAL aReq := { ;
+        "ARTICULOS", ;
+        "TABLAS_AUX", ;
+        "TMP_CAB", ;
+        "TMP_TRA", ;
+        "TMP_MAT", ;
+        "TMP_RES", ;
+        "SYS_REND" }
     LOCAL i
 
-    // Crear ARTICULOS si no existe (15 chars CODIGO para códigos tipo "TORN_PM_25")
-    IF !File( "ARTICULOS.DBF" )
-        AAdd( aFlds, { "CODIGO",    "C", 15, 0 } )
-        AAdd( aFlds, { "DESCRIP",   "C", 60, 0 } )
-        AAdd( aFlds, { "FAMILIA",   "C", 10, 0 } )
-        AAdd( aFlds, { "TIPO",      "C", 10, 0 } )
-        AAdd( aFlds, { "PROVEEDO",  "C", 10, 0 } )
-        AAdd( aFlds, { "COD_BARR",  "C", 15, 0 } )
-        AAdd( aFlds, { "QR_DATA",   "C", 80, 0 } )
-        AAdd( aFlds, { "STOCK",     "N", 12, 4 } )
-        AAdd( aFlds, { "STO_MIN",   "N", 10, 4 } )
-        AAdd( aFlds, { "STO_MAX",   "N", 10, 4 } )
-        AAdd( aFlds, { "UNIDAD",    "C",  5, 0 } )
-        AAdd( aFlds, { "ES_SERV",   "L",  1, 0 } )
-        AAdd( aFlds, { "ESPESOR",   "N",  6, 2 } )
-        AAdd( aFlds, { "ANCHO_PERF","N",  3, 0 } )
-        AAdd( aFlds, { "LARGO",     "N",  9, 2 } )
-        AAdd( aFlds, { "ANCHO",     "N",  9, 2 } )
-        AAdd( aFlds, { "PESO_UNI",  "N", 10, 3 } )
-        AAdd( aFlds, { "CTA_VTA",   "C", 10, 0 } )
-        AAdd( aFlds, { "CTA_COM",   "C", 10, 0 } )
-        AAdd( aFlds, { "COSTO_PR",  "N", 12, 4 } )
-        AAdd( aFlds, { "PRECIO",    "N", 12, 2 } )
-        AAdd( aFlds, { "IVA",       "N",  5, 2 } )
-        AAdd( aFlds, { "TIPO_IVA",  "C",  1, 0 } )
-        AAdd( aFlds, { "DESCUENT",  "N",  5, 2 } )
-        AAdd( aFlds, { "FECHA_AL",  "D",  8, 0 } )
-        AAdd( aFlds, { "BAJA",      "L",  1, 0 } )
+    FOR i := 1 TO Len( aReq )
+        IF !File( aReq[i] + ".DBF" )
+            _Log( "Falta " + aReq[i] + ".DBF; ejecute Drywall/AppGestion antes del seed" )
+            RETURN .F.
+        ENDIF
+    NEXT
 
-        AAdd( aInds, { "ART_COD", "CODIGO" } )
-        AAdd( aInds, { "ART_DES", "Upper(DESCRIP)" } )
-        AAdd( aInds, { "ART_FAM", "FAMILIA" } )
-        AAdd( aInds, { "ART_BAR", "COD_BARR" } )
+RETURN .T.
 
-        DbCreate( "ARTICULOS", aFlds, "DBFCDX" )
-        USE ARTICULOS EXCLUSIVE VIA "DBFCDX"
-        FOR i := 1 TO Len( aInds )
-            INDEX ON &( aInds[i, 2] ) TAG ( aInds[i, 1] )
-        NEXT
-        DbCloseArea()
-    ENDIF
 
-    IF nAreaAnt > 0
-        dbSelectArea( nAreaAnt )
+STATIC FUNCTION _SetDataPath()
+
+    IF hb_DirExists( hb_DirBase() + "DATA" )
+        SET DEFAULT TO ( hb_DirBase() + "DATA" )
+    ELSEIF hb_DirExists( hb_DirBase() + "..\DATA" )
+        SET DEFAULT TO ( hb_DirBase() + "..\DATA" )
     ENDIF
 
 RETURN NIL
@@ -84,8 +65,8 @@ STATIC FUNCTION _SeedAuxiliares()
     _Aux( "PERFIL", "CAN_48",    "Canal 48mm x 3m" )
     _Aux( "PERFIL", "CAN_70",    "Canal 70mm x 3m" )
     _Aux( "PERFIL", "CAN_90",    "Canal 90mm x 3m" )
-    _Aux( "PERFIL", "MAS_82x16", "Maestra techo 82x16mm x 4m" )
-    _Aux( "PERFIL", "MAS_80x16", "Maestra techo 80x16mm x 4m" )
+    _Aux( "PERFIL", "MAS_82X16", "Maestra techo 82x16mm x 4m" )
+    _Aux( "PERFIL", "MAS_80X16", "Maestra techo 80x16mm x 4m" )
     _Aux( "PERFIL", "T45",       "Primario techo T-45 x 3m" )
     _Aux( "PERFIL", "T60",       "Primario techo T-60 x 3m" )
     _Aux( "PERFIL", "OMEGA_30",  "Omega 30mm x 3m" )
@@ -162,12 +143,18 @@ RETURN NIL
 STATIC FUNCTION _Aux( cTipo, cCod, cDesc )
 
     IF Select( "TABLAS_AUX" ) == 0
-        USE TABLAS_AUX NEW SHARED VIA "DBFCDX"
+        ABRIR_TABLA( "TABLAS_AUX", "TABLAS_AUX", "" )
     ENDIF
     dbSelectArea( "TABLAS_AUX" )
     dbGoTop()
     DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->TIPO ) == cTipo .AND. AllTrim( FIELD->CODIGO ) == cCod
+        IF !Deleted() .AND. Upper( AllTrim( FIELD->TIPO ) ) == Upper( AllTrim( cTipo ) ) .AND. ;
+           Upper( AllTrim( FIELD->CODIGO ) ) == Upper( AllTrim( cCod ) )
+            IF AllTrim( FIELD->CODIGO ) != cCod .AND. FLock()
+                REPLACE FIELD->CODIGO WITH cCod
+                DbCommit()
+                dbUnlock()
+            ENDIF
             RETURN NIL  // ya existe
         ENDIF
         dbSkip()
@@ -198,8 +185,8 @@ STATIC FUNCTION _SeedArticulos()
     _Art( "CAN_48",    "Canal 48mm x 3m",               "PERFIL", "ud", 2.75,   48, 3000, 0,   0.650 )
     _Art( "CAN_70",    "Canal 70mm x 3m",               "PERFIL", "ud", 3.50,   70, 3000, 0,   0.850 )
     _Art( "CAN_90",    "Canal 90mm x 3m",               "PERFIL", "ud", 4.25,   90, 3000, 0,   1.100 )
-    _Art( "MAS_82x16", "Maestra techo 82x16mm x 4m",    "PERFIL", "ud", 6.50,   82, 4000, 16,  0.750 )
-    _Art( "MAS_80x16", "Maestra techo 80x16mm x 4m",    "PERFIL", "ud", 6.00,   80, 4000, 16,  0.700 )
+    _Art( "MAS_82X16", "Maestra techo 82x16mm x 4m",    "PERFIL", "ud", 6.50,   82, 4000, 16,  0.750 )
+    _Art( "MAS_80X16", "Maestra techo 80x16mm x 4m",    "PERFIL", "ud", 6.00,   80, 4000, 16,  0.700 )
     _Art( "T45",       "Primario techo T-45 x 3m",      "PERFIL", "ud", 4.50,   45, 3000, 0,   0.400 )
     _Art( "T60",       "Primario techo T-60 x 3m",      "PERFIL", "ud", 5.20,   60, 3000, 0,   0.550 )
     _Art( "OMEGA_30",  "Omega 30mm x 3m",               "PERFIL", "ud", 4.00,   30, 3000, 0,   0.350 )
@@ -302,12 +289,17 @@ STATIC FUNCTION _Art( cCod, cDesc, cFam, cUd, nPre, nEsp, nLar, nAnc, nPeso )
     ENDIF
 
     IF Select( "ARTICULOS" ) == 0
-        USE ARTICULOS NEW SHARED VIA "DBFCDX"
+        ABRIR_TABLA( "ARTICULOS", "ARTICULOS", "" )
     ENDIF
     dbSelectArea( "ARTICULOS" )
     dbGoTop()
     DO WHILE !Eof()
-        IF !Deleted() .AND. AllTrim( FIELD->CODIGO ) == cCod
+        IF !Deleted() .AND. Upper( AllTrim( FIELD->CODIGO ) ) == Upper( AllTrim( cCod ) )
+            IF AllTrim( FIELD->CODIGO ) != cCod .AND. FLock()
+                REPLACE FIELD->CODIGO WITH cCod
+                DbCommit()
+                dbUnlock()
+            ENDIF
             RETURN NIL
         ENDIF
         dbSkip()
@@ -326,6 +318,123 @@ STATIC FUNCTION _Art( cCod, cDesc, cFam, cUd, nPre, nEsp, nLar, nAnc, nPeso )
         REPLACE FIELD->LARGO    WITH nLar
         REPLACE FIELD->ANCHO    WITH nAnc
         REPLACE FIELD->PESO_UNI WITH nPeso
+        DbCommit()
+        dbUnlock()
+    ENDIF
+
+RETURN NIL
+
+
+// ============================================================================
+// SYS_REND: rendimientos tecnicos por sistema y m2
+// ============================================================================
+STATIC FUNCTION _SeedRendimientos()
+
+    IF !File( "SYS_REND.DBF" )
+        _Log( "SYS_REND no existe, ejecute Drywall para crear tablas" )
+        RETURN NIL
+    ENDIF
+
+    _RendTabiqueSencillo()
+    _RendTrasdosadoAuto()
+    _RendTechoSemidirecto()
+    _Log( "SYS_REND" )
+
+RETURN NIL
+
+
+STATIC FUNCTION _RendTabiqueSencillo()
+
+    LOCAL cSis := "TAB_SENCILLO_1X1"
+    LOCAL cDesc := "Tabique sencillo 1 placa por cada lado"
+
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  10, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  20, "PLACA",    "PLACA_B",    "",           "M2", 1.050 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  30, "PERFIL",   "MONTANTE",   "",           "ML", 2.330 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  40, "PERFIL",   "CANAL",      "",           "ML", 0.950 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  50, "PASTA",    "PASTA_JUNT", "PASTA_JUNT", "KG", 0.810 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  60, "TORNILLO", "TORN_PM_1",  "TORN_PM_25", "UD", 30.000 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  70, "TORNILLO", "TORN_MM",    "TORN_MM_9",  "UD", 3.000 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  80, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 3.150 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0,  90, "CINTA",    "CINTA_GUAR", "CINTA_GUAR", "ML", 0.300 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0, 100, "ACCESORIO","JUNTA_EST",  "BANDA_ACUS", "ML", 1.720 )
+    _Rend( cSis, "TABIQUE", cDesc, 0.60, 2, 1, 0, 110, "AISLAN",   "AISLANTE",   "",           "M2", 1.050 )
+
+RETURN NIL
+
+
+STATIC FUNCTION _RendTrasdosadoAuto()
+
+    LOCAL cSis := "TR_AUT_MONT_1P"
+    LOCAL cDesc := "Trasdosado autoportante montante 1 placa"
+
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  10, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  20, "PERFIL",   "MONTANTE",   "",           "ML", 2.330 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  30, "PERFIL",   "CANAL",      "",           "ML", 0.950 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  40, "PASTA",    "PASTA_JUNT", "PASTA_JUNT", "KG", 0.360 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  50, "TORNILLO", "TORN_PM_1",  "TORN_PM_25", "UD", 15.000 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  60, "TORNILLO", "TORN_MM",    "TORN_MM_9",  "UD", 3.000 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  70, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 1.300 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  80, "CINTA",    "CINTA_GUAR", "CINTA_GUAR", "ML", 0.150 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0,  90, "ACCESORIO","JUNTA_EST",  "BANDA_ACUS", "ML", 1.720 )
+    _Rend( cSis, "TRASDOSADO_AUT", cDesc, 0.60, 1, 1, 0, 100, "AISLAN",   "AISLANTE",   "",           "M2", 1.050 )
+
+RETURN NIL
+
+
+STATIC FUNCTION _RendTechoSemidirecto()
+
+    LOCAL cSis := "TECHO_SEMI_MAES_1P"
+    LOCAL cDesc := "Techo semidirecto maestras 1 placa"
+
+    _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 10, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
+    _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 20, "PERFIL",   "PERF_SEC",   "",           "ML", 2.450 )
+    _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 30, "PASTA",    "PASTA_JUNT", "PASTA_JUNT", "KG", 0.420 )
+    _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 40, "TORNILLO", "TORN_PM_1",  "TORN_PM_25", "UD", 13.000 )
+    _Rend( cSis, "TECHO", cDesc, 0.60, 1, 1, 0, 50, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 1.890 )
+    _Rend( cSis, "TECHO", cDesc, 0.50, 1, 1, 0, 60, "PLACA",    "PLACA_A",    "",           "M2", 1.050 )
+    _Rend( cSis, "TECHO", cDesc, 0.50, 1, 1, 0, 70, "PERFIL",   "PERF_SEC",   "",           "ML", 2.800 )
+    _Rend( cSis, "TECHO", cDesc, 0.50, 1, 1, 0, 80, "PASTA",    "PASTA_JUNT", "PASTA_JUNT", "KG", 0.420 )
+    _Rend( cSis, "TECHO", cDesc, 0.50, 1, 1, 0, 90, "TORNILLO", "TORN_PM_1",  "TORN_PM_25", "UD", 15.000 )
+    _Rend( cSis, "TECHO", cDesc, 0.50, 1, 1, 0,100, "CINTA",    "CINTA_JUNT", "CINTA_PAP",  "ML", 1.890 )
+
+RETURN NIL
+
+
+STATIC FUNCTION _Rend( cSis, cTipo, cDesc, nMod, nCaras, nCapas, nAncho, ;
+                       nOrden, cFam, cRol, cCod, cUd, nRend )
+
+    IF Select( "SYS_REND" ) == 0
+        ABRIR_TABLA( "SYS_REND", "SYS_REND", "" )
+    ENDIF
+
+    dbSelectArea( "SYS_REND" )
+    dbGoTop()
+    DO WHILE !Eof()
+        IF !Deleted() .AND. ;
+           AllTrim( FIELD->SISTEMA_ID ) == cSis .AND. ;
+           FIELD->ORDEN == nOrden
+            RETURN NIL
+        ENDIF
+        dbSkip()
+    ENDDO
+
+    IF FLock()
+        DbAppend()
+        REPLACE FIELD->SISTEMA_ID WITH cSis
+        REPLACE FIELD->TIPO_OBRA  WITH cTipo
+        REPLACE FIELD->DESC_SIS   WITH cDesc
+        REPLACE FIELD->MODUL      WITH nMod
+        REPLACE FIELD->CARAS      WITH nCaras
+        REPLACE FIELD->CAPAS      WITH nCapas
+        REPLACE FIELD->ANCHO_PERF WITH nAncho
+        REPLACE FIELD->ORDEN      WITH nOrden
+        REPLACE FIELD->FAMILIA    WITH cFam
+        REPLACE FIELD->ROL_MAT    WITH cRol
+        REPLACE FIELD->CODIGO_DEF WITH cCod
+        REPLACE FIELD->UD_TEC     WITH cUd
+        REPLACE FIELD->REND_M2    WITH nRend
+        REPLACE FIELD->L_EDIT     WITH .T.
         DbCommit()
         dbUnlock()
     ENDIF
@@ -391,7 +500,7 @@ STATIC FUNCTION _Proyecto( cNum, cTit, cCli, cObs )
 
     // --- TMP_CAB (cabecera) ---
     IF Select("TMP_CAB") == 0
-        USE TMP_CAB NEW SHARED VIA "DBFCDX"
+        ABRIR_TABLA( "TMP_CAB", "TMP_CAB", "" )
     ENDIF
     dbSelectArea("TMP_CAB")
     dbGoTop()
@@ -409,7 +518,16 @@ STATIC FUNCTION _Proyecto( cNum, cTit, cCli, cObs )
         REPLACE FIELD->ESTADO     WITH "P"
         REPLACE FIELD->MARGEN     WITH 0
         REPLACE FIELD->OBSERV     WITH cObs
+        IF FieldPos( "L_ACTIVO" ) > 0
+            REPLACE FIELD->L_ACTIVO WITH ( cNum == "PR001" )
+        ENDIF
         REPLACE FIELD->L_SUCIO    WITH .T.
+        IF FieldPos( "L_CALC_DIR" ) > 0
+            REPLACE FIELD->L_CALC_DIR WITH .T.
+        ENDIF
+        IF FieldPos( "L_CAB_DIR" ) > 0
+            REPLACE FIELD->L_CAB_DIR WITH .F.
+        ENDIF
         DbCommit()
         dbUnlock()
     ENDIF
@@ -436,25 +554,54 @@ RETURN NIL
 
 STATIC FUNCTION _Tramo( cNum, nLin, cTipo, cConc, nLar, nAlt, nMod, cPlaca )
 
+    LOCAL cMont := "MON_48"
+    LOCAL cCan  := "CAN_48"
+
     IF Select("TMP_TRA") == 0
-        USE TMP_TRA NEW SHARED VIA "DBFCDX"
+        ABRIR_TABLA( "TMP_TRA", "TMP_TRA", "" )
     ENDIF
     dbSelectArea("TMP_TRA")
+
+    IF "70" $ cConc
+        cMont := "MON_70"
+        cCan  := "CAN_70"
+    ENDIF
 
     IF FLock()
         DbAppend()
         REPLACE FIELD->NUMERO     WITH cNum
         REPLACE FIELD->ID_LINEA   WITH nLin
         REPLACE FIELD->TIPO_OBRA  WITH cTipo
+        IF FieldPos( "SISTEMA_ID" ) > 0
+            REPLACE FIELD->SISTEMA_ID WITH _SeedSistemaId( cTipo )
+        ENDIF
         REPLACE FIELD->CONCEPTO   WITH cConc
         REPLACE FIELD->LARGO      WITH nLar
         REPLACE FIELD->ALTO       WITH nAlt
         REPLACE FIELD->MODUL      WITH nMod
         REPLACE FIELD->ID_PLACA_A WITH cPlaca
+        REPLACE FIELD->ID_PLACA_B WITH cPlaca
         REPLACE FIELD->PLAC_CARA  WITH 1
-        REPLACE FIELD->CARAS      WITH 1
+        REPLACE FIELD->CARAS      WITH If( cTipo == "TABIQUE", 2, 1 )
+        REPLACE FIELD->ID_PER_VER WITH If( cTipo == "TECHO", "MAS_82X16", cMont )
+        REPLACE FIELD->ID_PER_HOR WITH cCan
+        REPLACE FIELD->L_BANDA    WITH ( cTipo == "TABIQUE" .OR. cTipo == "TRASDOSADO_AUT" )
         DbCommit()
         dbUnlock()
     ENDIF
 
 RETURN NIL
+
+
+STATIC FUNCTION _SeedSistemaId( cTipo )
+
+    DO CASE
+    CASE cTipo == "TABIQUE"
+        RETURN "TAB_SENCILLO_1X1"
+    CASE cTipo == "TRASDOSADO_AUT"
+        RETURN "TR_AUT_MONT_1P"
+    CASE cTipo == "TECHO"
+        RETURN "TECHO_SEMI_MAES_1P"
+    ENDCASE
+
+RETURN Space(20)

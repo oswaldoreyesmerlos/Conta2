@@ -15,7 +15,7 @@ FUNCTION EditAux( cTipo )
 
     IF Select( "TABLAS_AUX" ) == 0
         IF File( "TABLAS_AUX.DBF" )
-            USE TABLAS_AUX NEW SHARED VIA "DBFCDX"
+            ABRIR_TABLA( "TABLAS_AUX", "TABLAS_AUX", "" )
         ELSE
             MsgStop( "Falta archivo TABLAS_AUX.DBF" )
             lOk := .F.
@@ -24,7 +24,7 @@ FUNCTION EditAux( cTipo )
 
     IF lOk
         dbSelectArea( "TABLAS_AUX" )
-        dbSetOrder( 1 )
+        OrdSetFocus( "AUX_PK" )
 
         OrdScope( 0, PadR( cTipo, 10 ) )
         OrdScope( 1, PadR( cTipo, 10 ) )

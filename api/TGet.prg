@@ -18,6 +18,7 @@ CLASS TGet FROM TControl
     DATA nOffset
     DATA lNumFresh
     DATA lFresh
+    DATA lInsert
 
     DATA bWhen
     DATA bValid
@@ -92,6 +93,7 @@ METHOD New( nRow, nCol, uValue, cPic, oPar ) CLASS TGet
     ::nOffset := 0
     ::lNumFresh := .F.
     ::lFresh    := .T.
+    ::lInsert   := .F.
 
     ::bWhen  := NIL
     ::bValid := NIL
@@ -152,7 +154,7 @@ METHOD Paint() CLASS TGet
     ::DrawText( 0, 0, cShow, cCol )
 
     IF ::lFocused
-        GfxCursor( SC_NORMAL )
+        GfxCursor( If( ::lInsert, SC_INSERT, SC_NORMAL ) )
         GfxSetPos( ::nTop, ::nLeft + ::nPos - ::nOffset - 1 )
     ELSE
         GfxCursor( SC_NONE )
@@ -258,6 +260,13 @@ METHOD HandleKey( nKey ) CLASS TGet
         RETURN .T.
     ENDIF
 
+
+    // Insert/Overwrite toggle
+    IF nKey == K_INS
+        ::lInsert := ! ::lInsert
+        ::Paint()
+        RETURN .T.
+    ENDIF
 
     // Movimiento
     IF nKey == K_LEFT
@@ -373,11 +382,13 @@ METHOD HandleKey( nKey ) CLASS TGet
             ::lFresh := .F.
         ENDIF
 
-        ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, cChr )
-
-        IF ::nPos < ::nBufLen
-            ::nPos++
+        IF ::lInsert .AND. ::nPos < ::nBufLen
+            ::cBuffer := Left( Stuff( ::cBuffer, ::nPos, 0, cChr ), ::nBufLen )
+        ELSE
+            ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, cChr )
         ENDIF
+
+        ::nPos := Min( ::nPos + 1, ::nBufLen )
 
         ::Paint()
 
